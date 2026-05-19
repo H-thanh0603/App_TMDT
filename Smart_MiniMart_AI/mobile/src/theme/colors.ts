@@ -1,39 +1,47 @@
-/** Bảng màu Smart MiniMart AI — xanh lá tươi (siêu thị/healthy) */
+/**
+ * Smart MiniMart AI - Brand Color System
+ * Emerald green primary + Violet AI accents + Gold sparkle
+ */
 export const colors = {
-  primary: '#10B981',     // emerald-500
+  // Brand primary - Emerald green
+  primary: '#10B981',
   primaryDark: '#059669',
-  primaryLight: '#D1FAE5',
-  secondary: '#F59E0B',   // amber-500
-  accent: '#3B82F6',      // blue-500
+  primaryLight: '#34D399',
+  primarySoft: '#D1FAE5',
 
-  bg: '#FFFFFF',
-  bgSecondary: '#F9FAFB',
-  surface: '#FFFFFF',
-  surfaceElevated: '#FFFFFF',
+  // AI accent - Violet
+  ai: '#8B5CF6',
+  aiDark: '#7C3AED',
+  aiLight: '#A78BFA',
+  aiSoft: '#EDE9FE',
 
-  text: '#111827',
-  textSecondary: '#6B7280',
-  textTertiary: '#9CA3AF',
-  textInverse: '#FFFFFF',
+  // Gold sparkle (premium / VIP)
+  gold: '#F59E0B',
+  goldLight: '#FCD34D',
+  goldSoft: '#FEF3C7',
 
-  border: '#E5E7EB',
-  divider: '#F3F4F6',
-
+  // Status colors
   success: '#10B981',
   warning: '#F59E0B',
   danger: '#EF4444',
   info: '#3B82F6',
 
-  // Role colors
-  roleCustomer: '#10B981',
-  roleStaff: '#3B82F6',
-  roleAdmin: '#8B5CF6',
-  roleAiManager: '#F59E0B',
+  // Neutrals
+  bg: '#F8FAFC',
+  bgAlt: '#F1F5F9',
+  card: '#FFFFFF',
+  border: '#E2E8F0',
+  borderLight: '#F1F5F9',
 
-  // Alert tiers
-  expCritical: '#EF4444',
-  expWarning: '#F59E0B',
-  expNotice: '#3B82F6',
-} as const;
+  // Text
+  text: '#0F172A',
+  textSecondary: '#475569',
+  textMuted: '#94A3B8',
+  textInverse: '#FFFFFF',
 
-export type ColorKey = keyof typeof colors;
+  // Overlay
+  overlay: 'rgba(15, 23, 42, 0.5)',
+  shadow: 'rgba(15, 23, 42, 0.08)',
+};
+
+export type ThemeColors = typeof colors;
