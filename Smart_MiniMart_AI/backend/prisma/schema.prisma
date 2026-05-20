@@ -317,6 +317,7 @@ model Order {
   shippingFee     Decimal       @default(0) @db.Decimal(12, 2)
   totalAmount     Decimal       @db.Decimal(12, 2)
   promotionCode   String?
+  paymentRef      String?       // VNPay txnRef hoặc external payment reference
   note            String?
   loyaltyEarned   Int           @default(0)
   cancelReason    String?

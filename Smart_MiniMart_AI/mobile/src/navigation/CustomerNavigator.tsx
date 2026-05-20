@@ -10,7 +10,10 @@ import { AISearchScreen } from '@/screens/customer/AISearchScreen';
 import { AIChatScreen } from '@/screens/customer/AIChatScreen';
 import { CartScreen } from '@/screens/customer/CartScreen';
 import { OrdersScreen } from '@/screens/customer/OrdersScreen';
+import { OrderDetailScreen } from '@/screens/customer/OrderDetailScreen';
+import { AddressesScreen } from '@/screens/customer/AddressesScreen';
 import { ProfileScreen } from '@/screens/customer/ProfileScreen';
+import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { colors } from '@/theme';
 
 const Stack = createNativeStackNavigator();
@@ -44,11 +47,14 @@ function CustomerTabs() {
 export function CustomerNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator>
+      <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: colors.primary }, headerTintColor: 'white', headerTitleStyle: { fontWeight: '700' } }}>
         <Stack.Screen name="Tabs" component={CustomerTabs} options={{ headerShown: false }} />
         <Stack.Screen name="ProductList" component={ProductListScreen} options={{ title: 'Sản phẩm' }} />
-        <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: 'Chi tiết' }} />
+        <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: 'Chi tiết sản phẩm' }} />
         <Stack.Screen name="Orders" component={OrdersScreen} options={{ title: 'Đơn hàng của tôi' }} />
+        <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Chi tiết đơn' }} />
+        <Stack.Screen name="Addresses" component={AddressesScreen} options={{ title: 'Địa chỉ' }} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Thông báo' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -16,6 +16,9 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 import { AIGatewayModule } from './modules/ai-gateway/ai-gateway.module';
 import { AIManagerModule } from './modules/ai-manager/ai-manager.module';
 import { HealthModule } from './modules/health/health.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { SettingsModule } from './modules/settings/settings.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -37,6 +40,9 @@ import { HealthModule } from './modules/health/health.module';
     AIGatewayModule,
     AIManagerModule,
     HealthModule,
+    NotificationsModule,
+    SettingsModule,
+    PaymentsModule,
   ],
 })
 export class AppModule {}

@@ -8,6 +8,7 @@ import { ImportReceiptsScreen } from '@/screens/staff/ImportReceiptsScreen';
 import { OCRScanScreen } from '@/screens/staff/OCRScanScreen';
 import { ReceiptDetailScreen } from '@/screens/staff/ReceiptDetailScreen';
 import { StaffProfileScreen } from '@/screens/staff/StaffProfileScreen';
+import { NotificationsScreen } from '@/screens/NotificationsScreen';
 import { colors } from '@/theme';
 
 const Stack = createNativeStackNavigator();
@@ -23,7 +24,7 @@ function StaffTabs() {
         tabBarLabelStyle: { fontSize: 11 },
         tabBarIcon: ({ color, size }) => {
           const icon: Record<string, string> = {
-            Orders: '📦', Imports: '📥', Profile: '👤',
+            Orders: '📦', Imports: '📥', Notif: '🔔', Profile: '👤',
           };
           return <Text style={{ fontSize: size, color }}>{icon[route.name] ?? '•'}</Text>;
         },
@@ -31,6 +32,7 @@ function StaffTabs() {
     >
       <Tab.Screen name="Orders" component={StaffOrdersScreen} options={{ title: 'Đơn hàng' }} />
       <Tab.Screen name="Imports" component={ImportReceiptsScreen} options={{ title: 'Nhập hàng' }} />
+      <Tab.Screen name="Notif" component={NotificationsScreen} options={{ title: 'Thông báo' }} />
       <Tab.Screen name="Profile" component={StaffProfileScreen} options={{ title: 'Cá nhân' }} />
     </Tab.Navigator>
   );
@@ -39,7 +41,7 @@ function StaffTabs() {
 export function StaffNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator>
+      <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: colors.roleStaff }, headerTintColor: 'white' }}>
         <Stack.Screen name="Tabs" component={StaffTabs} options={{ headerShown: false }} />
         <Stack.Screen name="OCRScan" component={OCRScanScreen} options={{ title: 'Quét phiếu nhập' }} />
         <Stack.Screen name="ReceiptDetail" component={ReceiptDetailScreen} options={{ title: 'Chi tiết phiếu' }} />

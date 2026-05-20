@@ -29,15 +29,30 @@ export const colors = {
   // Neutrals
   bg: '#F8FAFC',
   bgAlt: '#F1F5F9',
+  bgSecondary: '#F1F5F9',
   card: '#FFFFFF',
+  surface: '#FFFFFF',
   border: '#E2E8F0',
   borderLight: '#F1F5F9',
+  divider: '#E2E8F0',
 
   // Text
   text: '#0F172A',
   textSecondary: '#475569',
   textMuted: '#94A3B8',
+  textTertiary: '#94A3B8',
   textInverse: '#FFFFFF',
+
+  // Role accents (legacy aliases)
+  secondary: '#3B82F6',
+  roleCustomer: '#10B981',
+  roleStaff: '#3B82F6',
+  roleAdmin: '#8B5CF6',
+  roleAiManager: '#F59E0B',
+
+  // Legacy aliases
+  accent: '#8B5CF6',
+  expWarning: '#F59E0B',
 
   // Overlay
   overlay: 'rgba(15, 23, 42, 0.5)',

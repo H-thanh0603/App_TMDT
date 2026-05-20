@@ -230,3 +230,160 @@ export function useAILogs(params: Record<string, any> = {}) {
     ),
   });
 }
+
+// ===== Profile =====
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { fullName?: string; phone?: string; avatarUrl?: string }) =>
+      unwrap<any>(await api.patch('/users/me', params)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
+  });
+}
+
+export function useMyStats() {
+  return useQuery({
+    queryKey: ['me', 'stats'],
+    queryFn: async () => unwrap<{
+      orderCount: number; totalSpent: number; loyaltyPoints: number;
+      isVip: boolean; nextVipThreshold: number;
+    }>(await api.get('/users/me/stats')),
+  });
+}
+
+// ===== Addresses =====
+export function useAddresses() {
+  return useQuery({
+    queryKey: ['addresses'],
+    queryFn: async () => unwrap<any[]>(await api.get('/users/me/addresses')),
+  });
+}
+
+export function useCreateAddress() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: any) =>
+      unwrap<any>(await api.post('/users/me/addresses', dto)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['addresses'] }),
+  });
+}
+
+export function useUpdateAddress() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, dto }: { id: string; dto: any }) =>
+      unwrap<any>(await api.patch(`/users/me/addresses/${id}`, dto)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['addresses'] }),
+  });
+}
+
+export function useDeleteAddress() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      unwrap<any>(await api.delete(`/users/me/addresses/${id}`)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['addresses'] }),
+  });
+}
+
+// ===== Order detail =====
+export function useOrder(id: string) {
+  return useQuery({
+    queryKey: ['orders', id],
+    queryFn: async () => unwrap<any>(await api.get(`/orders/${id}`)),
+    enabled: !!id,
+  });
+}
+
+// ===== Notifications =====
+export function useNotifications(params: { isRead?: string; limit?: number } = {}) {
+  return useQuery({
+    queryKey: ['notifications', params],
+    queryFn: async () => unwrap<{ items: any[]; unread: number }>(
+      await api.get('/notifications/me', { params }),
+    ),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useMarkRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      unwrap<any>(await api.post(`/notifications/me/${id}/read`)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+}
+
+export function useMarkAllRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => unwrap<any>(await api.post('/notifications/me/read-all')),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+}
+
+export function useBroadcast() {
+  return useMutation({
+    mutationFn: async (dto: {
+      title: string; body: string; type?: string;
+      targetRoles?: string[]; targetUserIds?: string[];
+    }) => unwrap<{ sent: number }>(await api.post('/notifications/broadcast', dto)),
+  });
+}
+
+// ===== Store config (public) =====
+export function useStoreConfig() {
+  return useQuery({
+    queryKey: ['settings', 'public'],
+    queryFn: async () => unwrap<any>(await api.get('/settings/public')),
+    staleTime: 5 * 60_000,
+  });
+}
+
+// ===== Admin: User management =====
+export function useAdminUsers(params: { role?: string; status?: string; q?: string; page?: number } = {}) {
+  return useQuery({
+    queryKey: ['admin-users', params],
+    queryFn: async () => unwrap<{
+      items: any[]; total: number; page: number; totalPages: number;
+    }>(await api.get('/users', { params })),
+  });
+}
+
+export function useCreateStaff() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: any) =>
+      unwrap<any>(await api.post('/users/staff', dto)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
+  });
+}
+
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, dto }: { id: string; dto: any }) =>
+      unwrap<any>(await api.patch(`/users/${id}`, dto)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
+  });
+}
+
+export function useAdjustLoyalty() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, delta, reason }: { id: string; delta: number; reason?: string }) =>
+      unwrap<any>(await api.post(`/users/${id}/loyalty`, { delta, reason })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
+  });
+}
+
+// ===== Payments =====
+export function useCreateVnpay() {
+  return useMutation({
+    mutationFn: async (dto: { orderId: string; bankCode?: string }) =>
+      unwrap<{ url: string; orderRef: string; amount: number }>(
+        await api.post('/payments/vnpay/create', dto),
+      ),
+  });
+}
