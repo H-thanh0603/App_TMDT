@@ -1,46 +1,112 @@
-import { useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import {
+  ActivityIndicator, FlatList, StyleSheet, Text, View, Pressable, Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAllOrders } from '@/services/queries';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useAllOrders, useUpdateOrderStatus } from '@/services/queries';
+import { Badge } from '@/components/Badge';
+import { colors } from '@/theme/colors';
 import { formatDateTime, formatVnd, statusLabel } from '@/utils/format';
 import type { OrderStatus } from '@/types';
 
-const STATUSES: Array<{ label: string; value?: OrderStatus }> = [
-  { label: 'Tất cả' },
-  { label: 'Chờ', value: 'PENDING' },
-  { label: 'Xác nhận', value: 'CONFIRMED' },
-  { label: 'Chuẩn bị', value: 'PREPARING' },
-  { label: 'Giao', value: 'DELIVERING' },
-  { label: 'Xong', value: 'COMPLETED' },
-  { label: 'Hủy', value: 'CANCELED' },
+const STATUSES: Array<{ label: string; value?: OrderStatus; emoji: string }> = [
+  { label: 'Tất cả', emoji: '📋' },
+  { label: 'Chờ', value: 'PENDING', emoji: '⏳' },
+  { label: 'Xác nhận', value: 'CONFIRMED', emoji: '✓' },
+  { label: 'Chuẩn bị', value: 'PREPARING', emoji: '📦' },
+  { label: 'Giao', value: 'DELIVERING', emoji: '🚚' },
+  { label: 'Xong', value: 'COMPLETED', emoji: '✅' },
+  { label: 'Hủy', value: 'CANCELED', emoji: '❌' },
 ];
+
+const STATUS_VARIANT: Record<string, any> = {
+  PENDING: 'warning', CONFIRMED: 'info', PREPARING: 'ai',
+  DELIVERING: 'gold', COMPLETED: 'success', CANCELED: 'danger',
+};
 
 export function AdminOrdersScreen() {
   const [filter, setFilter] = useState<OrderStatus | undefined>(undefined);
-  const { data, isLoading } = useAllOrders(filter ? { status: filter, limit: 50 } : { limit: 50 });
+  const { data, isLoading, refetch, isFetching } = useAllOrders(
+    filter ? { status: filter, limit: 100 } : { limit: 100 },
+  );
+  const update = useUpdateOrderStatus();
   const items = data?.items ?? [];
+
+  // Quick stats
+  const { data: allData } = useAllOrders({ limit: 100 });
+  const stats = useMemo(() => {
+    const all = allData?.items ?? [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const todayOrders = all.filter((o: any) =>
+      new Date(o.createdAt).getTime() >= today.getTime());
+    return {
+      total: all.length,
+      pending: all.filter((o: any) => o.status === 'PENDING').length,
+      todayRevenue: todayOrders
+        .filter((o: any) => o.status !== 'CANCELED')
+        .reduce((s: number, o: any) => s + Number(o.totalAmount), 0),
+    };
+  }, [allData]);
+
+  const cancel = (id: string) => {
+    Alert.alert('Hủy đơn?', 'Bạn có chắc muốn hủy đơn này?', [
+      { text: 'Không' },
+      {
+        text: 'Hủy đơn', style: 'destructive',
+        onPress: async () => {
+          try { await update.mutateAsync({ id, status: 'CANCELED' }); }
+          catch (e: any) { Alert.alert('Lỗi', e?.response?.data?.message || 'Không thể hủy'); }
+        },
+      },
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Tất cả đơn hàng</Text>
-        <Text style={styles.subtitle}>{data?.total ?? 0} đơn</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Đơn hàng</Text>
+          <Text style={styles.subtitle}>{data?.total ?? 0} đơn</Text>
+        </View>
       </View>
 
+      {/* Stats banner */}
+      <View style={styles.statsBanner}>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{stats.total}</Text>
+          <Text style={styles.statLabel}>Tổng đơn</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: colors.warning }]}>{stats.pending}</Text>
+          <Text style={styles.statLabel}>Chờ xử lý</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { fontSize: 14 }]}>{formatVnd(stats.todayRevenue)}</Text>
+          <Text style={styles.statLabel}>DT hôm nay</Text>
+        </View>
+      </View>
+
+      {/* Status filter chips */}
       <FlatList
         horizontal showsHorizontalScrollIndicator={false}
         data={STATUSES} keyExtractor={(s) => s.label}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: 8 }}
+        contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}
         style={{ maxHeight: 50 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => setFilter(item.value)}
-            style={[styles.chip, filter === item.value && styles.chipActive]}>
-            <Text style={[styles.chipText, filter === item.value && styles.chipTextActive]}>
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) => {
+          const active = filter === item.value;
+          return (
+            <Pressable
+              onPress={() => setFilter(item.value)}
+              style={[styles.chip, active && styles.chipActive]}
+            >
+              <Text style={styles.chipEmoji}>{item.emoji}</Text>
+              <Text style={[styles.chipText, active && { color: 'white' }]}>{item.label}</Text>
+            </Pressable>
+          );
+        }}
       />
 
       {isLoading ? (
@@ -48,30 +114,64 @@ export function AdminOrdersScreen() {
       ) : (
         <FlatList
           data={items}
-          keyExtractor={(o) => o.id}
-          contentContainerStyle={{ padding: spacing.lg }}
-          renderItem={({ item }: any) => (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.orderNumber}>{item.orderNumber}</Text>
-                <Text style={styles.status}>{statusLabel(item.status)}</Text>
+          keyExtractor={(o: any) => o.id}
+          contentContainerStyle={{ padding: 12 }}
+          onRefresh={refetch}
+          refreshing={isFetching && !isLoading}
+          renderItem={({ item: rawItem }) => {
+            const item = rawItem as any;
+            const canCancel = ['PENDING', 'CONFIRMED'].includes(item.status);
+            return (
+              <View style={styles.orderCard}>
+                <View style={styles.orderHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.orderNumber}>#{item.orderNumber}</Text>
+                    <Text style={styles.orderTime}>{formatDateTime(item.createdAt)}</Text>
+                  </View>
+                  <Badge
+                    label={statusLabel(item.status)}
+                    variant={STATUS_VARIANT[item.status] || 'default'}
+                    size="md"
+                  />
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.customerRow}>
+                  <Text style={{ fontSize: 16 }}>👤</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.customerName}>
+                      {item.customer?.fullName ?? item.shippingName ?? 'Khách'}
+                    </Text>
+                    <Text style={styles.customerPhone}>
+                      {item.customer?.phone ?? item.shippingPhone ?? ''}
+                    </Text>
+                  </View>
+                  <Text style={styles.payment}>
+                    {item.paymentMethod === 'COD' ? '💵 COD' : '🏦 ' + item.paymentMethod}
+                  </Text>
+                </View>
+
+                <View style={styles.summaryRow}>
+                  <Text style={styles.itemCount}>{item.items?.length ?? 0} sản phẩm</Text>
+                  <Text style={styles.total}>{formatVnd(Number(item.totalAmount))}</Text>
+                </View>
+
+                {canCancel && (
+                  <Pressable
+                    style={styles.cancelBtn}
+                    onPress={() => cancel(item.id)}
+                  >
+                    <Text style={styles.cancelText}>Hủy đơn</Text>
+                  </Pressable>
+                )}
               </View>
-              <Text style={styles.userInfo}>
-                {item.user?.fullName} • {item.user?.email}
-              </Text>
-              <Text style={styles.date}>{formatDateTime(item.createdAt)}</Text>
-              <View style={styles.cardFooter}>
-                <Text style={styles.itemCount}>
-                  {item.items.length} sản phẩm
-                </Text>
-                <Text style={styles.total}>{formatVnd(Number(item.totalAmount))}</Text>
-              </View>
-            </View>
-          )}
+            );
+          }}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={{ fontSize: 48 }}>📦</Text>
-              <Text style={styles.emptyText}>Không có đơn hàng</Text>
+              <Text style={{ fontSize: 56 }}>📭</Text>
+              <Text style={styles.emptyText}>Không có đơn nào</Text>
             </View>
           }
         />
@@ -81,24 +181,57 @@ export function AdminOrdersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bgSecondary },
+  container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { padding: spacing.lg, paddingBottom: spacing.sm },
-  title: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.text },
-  subtitle: { color: colors.textSecondary, marginTop: 2, fontSize: typography.size.sm },
-  chip: { paddingHorizontal: spacing.base, paddingVertical: spacing.xs, borderRadius: radius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  chipActive: { backgroundColor: colors.roleAdmin, borderColor: colors.roleAdmin },
-  chipText: { fontSize: typography.size.sm, color: colors.text },
-  chipTextActive: { color: '#fff', fontWeight: typography.weight.semibold },
-  card: { backgroundColor: colors.surface, borderRadius: radius.base, padding: spacing.base, marginBottom: spacing.sm },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  orderNumber: { fontWeight: typography.weight.bold, color: colors.text },
-  status: { color: colors.roleAdmin, fontWeight: typography.weight.semibold, fontSize: typography.size.sm },
-  userInfo: { color: colors.textSecondary, fontSize: typography.size.sm, marginTop: 4 },
-  date: { color: colors.textTertiary, fontSize: typography.size.xs, marginTop: 2 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider },
-  itemCount: { color: colors.textSecondary, fontSize: typography.size.sm },
-  total: { fontWeight: typography.weight.bold, color: colors.primary, fontSize: typography.size.base },
-  empty: { alignItems: 'center', paddingTop: spacing['2xl'] },
-  emptyText: { color: colors.textSecondary, marginTop: spacing.md },
+  header: {
+    flexDirection: 'row', padding: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  title: { fontSize: 22, fontWeight: '800', color: colors.text },
+  subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  statsBanner: {
+    flexDirection: 'row', backgroundColor: 'white',
+    marginHorizontal: 12, marginVertical: 10,
+    paddingVertical: 14, borderRadius: 12,
+    shadowColor: colors.shadow, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
+  },
+  statItem: { flex: 1, alignItems: 'center' },
+  statValue: { fontSize: 20, fontWeight: '900', color: colors.text },
+  statLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  statDivider: { width: 1, backgroundColor: colors.border, marginVertical: 6 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 18, backgroundColor: colors.bgAlt, height: 36,
+  },
+  chipActive: { backgroundColor: colors.primary },
+  chipEmoji: { fontSize: 13 },
+  chipText: { color: colors.text, fontWeight: '700', fontSize: 12 },
+  orderCard: {
+    backgroundColor: 'white', borderRadius: 12, padding: 14,
+    marginBottom: 8,
+    shadowColor: colors.shadow, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
+  },
+  orderHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  orderNumber: { fontSize: 15, fontWeight: '800', color: colors.text },
+  orderTime: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  divider: { height: 1, backgroundColor: colors.borderLight, marginVertical: 10 },
+  customerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  customerName: { fontSize: 13, fontWeight: '700', color: colors.text },
+  customerPhone: { fontSize: 11, color: colors.textMuted, marginTop: 1 },
+  payment: { fontSize: 11, color: colors.textSecondary, fontWeight: '600' },
+  summaryRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginTop: 10,
+  },
+  itemCount: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
+  total: { fontSize: 17, fontWeight: '900', color: colors.primary },
+  cancelBtn: {
+    marginTop: 10, paddingVertical: 8,
+    backgroundColor: '#FEE2E2', borderRadius: 8, alignItems: 'center',
+  },
+  cancelText: { color: colors.danger, fontWeight: '700', fontSize: 13 },
+  empty: { alignItems: 'center', paddingTop: 60 },
+  emptyText: { color: colors.textMuted, marginTop: 12, fontSize: 14 },
 });

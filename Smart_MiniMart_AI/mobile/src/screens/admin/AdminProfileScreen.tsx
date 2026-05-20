@@ -2,7 +2,7 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/auth.store';
 import { Button } from '@/components/Button';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors } from '@/theme/colors';
 
 export function AdminProfileScreen() {
   const { user, logout } = useAuthStore();
@@ -24,7 +24,7 @@ export function AdminProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing['2xl'] }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
         <View style={styles.header}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{user?.fullName.charAt(0).toUpperCase()}</Text>
@@ -50,7 +50,7 @@ export function AdminProfileScreen() {
           ))}
         </View>
 
-        <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
           <Button title="Đăng xuất" onPress={handleLogout} variant="outline" fullWidth />
         </View>
       </ScrollView>
@@ -60,16 +60,16 @@ export function AdminProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
-  header: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, gap: spacing.md, backgroundColor: colors.surface },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 12, backgroundColor: colors.surface },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.roleAdmin, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
-  name: { fontSize: typography.size.lg, fontWeight: typography.weight.bold, color: colors.text },
-  role: { color: colors.roleAdmin, fontWeight: typography.weight.semibold, fontSize: typography.size.xs, marginTop: 2 },
-  email: { color: colors.textSecondary, fontSize: typography.size.sm, marginTop: 2 },
-  menu: { marginTop: spacing.lg, backgroundColor: colors.surface },
-  menuItem: { flexDirection: 'row', alignItems: 'center', padding: spacing.base, borderBottomWidth: 1, borderBottomColor: colors.divider },
-  menuIcon: { fontSize: 22, marginRight: spacing.md },
-  menuText: { fontSize: typography.size.base, color: colors.text, fontWeight: typography.weight.semibold },
-  menuSub: { fontSize: typography.size.xs, color: colors.textSecondary, marginTop: 2 },
+  name: { fontSize: 17, fontWeight: '800', color: colors.text },
+  role: { color: colors.roleAdmin, fontWeight: '600', fontSize: 11, marginTop: 2 },
+  email: { color: colors.textSecondary, fontSize: 13, marginTop: 2 },
+  menu: { marginTop: 20, backgroundColor: colors.surface },
+  menuItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.divider },
+  menuIcon: { fontSize: 22, marginRight: 12 },
+  menuText: { fontSize: 14, color: colors.text, fontWeight: '600' },
+  menuSub: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
   menuArrow: { fontSize: 22, color: colors.textTertiary },
 });

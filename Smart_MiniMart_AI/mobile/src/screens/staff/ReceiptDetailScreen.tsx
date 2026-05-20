@@ -6,7 +6,7 @@ import {
   useImportReceipt, useUpdateReceiptItems, useConfirmReceipt,
 } from '@/services/queries';
 import { Button } from '@/components/Button';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors } from '@/theme/colors';
 import { formatVnd } from '@/utils/format';
 
 export function ReceiptDetailScreen() {
@@ -63,7 +63,7 @@ export function ReceiptDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
         <View style={styles.headerCard}>
           <Text style={styles.receiptNumber}>{receipt.receiptNumber}</Text>
           <Text style={styles.supplier}>NCC: {receipt.supplierName}</Text>
@@ -169,22 +169,22 @@ export function ReceiptDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   center: { alignItems: 'center', justifyContent: 'center' },
-  headerCard: { backgroundColor: colors.surface, padding: spacing.base, borderRadius: radius.base, marginBottom: spacing.md },
-  receiptNumber: { fontSize: typography.size.lg, fontWeight: typography.weight.bold, color: colors.text },
-  supplier: { fontSize: typography.size.sm, color: colors.text, marginTop: 4 },
-  meta: { fontSize: typography.size.xs, color: colors.textSecondary, marginTop: 4 },
-  warning: { fontSize: typography.size.xs, color: colors.warning, marginTop: spacing.sm, fontWeight: typography.weight.semibold },
-  sectionTitle: { fontSize: typography.size.base, fontWeight: typography.weight.semibold, color: colors.text, marginBottom: spacing.sm },
-  itemCard: { backgroundColor: colors.surface, padding: spacing.base, borderRadius: radius.base, marginBottom: spacing.sm },
-  itemHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.sm },
-  itemIndex: { fontWeight: typography.weight.bold, color: colors.text },
-  itemConf: { fontSize: typography.size.xs, color: colors.success, fontWeight: typography.weight.semibold },
-  fieldLabel: { fontSize: typography.size.xs, color: colors.textSecondary, marginTop: spacing.xs, marginBottom: 2 },
-  input: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.sm, fontSize: typography.size.sm, color: colors.text, backgroundColor: colors.bgSecondary },
+  headerCard: { backgroundColor: colors.surface, padding: 16, borderRadius: 12, marginBottom: 12 },
+  receiptNumber: { fontSize: 17, fontWeight: '800', color: colors.text },
+  supplier: { fontSize: 13, color: colors.text, marginTop: 4 },
+  meta: { fontSize: 11, color: colors.textSecondary, marginTop: 4 },
+  warning: { fontSize: 11, color: colors.warning, marginTop: 8, fontWeight: '600' },
+  sectionTitle: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 8 },
+  itemCard: { backgroundColor: colors.surface, padding: 16, borderRadius: 12, marginBottom: 8 },
+  itemHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  itemIndex: { fontWeight: '800', color: colors.text },
+  itemConf: { fontSize: 11, color: colors.success, fontWeight: '600' },
+  fieldLabel: { fontSize: 11, color: colors.textSecondary, marginTop: 4, marginBottom: 2 },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 6, padding: 8, fontSize: 13, color: colors.text, backgroundColor: colors.bgSecondary },
   row3: { flexDirection: 'row', gap: 8 },
-  lineTotal: { textAlign: 'right', marginTop: spacing.sm, fontSize: typography.size.sm, fontWeight: typography.weight.semibold, color: colors.primary },
-  totalCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.primaryLight, padding: spacing.base, borderRadius: radius.base, marginTop: spacing.md },
-  totalLabel: { fontWeight: typography.weight.bold, color: colors.primaryDark },
-  totalValue: { fontSize: typography.size.lg, fontWeight: typography.weight.bold, color: colors.primaryDark },
-  footer: { flexDirection: 'row', gap: 8, padding: spacing.base, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
+  lineTotal: { textAlign: 'right', marginTop: 8, fontSize: 13, fontWeight: '600', color: colors.primary },
+  totalCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.primaryLight, padding: 16, borderRadius: 12, marginTop: 12 },
+  totalLabel: { fontWeight: '800', color: colors.primaryDark },
+  totalValue: { fontSize: 17, fontWeight: '800', color: colors.primaryDark },
+  footer: { flexDirection: 'row', gap: 8, padding: 16, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
 });

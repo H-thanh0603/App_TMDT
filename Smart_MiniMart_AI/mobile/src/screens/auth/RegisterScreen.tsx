@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button } from '@/components/Button';
 import { useAuthStore } from '@/store/auth.store';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors } from '@/theme/colors';
 import type { AuthStackParamList } from '@/navigation/AuthNavigator';
 
 export function RegisterScreen() {
@@ -43,7 +43,7 @@ export function RegisterScreen() {
           <Text style={styles.title}>Tạo tài khoản</Text>
           <Text style={styles.subtitle}>Mua sắm tiện hơn với tài khoản Smart MiniMart</Text>
 
-          <View style={{ marginTop: spacing.lg }}>
+          <View style={{ marginTop: 20 }}>
             {fields.map((f) => (
               <View key={f.key}>
                 <Text style={styles.label}>{f.label}</Text>
@@ -62,10 +62,10 @@ export function RegisterScreen() {
           </View>
 
           <Button title="Đăng ký" onPress={handleRegister} loading={loading} fullWidth
-            style={{ marginTop: spacing.lg }} />
+            style={{ marginTop: 20 }} />
 
           <TouchableOpacity onPress={() => nav.goBack()}
-            style={{ marginTop: spacing.lg, alignItems: 'center' }}>
+            style={{ marginTop: 20, alignItems: 'center' }}>
             <Text style={styles.linkText}>
               Đã có tài khoản? <Text style={{ color: colors.primary, fontWeight: '600' }}>Đăng nhập</Text>
             </Text>
@@ -78,14 +78,14 @@ export function RegisterScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: spacing.lg, paddingTop: spacing['2xl'] },
-  title: { fontSize: typography.size['2xl'], fontWeight: typography.weight.bold, color: colors.text },
-  subtitle: { fontSize: typography.size.sm, color: colors.textSecondary, marginTop: spacing.xs },
-  label: { fontSize: typography.size.sm, color: colors.textSecondary, marginTop: spacing.md, fontWeight: typography.weight.medium },
+  scroll: { padding: 20, paddingTop: 32 },
+  title: { fontSize: 24, fontWeight: '800', color: colors.text },
+  subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 4 },
+  label: { fontSize: 13, color: colors.textSecondary, marginTop: 12, fontWeight: '500' },
   input: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.base,
-    padding: spacing.md, fontSize: typography.size.base, color: colors.text,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 12,
+    padding: 12, fontSize: 14, color: colors.text,
     backgroundColor: colors.surface,
   },
-  linkText: { color: colors.textSecondary, fontSize: typography.size.sm },
+  linkText: { color: colors.textSecondary, fontSize: 13 },
 });

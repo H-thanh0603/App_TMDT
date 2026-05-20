@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import {
+  Alert, Image, ScrollView, StyleSheet, Text, View, Pressable,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { Button } from '@/components/Button';
 import { useScanReceipt } from '@/services/queries';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors } from '@/theme/colors';
 
 const SAMPLE_IMAGES = [
   { label: 'Phiếu mẫu 1 (rõ nét)', url: 'https://placehold.co/600x800/png?text=Phieu+nhap+1' },
@@ -69,16 +71,16 @@ export function OCRScanScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
         <Text style={styles.label}>OCR Engine</Text>
         <View style={styles.engineRow}>
           {ENGINES.map((e) => (
-            <TouchableOpacity key={e.value} onPress={() => setEngine(e.value)}
+            <Pressable key={e.value} onPress={() => setEngine(e.value)}
               style={[styles.engineChip, engine === e.value && styles.engineChipActive]}>
               <Text style={[styles.engineText, engine === e.value && styles.engineTextActive]}>
                 {e.label}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           ))}
         </View>
 
@@ -92,24 +94,28 @@ export function OCRScanScreen() {
           </View>
         )}
 
-        <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
-          <Button title="📷 Chụp ảnh" onPress={takePhoto} variant="outline" style={{ flex: 1 }} />
-          <Button title="📁 Tải lên" onPress={pickFromGallery} variant="outline" style={{ flex: 1 }} />
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+          <Pressable style={[styles.outlineBtn, { flex: 1 }]} onPress={takePhoto}><Text style={styles.outlineBtnText}>📷 Chụp ảnh</Text></Pressable>
+          <Pressable style={[styles.outlineBtn, { flex: 1 }]} onPress={pickFromGallery}><Text style={styles.outlineBtnText}>📁 Tải lên</Text></Pressable>
         </View>
 
-        <Button title={scan.isPending ? 'Đang xử lý...' : '🔍 Quét OCR'}
-          onPress={() => handleScan()} loading={scan.isPending}
-          disabled={!imageUri} fullWidth style={{ marginTop: spacing.md }} />
+        <Pressable
+          style={[styles.scanBtn, !imageUri && { opacity: 0.5 }]}
+          onPress={() => handleScan()}
+          disabled={!imageUri || scan.isPending}
+        >
+          {scan.isPending ? <ActivityIndicator color="white" /> : <Text style={styles.scanBtnText}>🔍 Quét OCR</Text>}
+        </Pressable>
 
         <View style={styles.divider} />
 
         <Text style={styles.label}>Hoặc dùng ảnh mẫu (demo)</Text>
         {SAMPLE_IMAGES.map((s) => (
-          <TouchableOpacity key={s.url} style={styles.sampleItem}
+          <Pressable key={s.url} style={styles.sampleItem}
             onPress={() => handleScan(s.url)}>
             <Text style={styles.sampleLabel}>📋 {s.label}</Text>
             <Text style={styles.sampleArrow}>→</Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -118,17 +124,27 @@ export function OCRScanScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
-  label: { fontSize: typography.size.sm, fontWeight: typography.weight.semibold, color: colors.text, marginBottom: spacing.sm, marginTop: spacing.md },
+  label: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 8, marginTop: 12 },
   engineRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  engineChip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  engineChip: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 9999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   engineChipActive: { backgroundColor: colors.roleStaff, borderColor: colors.roleStaff },
-  engineText: { fontSize: typography.size.xs, color: colors.text },
-  engineTextActive: { color: '#fff', fontWeight: typography.weight.semibold },
-  preview: { width: '100%', aspectRatio: 3/4, borderRadius: radius.base, backgroundColor: colors.bgSecondary },
-  placeholder: { aspectRatio: 3/4, backgroundColor: colors.surface, borderRadius: radius.base, borderWidth: 2, borderColor: colors.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
-  placeholderText: { color: colors.textSecondary, marginTop: spacing.sm },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.lg },
-  sampleItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.surface, padding: spacing.base, borderRadius: radius.base, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border },
-  sampleLabel: { fontSize: typography.size.sm, color: colors.text },
+  engineText: { fontSize: 11, color: colors.text },
+  engineTextActive: { color: '#fff', fontWeight: '600' },
+  preview: { width: '100%', aspectRatio: 3/4, borderRadius: 12, backgroundColor: colors.bgSecondary },
+  placeholder: { aspectRatio: 3/4, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 2, borderColor: colors.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  placeholderText: { color: colors.textSecondary, marginTop: 8 },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: 20 },
+  sampleItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.surface, padding: 16, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: colors.border },
+  sampleLabel: { fontSize: 13, color: colors.text },
   sampleArrow: { fontSize: 20, color: colors.primary, fontWeight: 'bold' },
+  outlineBtn: {
+    paddingVertical: 12, alignItems: 'center', borderRadius: 10,
+    backgroundColor: 'white', borderWidth: 1.5, borderColor: colors.primary,
+  },
+  outlineBtnText: { color: colors.primary, fontWeight: '700', fontSize: 14 },
+  scanBtn: {
+    backgroundColor: colors.primary, padding: 14, borderRadius: 12,
+    alignItems: 'center', marginTop: 12,
+  },
+  scanBtnText: { color: 'white', fontWeight: '800', fontSize: 15 },
 });

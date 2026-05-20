@@ -1,9 +1,12 @@
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import {
+  ActivityIndicator, FlatList, StyleSheet, Text, View, Pressable,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useImportReceipts } from '@/services/queries';
-import { Button } from '@/components/Button';
-import { colors, radius, spacing, typography } from '@/theme';
+import { Badge } from '@/components/Badge';
+import { colors } from '@/theme/colors';
 import { formatDateTime, formatVnd } from '@/utils/format';
 
 const STATUS_COLOR: Record<string, string> = {
@@ -33,7 +36,9 @@ export function ImportReceiptsScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Nhập hàng</Text>
-        <Button title="📷 Quét phiếu" size="sm" onPress={() => nav.navigate('OCRScan')} />
+        <Pressable style={styles.scanBtn} onPress={() => nav.navigate('OCRScan')}>
+          <Text style={styles.scanBtnText}>📷 Quét phiếu</Text>
+        </Pressable>
       </View>
 
       {isLoading ? (
@@ -42,9 +47,9 @@ export function ImportReceiptsScreen() {
         <FlatList
           data={items}
           keyExtractor={(r) => r.id}
-          contentContainerStyle={{ padding: spacing.lg }}
+          contentContainerStyle={{ padding: 20 }}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.card}
+            <Pressable style={styles.card}
               onPress={() => nav.navigate('ReceiptDetail', { id: item.id })}>
               <View style={styles.row}>
                 <Text style={styles.receiptNumber}>{item.receiptNumber}</Text>
@@ -60,7 +65,7 @@ export function ImportReceiptsScreen() {
                 </Text>
                 <Text style={styles.total}>{formatVnd(Number(item.totalAmount ?? 0))}</Text>
               </View>
-            </TouchableOpacity>
+            </Pressable>
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
@@ -78,17 +83,19 @@ export function ImportReceiptsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.lg },
-  title: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.text },
-  card: { backgroundColor: colors.surface, borderRadius: radius.base, padding: spacing.base, marginBottom: spacing.md },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20 },
+  title: { fontSize: 20, fontWeight: '800', color: colors.text },
+  card: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
-  receiptNumber: { fontWeight: typography.weight.bold, color: colors.text },
-  status: { fontSize: typography.size.xs, fontWeight: typography.weight.semibold },
-  supplier: { fontSize: typography.size.sm, color: colors.text, marginTop: 4 },
-  date: { fontSize: typography.size.xs, color: colors.textTertiary, marginTop: 2 },
-  itemCount: { fontSize: typography.size.sm, color: colors.textSecondary },
-  total: { fontWeight: typography.weight.bold, color: colors.primary },
-  empty: { alignItems: 'center', paddingTop: spacing['2xl'] },
-  emptyText: { color: colors.text, marginTop: spacing.md, fontSize: typography.size.base, fontWeight: typography.weight.semibold },
-  emptyHint: { color: colors.textSecondary, marginTop: spacing.xs, fontSize: typography.size.sm },
+  receiptNumber: { fontWeight: '800', color: colors.text },
+  status: { fontSize: 11, fontWeight: '600' },
+  supplier: { fontSize: 13, color: colors.text, marginTop: 4 },
+  date: { fontSize: 11, color: colors.textTertiary, marginTop: 2 },
+  itemCount: { fontSize: 13, color: colors.textSecondary },
+  total: { fontWeight: '800', color: colors.primary },
+  empty: { alignItems: 'center', paddingTop: 32 },
+  emptyText: { color: colors.text, marginTop: 12, fontSize: 14, fontWeight: '600' },
+  emptyHint: { color: colors.textSecondary, marginTop: 4, fontSize: 13 },
+  scanBtn: { backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+  scanBtnText: { color: 'white', fontWeight: '700', fontSize: 13 },
 });

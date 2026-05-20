@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/store/auth.store';
 import { useExpiringProducts, useSlowMoving } from '@/services/queries';
 import { Button } from '@/components/Button';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors } from '@/theme/colors';
 
 export function StaffProfileScreen() {
   const { user, logout } = useAuthStore();
@@ -24,7 +24,7 @@ export function StaffProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing['2xl'] }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
         <View style={styles.header}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{user?.fullName.charAt(0).toUpperCase()}</Text>
@@ -60,7 +60,7 @@ export function StaffProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
+        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
           <Button title="Đăng xuất" onPress={handleLogout} variant="outline" fullWidth />
         </View>
       </ScrollView>
@@ -70,20 +70,20 @@ export function StaffProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
-  header: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, gap: spacing.md, backgroundColor: colors.surface },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 12, backgroundColor: colors.surface },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.roleStaff, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
-  name: { fontSize: typography.size.lg, fontWeight: typography.weight.bold, color: colors.text },
-  role: { color: colors.roleStaff, fontWeight: typography.weight.semibold, fontSize: typography.size.xs, marginTop: 2 },
-  email: { color: colors.textSecondary, fontSize: typography.size.sm, marginTop: 2 },
-  sectionTitle: { fontSize: typography.size.base, fontWeight: typography.weight.bold, color: colors.text, marginHorizontal: spacing.lg, marginTop: spacing.lg, marginBottom: spacing.sm },
-  alertGrid: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg },
-  alertCard: { flex: 1, padding: spacing.base, borderRadius: radius.base, alignItems: 'center' },
-  alertNumber: { fontSize: typography.size['2xl'], fontWeight: typography.weight.bold },
-  alertLabel: { fontSize: typography.size.xs, color: colors.text, textAlign: 'center', marginTop: 4 },
-  menu: { marginTop: spacing.lg, backgroundColor: colors.surface },
-  menuItem: { flexDirection: 'row', alignItems: 'center', padding: spacing.base, borderBottomWidth: 1, borderBottomColor: colors.divider },
-  menuIcon: { fontSize: 22, marginRight: spacing.md },
-  menuText: { flex: 1, fontSize: typography.size.base, color: colors.text },
+  name: { fontSize: 17, fontWeight: '800', color: colors.text },
+  role: { color: colors.roleStaff, fontWeight: '600', fontSize: 11, marginTop: 2 },
+  email: { color: colors.textSecondary, fontSize: 13, marginTop: 2 },
+  sectionTitle: { fontSize: 14, fontWeight: '800', color: colors.text, marginHorizontal: 20, marginTop: 20, marginBottom: 8 },
+  alertGrid: { flexDirection: 'row', gap: 8, paddingHorizontal: 20 },
+  alertCard: { flex: 1, padding: 16, borderRadius: 12, alignItems: 'center' },
+  alertNumber: { fontSize: 24, fontWeight: '800' },
+  alertLabel: { fontSize: 11, color: colors.text, textAlign: 'center', marginTop: 4 },
+  menu: { marginTop: 20, backgroundColor: colors.surface },
+  menuItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.divider },
+  menuIcon: { fontSize: 22, marginRight: 12 },
+  menuText: { flex: 1, fontSize: 14, color: colors.text },
   menuArrow: { fontSize: 22, color: colors.textTertiary },
 });
