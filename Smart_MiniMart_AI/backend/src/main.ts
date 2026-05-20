@@ -33,8 +33,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup(`${prefix}/docs`, app, document);
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   Logger.log(`🚀 Smart MiniMart API → http://localhost:${port}/${prefix}`, 'Bootstrap');
+  Logger.log(`🌐 LAN access     → http://192.168.x.x:${port}/${prefix} (mobile)`, 'Bootstrap');
   Logger.log(`📚 Swagger        → http://localhost:${port}/${prefix}/docs`, 'Bootstrap');
 }
 

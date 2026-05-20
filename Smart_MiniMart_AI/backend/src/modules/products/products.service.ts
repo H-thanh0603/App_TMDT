@@ -96,10 +96,14 @@ export class ProductsService {
     const cat = await this.prisma.category.findUnique({ where: { id: dto.categoryId } });
     if (!cat) throw new NotFoundException('Danh mục không tồn tại');
 
+    const { attributes, ...rest } = dto;
     return this.prisma.product.create({
       data: {
-        ...dto,
+        ...rest,
         expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : null,
+        ...(attributes !== undefined && {
+          attributes: attributes as Prisma.InputJsonValue,
+        }),
       },
     });
   }
@@ -108,11 +112,15 @@ export class ProductsService {
     const product = await this.prisma.product.findUnique({ where: { id } });
     if (!product) throw new NotFoundException('Sản phẩm không tồn tại');
 
+    const { attributes, ...rest } = dto;
     return this.prisma.product.update({
       where: { id },
       data: {
-        ...dto,
+        ...rest,
         expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : undefined,
+        ...(attributes !== undefined && {
+          attributes: attributes as Prisma.InputJsonValue,
+        }),
       },
     });
   }

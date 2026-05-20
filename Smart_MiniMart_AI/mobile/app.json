@@ -5,9 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "smartminimart",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "cover",
@@ -29,21 +28,6 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#10B981",
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 220
-        }
-      ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "smart-minimart-ai-demo"
-      }
     }
   }
 }

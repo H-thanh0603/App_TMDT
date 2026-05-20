@@ -85,7 +85,11 @@ export class AIGatewayService {
       model: result.model,
       mode,
       latencyMs: Date.now() - start,
-      tokensUsed: result.usage,
+      tokensUsed: result.usage ? {
+        prompt: result.usage.promptTokens,
+        completion: result.usage.completionTokens,
+        total: result.usage.totalTokens,
+      } : undefined,
       costUsd: 0,
       error: errorMsg,
     };
@@ -107,7 +111,11 @@ export class AIGatewayService {
       model: result.model,
       mode,
       latencyMs: Date.now() - start,
-      tokensUsed: result.usage,
+      tokensUsed: result.usage ? {
+        prompt: result.usage.promptTokens,
+        completion: result.usage.completionTokens,
+        total: result.usage.totalTokens,
+      } : undefined,
       costUsd: result.costUsd,
     };
   }
@@ -148,13 +156,14 @@ export class AIGatewayService {
   }
 
   private shouldUseJsonMode(taskType: AITaskType): boolean {
-    return [
+    const jsonTasks: AITaskType[] = [
       AITaskType.AI_SEARCH,
       AITaskType.OCR_PARSE,
       AITaskType.ANALYTICS_SLOWMOVING,
       AITaskType.PROMOTION_SUGGEST,
       AITaskType.RESTOCK_SUGGEST,
-    ].includes(taskType);
+    ];
+    return jsonTasks.includes(taskType);
   }
 
   private tryParseJson(text: string): any {
