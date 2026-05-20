@@ -1,11 +1,19 @@
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useExpiringProducts, useSlowMoving, useRestockSuggestions, useAllOrders } from '@/services/queries';
+import { useNavigation } from '@react-navigation/native';
+import {
+  useExpiringProducts, useSlowMoving, useRestockSuggestions, useAllOrders,
+} from '@/services/queries';
 import { useAuthStore } from '@/store/auth.store';
-import { colors, radius, spacing, typography } from '@/theme';
+import { Card } from '@/components/Card';
+import { Badge } from '@/components/Badge';
+import { StatCard } from '@/components/StatCard';
+import { colors } from '@/theme/colors';
 import { formatVnd } from '@/utils/format';
 
 export function AdminDashboardScreen() {
+  const nav = useNavigation<any>();
   const { user } = useAuthStore();
   const { data: orders } = useAllOrders({ limit: 100 });
   const { data: expiring = [] } = useExpiringProducts(30);
@@ -13,8 +21,7 @@ export function AdminDashboardScreen() {
   const { data: restock = [] } = useRestockSuggestions();
 
   const orderItems = orders?.items ?? [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
 
   const todayOrders = orderItems.filter((o: any) =>
     new Date(o.createdAt).getTime() >= today.getTime());
@@ -23,105 +30,236 @@ export function AdminDashboardScreen() {
     .filter((o: any) => o.status !== 'CANCELED')
     .reduce((s: number, o: any) => s + Number(o.totalAmount), 0);
   const totalRevenue = completedOrders.reduce((s: number, o: any) => s + Number(o.totalAmount), 0);
+  const pendingOrders = orderItems.filter((o: any) => o.status === 'PENDING').length;
 
   const critical = expiring.filter((p: any) => p.alertTier === 'CRITICAL').length;
   const urgentRestock = restock.filter((p: any) => p.urgency === 'HIGH').length;
+  const totalAlerts = critical + urgentRestock + slow.length;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing['2xl'] }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
+        {/* Header gradient */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>Xin chào, {user?.fullName.split(' ').pop()}</Text>
-          <Text style={styles.subtitle}>Tổng quan cửa hàng hôm nay</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.greeting}>Xin chào,</Text>
+            <Text style={styles.userName}>{user?.fullName?.split(' ').pop() ?? 'Quản lý'} 👋</Text>
+            <Text style={styles.subtitle}>Tổng quan hôm nay</Text>
+          </View>
+          <Pressable style={styles.notifBtn} onPress={() => nav.navigate('Notifications')}>
+            <Text style={styles.notifIcon}>🔔</Text>
+            {totalAlerts > 0 && (
+              <View style={styles.notifDot}>
+                <Text style={styles.notifDotText}>{totalAlerts}</Text>
+              </View>
+            )}
+          </Pressable>
         </View>
 
+        {/* KPI Grid 2x2 with StatCard */}
         <View style={styles.kpiGrid}>
-          <View style={[styles.kpi, { backgroundColor: colors.primaryLight }]}>
-            <Text style={styles.kpiLabel}>Doanh thu hôm nay</Text>
-            <Text style={[styles.kpiValue, { color: colors.primaryDark }]}>{formatVnd(todayRevenue)}</Text>
+          <View style={styles.kpiRow}>
+            <StatCard
+              label="Doanh thu hôm nay"
+              value={formatVnd(todayRevenue)}
+              icon="₫"
+              variant="primary"
+              style={{ marginRight: 6 }}
+            />
+            <StatCard
+              label="Đơn hôm nay"
+              value={todayOrders.length}
+              icon="🛒"
+              variant="info"
+              style={{ marginLeft: 6 }}
+            />
           </View>
-          <View style={[styles.kpi, { backgroundColor: '#DBEAFE' }]}>
-            <Text style={styles.kpiLabel}>Đơn hôm nay</Text>
-            <Text style={[styles.kpiValue, { color: colors.info }]}>{todayOrders.length}</Text>
-          </View>
-          <View style={[styles.kpi, { backgroundColor: '#FCE7F3' }]}>
-            <Text style={styles.kpiLabel}>Tổng doanh thu</Text>
-            <Text style={[styles.kpiValue, { color: '#BE185D', fontSize: typography.size.lg }]}>
-              {formatVnd(totalRevenue)}
-            </Text>
-          </View>
-          <View style={[styles.kpi, { backgroundColor: '#F3E8FF' }]}>
-            <Text style={styles.kpiLabel}>Tổng đơn</Text>
-            <Text style={[styles.kpiValue, { color: colors.roleAdmin }]}>{orderItems.length}</Text>
-          </View>
-        </View>
-
-        <Text style={styles.sectionTitle}>Cảnh báo cần xử lý</Text>
-
-        <View style={styles.alertCard}>
-          <View style={styles.alertRow}>
-            <Text style={styles.alertEmoji}>⚠️</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.alertTitle}>Hàng sắp hết hạn (≤7 ngày)</Text>
-              <Text style={styles.alertDesc}>{critical} sản phẩm cần xử lý ngay</Text>
-            </View>
-            <Text style={[styles.alertBadge, { backgroundColor: colors.danger }]}>{critical}</Text>
-          </View>
-
-          <View style={styles.alertRow}>
-            <Text style={styles.alertEmoji}>📉</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.alertTitle}>Hàng bán chậm (30 ngày)</Text>
-              <Text style={styles.alertDesc}>Tồn kho cao, doanh số thấp</Text>
-            </View>
-            <Text style={[styles.alertBadge, { backgroundColor: colors.info }]}>{slow.length}</Text>
-          </View>
-
-          <View style={[styles.alertRow, { borderBottomWidth: 0 }]}>
-            <Text style={styles.alertEmoji}>📥</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.alertTitle}>Cần nhập hàng gấp</Text>
-              <Text style={styles.alertDesc}>{urgentRestock} sản phẩm sắp hết kho</Text>
-            </View>
-            <Text style={[styles.alertBadge, { backgroundColor: colors.warning }]}>{urgentRestock}</Text>
+          <View style={styles.kpiRow}>
+            <StatCard
+              label="Tổng doanh thu"
+              value={formatVnd(totalRevenue)}
+              icon="📈"
+              variant="ai"
+              style={{ marginRight: 6 }}
+            />
+            <StatCard
+              label="Tổng đơn"
+              value={orderItems.length}
+              icon="📦"
+              variant="gold"
+              style={{ marginLeft: 6 }}
+            />
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Hàng cận date — đề xuất giảm giá</Text>
-        {expiring.slice(0, 5).map((p: any) => (
-          <View key={p.id} style={styles.itemRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemName} numberOfLines={1}>{p.name}</Text>
-              <Text style={styles.itemMeta}>Còn {p.daysToExpire} ngày • Tồn: {p.stock}</Text>
-            </View>
-            <Text style={[styles.tierBadge, p.alertTier === 'CRITICAL' && { backgroundColor: colors.danger, color: '#fff' }]}>
-              {p.alertTier}
-            </Text>
+        {/* Quick actions */}
+        <Text style={styles.sectionTitle}>Truy cập nhanh</Text>
+        <View style={styles.quickGrid}>
+          <QuickAction icon="📁" label="Danh mục" color={colors.primary} onPress={() => nav.navigate('Categories')} />
+          <QuickAction icon="🎁" label="KM/Voucher" color={colors.ai} onPress={() => nav.navigate('Promotions')} />
+          <QuickAction icon="📋" label="Kho hàng" color={colors.warning} onPress={() => nav.navigate('Inventory')} />
+          <QuickAction icon="👥" label="Nhân viên" color={colors.info} onPress={() => nav.navigate('Users')} />
+        </View>
+
+        {/* Alerts */}
+        <View style={styles.alertHeader}>
+          <Text style={styles.sectionTitle}>Cảnh báo cần xử lý</Text>
+          {totalAlerts > 0 && <Badge label={`${totalAlerts}`} variant="danger" size="md" />}
+        </View>
+
+        <View style={{ paddingHorizontal: 16, gap: 10 }}>
+          {critical > 0 && (
+            <Card variant="elevated" padding={14}>
+              <View style={styles.alertRow}>
+                <View style={[styles.alertIcon, { backgroundColor: '#FEE2E2' }]}>
+                  <Text style={styles.alertEmoji}>⏰</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.alertTitle}>Sắp hết hạn</Text>
+                    <Badge label="GẤP" variant="danger" />
+                  </View>
+                  <Text style={styles.alertDesc}>{critical} sản phẩm cần xử lý ngay</Text>
+                </View>
+                <Pressable onPress={() => nav.navigate('Inventory')}>
+                  <Text style={styles.alertGo}>›</Text>
+                </Pressable>
+              </View>
+            </Card>
+          )}
+
+          {urgentRestock > 0 && (
+            <Card variant="elevated" padding={14}>
+              <View style={styles.alertRow}>
+                <View style={[styles.alertIcon, { backgroundColor: colors.aiSoft }]}>
+                  <Text style={styles.alertEmoji}>📥</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.alertTitle}>Cần nhập hàng</Text>
+                    <Badge label="HIGH" variant="ai" />
+                  </View>
+                  <Text style={styles.alertDesc}>{urgentRestock} SP sắp hết kho</Text>
+                </View>
+                <Pressable onPress={() => nav.navigate('Inventory')}>
+                  <Text style={styles.alertGo}>›</Text>
+                </Pressable>
+              </View>
+            </Card>
+          )}
+
+          {slow.length > 0 && (
+            <Card variant="elevated" padding={14}>
+              <View style={styles.alertRow}>
+                <View style={[styles.alertIcon, { backgroundColor: colors.goldSoft }]}>
+                  <Text style={styles.alertEmoji}>🐢</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.alertTitle}>Bán chậm</Text>
+                    <Badge label="AI" variant="gold" />
+                  </View>
+                  <Text style={styles.alertDesc}>{slow.length} SP cần KM</Text>
+                </View>
+                <Pressable onPress={() => nav.navigate('Promotions')}>
+                  <Text style={styles.alertGo}>›</Text>
+                </Pressable>
+              </View>
+            </Card>
+          )}
+
+          {totalAlerts === 0 && (
+            <Card variant="outlined" padding={20}>
+              <Text style={styles.emptyAlertText}>✨ Mọi thứ đang ổn, không có cảnh báo!</Text>
+            </Card>
+          )}
+        </View>
+
+        {/* Pending orders quick summary */}
+        {pendingOrders > 0 && (
+          <View style={{ padding: 16 }}>
+            <Pressable
+              style={styles.pendingCard}
+              onPress={() => nav.navigate('Orders')}
+            >
+              <Text style={styles.pendingTitle}>{pendingOrders} đơn chờ xác nhận</Text>
+              <Text style={styles.pendingSub}>Bấm để xử lý ngay →</Text>
+            </Pressable>
           </View>
-        ))}
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+function QuickAction({ icon, label, color, onPress }: any) {
+  return (
+    <Pressable style={styles.quickItem} onPress={onPress}>
+      <View style={[styles.quickIconBg, { backgroundColor: color + '20' }]}>
+        <Text style={styles.quickEmoji}>{icon}</Text>
+      </View>
+      <Text style={styles.quickLabel}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bgSecondary },
-  header: { padding: spacing.lg, paddingBottom: spacing.sm },
-  greeting: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.text },
-  subtitle: { fontSize: typography.size.sm, color: colors.textSecondary, marginTop: 2 },
-  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.lg, gap: spacing.sm },
-  kpi: { width: '48%', padding: spacing.base, borderRadius: radius.base },
-  kpiLabel: { fontSize: typography.size.xs, color: colors.textSecondary },
-  kpiValue: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, marginTop: 4 },
-  sectionTitle: { fontSize: typography.size.base, fontWeight: typography.weight.bold, color: colors.text, marginHorizontal: spacing.lg, marginTop: spacing.lg, marginBottom: spacing.sm },
-  alertCard: { backgroundColor: colors.surface, marginHorizontal: spacing.lg, borderRadius: radius.base },
-  alertRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.base, borderBottomWidth: 1, borderBottomColor: colors.divider },
-  alertEmoji: { fontSize: 28, marginRight: spacing.md },
-  alertTitle: { fontSize: typography.size.sm, fontWeight: typography.weight.semibold, color: colors.text },
-  alertDesc: { fontSize: typography.size.xs, color: colors.textSecondary, marginTop: 2 },
-  alertBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.full, color: '#fff', fontWeight: 'bold', fontSize: typography.size.xs, minWidth: 32, textAlign: 'center' },
-  itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, padding: spacing.base, marginHorizontal: spacing.lg, marginBottom: spacing.xs, borderRadius: radius.sm },
-  itemName: { fontSize: typography.size.sm, color: colors.text, fontWeight: typography.weight.semibold },
-  itemMeta: { fontSize: typography.size.xs, color: colors.textSecondary, marginTop: 2 },
-  tierBadge: { fontSize: typography.size.xs, fontWeight: 'bold', backgroundColor: colors.bgSecondary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, color: colors.text },
+  container: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24,
+    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
+  },
+  greeting: { color: 'rgba(255,255,255,0.85)', fontSize: 14 },
+  userName: { color: 'white', fontSize: 22, fontWeight: '800', marginTop: 2 },
+  subtitle: { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 4 },
+  notifBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  notifIcon: { fontSize: 22 },
+  notifDot: {
+    position: 'absolute', top: 6, right: 6,
+    minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9,
+    backgroundColor: colors.danger,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  notifDotText: { color: 'white', fontSize: 10, fontWeight: '800' },
+  kpiGrid: { padding: 12, marginTop: -16 },
+  kpiRow: { flexDirection: 'row', marginBottom: 12 },
+  sectionTitle: {
+    fontSize: 16, fontWeight: '800', color: colors.text,
+    marginHorizontal: 16, marginTop: 12, marginBottom: 12,
+  },
+  quickGrid: { flexDirection: 'row', paddingHorizontal: 12, gap: 8, marginBottom: 8 },
+  quickItem: { flex: 1, alignItems: 'center' },
+  quickIconBg: {
+    width: 56, height: 56, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 6,
+  },
+  quickEmoji: { fontSize: 26 },
+  quickLabel: { fontSize: 12, color: colors.text, fontWeight: '600' },
+  alertHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 16, marginTop: 12, marginBottom: 12,
+  },
+  alertRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  alertIcon: {
+    width: 44, height: 44, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  alertEmoji: { fontSize: 22 },
+  alertTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
+  alertDesc: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  alertGo: { fontSize: 24, color: colors.primary, fontWeight: '700' },
+  emptyAlertText: { textAlign: 'center', color: colors.textMuted, fontSize: 14 },
+  pendingCard: {
+    backgroundColor: colors.aiSoft, padding: 16,
+    borderRadius: 12, alignItems: 'center',
+    borderLeftWidth: 4, borderLeftColor: colors.ai,
+  },
+  pendingTitle: { fontSize: 15, fontWeight: '800', color: colors.aiDark },
+  pendingSub: { fontSize: 12, color: colors.aiDark, marginTop: 4 },
 });
