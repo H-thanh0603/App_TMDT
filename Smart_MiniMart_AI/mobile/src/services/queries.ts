@@ -387,3 +387,11 @@ export function useCreateVnpay() {
       ),
   });
 }
+
+// ===== Active Promos (public) =====
+export function useActivePromos() {
+  return useQuery({
+    queryKey: ['promos-active'],
+    queryFn: async () => unwrap<any[]>(await api.get('/promotions/active')),
+  });
+}

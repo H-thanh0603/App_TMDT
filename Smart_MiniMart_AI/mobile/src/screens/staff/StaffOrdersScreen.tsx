@@ -1,17 +1,23 @@
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import {
+  ActivityIndicator, FlatList, StyleSheet, Text, View, Pressable, Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
 import { useAllOrders, useUpdateOrderStatus } from '@/services/queries';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useAuthStore } from '@/store/auth.store';
+import { Card } from '@/components/Card';
+import { Badge } from '@/components/Badge';
+import { StatCard } from '@/components/StatCard';
+import { colors } from '@/theme/colors';
 import { formatDateTime, formatVnd, statusLabel } from '@/utils/format';
 import type { OrderStatus } from '@/types';
 
-const FILTERS: Array<{ label: string; value?: OrderStatus }> = [
-  { label: 'Tất cả' },
-  { label: 'Chờ xác nhận', value: 'PENDING' },
-  { label: 'Đã xác nhận', value: 'CONFIRMED' },
-  { label: 'Đang chuẩn bị', value: 'PREPARING' },
-  { label: 'Đang giao', value: 'DELIVERING' },
+const FILTERS: Array<{ label: string; value?: OrderStatus; emoji: string }> = [
+  { label: 'Tất cả', emoji: '📋' },
+  { label: 'Chờ', value: 'PENDING', emoji: '⏳' },
+  { label: 'Xác nhận', value: 'CONFIRMED', emoji: '✓' },
+  { label: 'Chuẩn bị', value: 'PREPARING', emoji: '📦' },
+  { label: 'Đang giao', value: 'DELIVERING', emoji: '🚚' },
 ];
 
 const NEXT_STATUS: Record<OrderStatus, OrderStatus | null> = {
@@ -19,31 +25,113 @@ const NEXT_STATUS: Record<OrderStatus, OrderStatus | null> = {
   DELIVERING: 'COMPLETED', COMPLETED: null, CANCELED: null,
 };
 
+const STATUS_VARIANT: Record<string, any> = {
+  PENDING: 'warning', CONFIRMED: 'info', PREPARING: 'ai',
+  DELIVERING: 'gold', COMPLETED: 'success', CANCELED: 'danger',
+};
+
+const NEXT_LABEL: Record<string, string> = {
+  CONFIRMED: 'Xác nhận', PREPARING: 'Chuẩn bị',
+  DELIVERING: 'Giao hàng', COMPLETED: 'Hoàn tất',
+};
+
 export function StaffOrdersScreen() {
+  const { user } = useAuthStore();
   const [filter, setFilter] = useState<OrderStatus | undefined>('PENDING');
-  const { data, isLoading } = useAllOrders(filter ? { status: filter } : {});
+  const { data, isLoading, refetch, isFetching } = useAllOrders(filter ? { status: filter, limit: 100 } : { limit: 100 });
   const update = useUpdateOrderStatus();
   const items = data?.items ?? [];
 
+  // Stats from all data
+  const { data: allData } = useAllOrders({ limit: 100 });
+  const stats = useMemo(() => {
+    const all = allData?.items ?? [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const todayOrders = all.filter((o: any) =>
+      new Date(o.createdAt).getTime() >= today.getTime());
+    return {
+      pending: all.filter((o: any) => o.status === 'PENDING').length,
+      processing: all.filter((o: any) =>
+        ['CONFIRMED', 'PREPARING', 'DELIVERING'].includes(o.status)).length,
+      todayCount: todayOrders.length,
+    };
+  }, [allData]);
+
+  const advance = (orderId: string, currentStatus: OrderStatus) => {
+    const next = NEXT_STATUS[currentStatus];
+    if (!next) return;
+    Alert.alert(
+      'Cập nhật trạng thái',
+      `Chuyển sang "${NEXT_LABEL[next] || next}"?`,
+      [
+        { text: 'Hủy' },
+        {
+          text: 'OK',
+          onPress: async () => {
+            try {
+              await update.mutateAsync({ id: orderId, status: next });
+            } catch (e: any) {
+              Alert.alert('Lỗi', e?.response?.data?.message || 'Không thể cập nhật');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Đơn cần xử lý</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.greeting}>Xin chào,</Text>
+          <Text style={styles.userName}>{user?.fullName?.split(' ').pop() ?? 'Nhân viên'}</Text>
+        </View>
       </View>
 
+      {/* Stats grid */}
+      <View style={styles.statsRow}>
+        <StatCard
+          label="Chờ xử lý"
+          value={stats.pending}
+          icon="⏳"
+          variant="primary"
+          style={{ marginRight: 4 }}
+        />
+        <StatCard
+          label="Đang xử lý"
+          value={stats.processing}
+          icon="📦"
+          variant="info"
+          style={{ marginHorizontal: 4 }}
+        />
+        <StatCard
+          label="Hôm nay"
+          value={stats.todayCount}
+          icon="📅"
+          variant="ai"
+          style={{ marginLeft: 4 }}
+        />
+      </View>
+
+      {/* Filter chips */}
       <FlatList
         horizontal showsHorizontalScrollIndicator={false}
         data={FILTERS} keyExtractor={(f) => f.label}
-        contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: 8 }}
+        contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}
         style={{ maxHeight: 50 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => setFilter(item.value)}
-            style={[styles.chip, filter === item.value && styles.chipActive]}>
-            <Text style={[styles.chipText, filter === item.value && styles.chipTextActive]}>
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) => {
+          const active = filter === item.value;
+          return (
+            <Pressable
+              onPress={() => setFilter(item.value)}
+              style={[styles.chip, active && styles.chipActive]}
+            >
+              <Text style={[styles.chipEmoji, active && { color: 'white' }]}>{item.emoji}</Text>
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{item.label}</Text>
+            </Pressable>
+          );
+        }}
       />
 
       {isLoading ? (
@@ -51,42 +139,65 @@ export function StaffOrdersScreen() {
       ) : (
         <FlatList
           data={items}
-          keyExtractor={(o) => o.id}
-          contentContainerStyle={{ padding: spacing.lg }}
-          renderItem={({ item }) => {
-            const next = NEXT_STATUS[item.status];
+          keyExtractor={(o: any) => o.id}
+          contentContainerStyle={{ padding: 12 }}
+          onRefresh={refetch}
+          refreshing={isFetching && !isLoading}
+          renderItem={({ item: rawItem }) => {
+            const item = rawItem as any;
+            const next = NEXT_STATUS[item.status as OrderStatus];
+            const itemCount = item.items?.length ?? 0;
             return (
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.orderNumber}>#{item.orderNumber}</Text>
-                  <Text style={styles.status}>{statusLabel(item.status)}</Text>
+              <View style={styles.orderCard}>
+                <View style={styles.orderHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.orderNumber}>#{item.orderNumber}</Text>
+                    <Text style={styles.orderTime}>{formatDateTime(item.createdAt)}</Text>
+                  </View>
+                  <Badge
+                    label={statusLabel(item.status)}
+                    variant={STATUS_VARIANT[item.status] || 'default'}
+                    size="md"
+                  />
                 </View>
-                <Text style={styles.date}>{formatDateTime(item.createdAt)}</Text>
-                <Text style={styles.userInfo}>
-                  {(item as any).user?.fullName} • {(item as any).user?.email}
-                </Text>
-                <View style={styles.itemList}>
-                  {item.items.slice(0, 3).map((it: any) => (
-                    <Text key={it.id} style={styles.itemLine} numberOfLines={1}>
-                      • {it.productName} × {it.quantity}
+
+                <View style={styles.divider} />
+
+                <View style={styles.customerRow}>
+                  <View style={styles.customerIcon}>
+                    <Text style={{ fontSize: 16 }}>👤</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.customerName}>
+                      {item.customer?.fullName ?? item.shippingName ?? 'Khách'}
                     </Text>
-                  ))}
+                    <Text style={styles.customerPhone}>
+                      {item.customer?.phone ?? item.shippingPhone ?? ''}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.cardFooter}>
+
+                {item.shippingAddress && (
+                  <Text style={styles.address} numberOfLines={2}>
+                    📍 {item.shippingAddress}
+                  </Text>
+                )}
+
+                <View style={styles.summaryRow}>
+                  <Text style={styles.itemCount}>{itemCount} sản phẩm</Text>
                   <Text style={styles.total}>{formatVnd(Number(item.totalAmount))}</Text>
-                  {next && (
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                      <TouchableOpacity style={styles.cancelBtn}
-                        onPress={() => update.mutate({ id: item.id, status: 'CANCELED', reason: 'Hủy bởi nhân viên' })}>
-                        <Text style={styles.cancelText}>Hủy</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.nextBtn}
-                        onPress={() => update.mutate({ id: item.id, status: next })}>
-                        <Text style={styles.nextText}>→ {statusLabel(next)}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
                 </View>
+
+                {next && (
+                  <Pressable
+                    style={styles.actionBtn}
+                    onPress={() => advance(item.id, item.status)}
+                  >
+                    <Text style={styles.actionText}>
+                      → {NEXT_LABEL[next] || next}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             );
           }}
@@ -103,28 +214,63 @@ export function StaffOrdersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bgSecondary },
+  container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { padding: spacing.lg, paddingBottom: spacing.sm },
-  title: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.text },
-  chip: { paddingHorizontal: spacing.base, paddingVertical: spacing.xs, borderRadius: radius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  chipActive: { backgroundColor: colors.roleStaff, borderColor: colors.roleStaff },
-  chipText: { fontSize: typography.size.sm, color: colors.text },
-  chipTextActive: { color: '#fff', fontWeight: typography.weight.semibold },
-  card: { backgroundColor: colors.surface, borderRadius: radius.base, padding: spacing.base, marginBottom: spacing.md },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  orderNumber: { fontWeight: typography.weight.bold, color: colors.text },
-  status: { color: colors.roleStaff, fontWeight: typography.weight.semibold, fontSize: typography.size.sm },
-  date: { color: colors.textTertiary, fontSize: typography.size.xs, marginTop: 2 },
-  userInfo: { color: colors.textSecondary, fontSize: typography.size.sm, marginTop: spacing.xs },
-  itemList: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider },
-  itemLine: { fontSize: typography.size.sm, color: colors.textSecondary, marginBottom: 2 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider },
-  total: { fontWeight: typography.weight.bold, color: colors.primary, fontSize: typography.size.base },
-  cancelBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.danger },
-  cancelText: { color: colors.danger, fontSize: typography.size.sm, fontWeight: typography.weight.semibold },
-  nextBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.sm, backgroundColor: colors.roleStaff },
-  nextText: { color: '#fff', fontSize: typography.size.sm, fontWeight: typography.weight.semibold },
-  empty: { alignItems: 'center', paddingTop: spacing['2xl'] },
-  emptyText: { color: colors.textSecondary, marginTop: spacing.md },
+  header: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.roleStaff,
+    paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24,
+    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
+  },
+  greeting: { color: 'rgba(255,255,255,0.85)', fontSize: 13 },
+  userName: { color: 'white', fontSize: 22, fontWeight: '800', marginTop: 2 },
+  statsRow: {
+    flexDirection: 'row', paddingHorizontal: 12, marginTop: -16, marginBottom: 8,
+  },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 18, backgroundColor: colors.bgAlt, height: 36,
+  },
+  chipActive: { backgroundColor: colors.primary },
+  chipEmoji: { fontSize: 14 },
+  chipText: { color: colors.text, fontWeight: '700', fontSize: 12 },
+  chipTextActive: { color: 'white' },
+  orderCard: {
+    backgroundColor: 'white', borderRadius: 14, padding: 14,
+    marginBottom: 10,
+    shadowColor: colors.shadow, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+  },
+  orderHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+  },
+  orderNumber: { fontSize: 15, fontWeight: '800', color: colors.text },
+  orderTime: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  divider: { height: 1, backgroundColor: colors.borderLight, marginVertical: 10 },
+  customerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  customerIcon: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: colors.aiSoft,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  customerName: { fontSize: 14, fontWeight: '700', color: colors.text },
+  customerPhone: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  address: {
+    fontSize: 12, color: colors.textSecondary,
+    marginTop: 8, lineHeight: 16,
+    backgroundColor: colors.bgAlt, padding: 8, borderRadius: 8,
+  },
+  summaryRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginTop: 10,
+  },
+  itemCount: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
+  total: { fontSize: 17, fontWeight: '800', color: colors.primary },
+  actionBtn: {
+    backgroundColor: colors.primary, marginTop: 12,
+    padding: 12, borderRadius: 10, alignItems: 'center',
+  },
+  actionText: { color: 'white', fontWeight: '800', fontSize: 14 },
+  empty: { alignItems: 'center', paddingTop: 60 },
+  emptyText: { color: colors.textMuted, marginTop: 12, fontSize: 14 },
 });

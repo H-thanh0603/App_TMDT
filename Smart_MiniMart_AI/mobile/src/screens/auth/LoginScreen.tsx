@@ -108,28 +108,34 @@ export function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  scroll: { flexGrow: 1, padding: spacing.base, justifyContent: 'center' },
-  brandHeader: { alignItems: 'center', marginBottom: spacing.xl },
-  logoCircle: {
-    width: 96, height: 96, borderRadius: 28, backgroundColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: colors.primary, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3, shadowRadius: 16, elevation: 8,
+  container: { flex: 1, backgroundColor: colors.primary },
+  scroll: { flexGrow: 1, paddingBottom: spacing.lg, justifyContent: 'flex-start' },
+  brandHeader: {
+    alignItems: 'center',
+    paddingTop: spacing['2xl'], paddingBottom: spacing['2xl'],
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: 32, borderBottomRightRadius: 32,
+    marginBottom: spacing.lg,
   },
-  logoEmoji: { fontSize: 48 },
+  logoCircle: {
+    width: 110, height: 110, borderRadius: 32, backgroundColor: 'white',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2, shadowRadius: 16, elevation: 8,
+  },
+  logoEmoji: { fontSize: 56 },
   sparkle: {
     position: 'absolute', top: -4, right: -4,
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: colors.gold, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: colors.bg,
+    borderWidth: 3, borderColor: colors.primary,
   },
   sparkleText: { fontSize: 16 },
-  title: { fontSize: 26, fontWeight: '800', color: colors.text, marginTop: spacing.base },
-  subtitle: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
+  title: { fontSize: 28, fontWeight: '900', color: 'white', marginTop: spacing.base },
+  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.9)', marginTop: 4 },
 
   formCard: {
-    backgroundColor: colors.card, borderRadius: 20, padding: spacing.lg,
+    backgroundColor: colors.card, borderRadius: 20, padding: spacing.lg, marginHorizontal: spacing.base,
     shadowColor: colors.shadow, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1, shadowRadius: 12, elevation: 4,
   },
@@ -147,7 +153,7 @@ const styles = StyleSheet.create({
   linkText: { fontSize: 14, color: colors.textMuted },
   linkAccent: { color: colors.primary, fontWeight: '700' },
 
-  demoSection: { marginTop: spacing.xl },
+  demoSection: { marginTop: spacing.xl, marginHorizontal: spacing.base },
   demoHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: spacing.sm, paddingHorizontal: 4,
