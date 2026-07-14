@@ -7,7 +7,7 @@ import { PrismaService } from '@/common/prisma/prisma.service';
 const VNPAY_TMN_CODE = 'DEMO0001'; // Sandbox merchant
 const VNPAY_HASH_SECRET = 'DEMOSECRETKEYDEMOSECRETKEYDEMOSECRETKEY'; // demo only
 const VNPAY_URL = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
-const VNPAY_RETURN = 'http://localhost:4000/api/v1/payments/vnpay/return';
+const VNPAY_RETURN = 'https://smart-minimart-api.onrender.com/api/v1/payments/vnpay/return';
 
 @Injectable()
 export class PaymentsService {
@@ -37,8 +37,8 @@ export class PaymentsService {
     const secret = this.cfg.get('VNPAY_HASH_SECRET', VNPAY_HASH_SECRET);
     const vnpUrl = this.cfg.get('VNPAY_URL', VNPAY_URL);
     const returnUrl: string = dto.returnUrl
-      ?? this.cfg.get<string>('VNPAY_RETURN_URL', VNPAY_RETURN)
-      ?? VNPAY_RETURN;
+      ?? this.cfg.get<string>('VNPAY_RETURN_URL')
+      ?? 'https://smart-minimart-api.onrender.com/api/v1/payments/vnpay/return';
 
     const date = new Date();
     const createDate = formatVnpayDate(date);

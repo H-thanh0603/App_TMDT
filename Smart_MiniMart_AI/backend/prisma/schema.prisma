@@ -43,6 +43,7 @@ enum PaymentMethod {
   QR_DEMO
   WALLET_DEMO
   VNPAY_SANDBOX
+  BANK
 }
 
 enum PaymentStatus {

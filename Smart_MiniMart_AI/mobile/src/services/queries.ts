@@ -392,6 +392,22 @@ export function useCreateVnpay() {
   });
 }
 
+export function useCreateVietQr() {
+  return useMutation({
+    mutationFn: async (dto: { orderId: string }) =>
+      unwrap<{
+        method: 'VIETQR';
+        qrDataUrl?: string;
+        qrImageUrl?: string;
+        bankBin: string;
+        accountNo: string;
+        accountName: string;
+        amount: number;
+        addInfo: string;
+      }>(await api.post('/payments/vietqr/create', dto)),
+  });
+}
+
 // ===== Active Promos (public) =====
 export function useActivePromos() {
   return useQuery({

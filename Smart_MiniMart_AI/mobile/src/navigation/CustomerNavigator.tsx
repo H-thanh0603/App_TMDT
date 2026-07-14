@@ -9,6 +9,7 @@ import { ProductDetailScreen } from '@/screens/customer/ProductDetailScreen';
 import { AISearchScreen } from '@/screens/customer/AISearchScreen';
 import { AIChatScreen } from '@/screens/customer/AIChatScreen';
 import { CartScreen } from '@/screens/customer/CartScreen';
+import { VietQrScreen } from '@/screens/customer/VietQrScreen';
 import { OrdersScreen } from '@/screens/customer/OrdersScreen';
 import { OrderDetailScreen } from '@/screens/customer/OrderDetailScreen';
 import { AddressesScreen } from '@/screens/customer/AddressesScreen';
@@ -51,6 +52,7 @@ export function CustomerNavigator() {
         <Stack.Screen name="Tabs" component={CustomerTabs} options={{ headerShown: false }} />
         <Stack.Screen name="ProductList" component={ProductListScreen} options={{ title: 'Sản phẩm' }} />
         <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: 'Chi tiết sản phẩm' }} />
+        <Stack.Screen name="VietQr" component={VietQrScreen} options={{ title: 'Thanh toán QR' }} />
         <Stack.Screen name="Orders" component={OrdersScreen} options={{ title: 'Đơn hàng của tôi' }} />
         <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Chi tiết đơn' }} />
         <Stack.Screen name="Addresses" component={AddressesScreen} options={{ title: 'Địa chỉ' }} />

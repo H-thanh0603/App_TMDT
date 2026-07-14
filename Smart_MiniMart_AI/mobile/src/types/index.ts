@@ -56,7 +56,7 @@ export interface Cart {
 }
 
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'DELIVERING' | 'COMPLETED' | 'CANCELED';
-export type PaymentMethod = 'COD' | 'QR_DEMO' | 'WALLET_DEMO' | 'VNPAY_SANDBOX' | 'BANK';
+export type PaymentMethod = 'COD' | 'QR_DEMO' | 'WALLET_DEMO' | 'VNPAY_SANDBOX' | 'BANK' | 'VIETQR';
 export type PaymentStatus = 'UNPAID' | 'PAID' | 'REFUNDED' | 'FAILED';
 
 export interface Order {

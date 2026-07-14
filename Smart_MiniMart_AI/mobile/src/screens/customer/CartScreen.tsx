@@ -14,7 +14,7 @@ import { colors } from '@/theme/colors';
 import { formatAddress, formatVnd, estimateShippingFee } from '@/utils/format';
 import type { Address, PaymentMethod } from '@/types';
 
-type PayOption = Extract<PaymentMethod, 'COD' | 'VNPAY_SANDBOX'>;
+type PayOption = Extract<PaymentMethod, 'COD' | 'VNPAY_SANDBOX' | 'VIETQR'>;
 
 export function CartScreen() {
   const nav = useNavigation<any>();
@@ -24,6 +24,7 @@ export function CartScreen() {
   const removeItem = useRemoveCartItem();
   const createOrder = useCreateOrder();
   const createVnpay = useCreateVnpay();
+  const createVietQr = useCreateVietQr();
   const [paymentMethod, setPaymentMethod] = useState<PayOption>('COD');
   const [submitting, setSubmitting] = useState(false);
 
@@ -32,7 +33,7 @@ export function CartScreen() {
   const subtotal = Number(cart?.subtotal ?? 0);
   const shippingFee = estimateShippingFee(subtotal);
   const total = subtotal + shippingFee;
-  const busy = submitting || createOrder.isPending || createVnpay.isPending;
+  const busy = submitting || createOrder.isPending || createVnpay.isPending || createVietQr.isPending;
 
   const placeOrder = async () => {
     if (!defaultAddress) return;
@@ -67,6 +68,21 @@ export function CartScreen() {
           Alert.alert(
             'Đơn đã tạo — VNPay lỗi',
             `${payErr?.response?.data?.message ?? payErr?.message ?? 'Không tạo được URL VNPay'}\nMã đơn: #${orderNumber || ''}`,
+            [{ text: 'Xem đơn', onPress: () => nav.navigate('Orders') }],
+          );
+          return;
+        }
+      }
+
+      if (paymentMethod === 'VIETQR') {
+        try {
+          const qr = await createVietQr.mutateAsync({ orderId });
+          nav.navigate('VietQr', { qr, orderNumber });
+          return;
+        } catch (qrErr: any) {
+          Alert.alert(
+            'Đơn đã tạo — VietQR lỗi',
+            `${qrErr?.response?.data?.message ?? qrErr?.message ?? 'Không tạo được QR'}\nMã đơn: #${orderNumber || ''}`,
             [{ text: 'Xem đơn', onPress: () => nav.navigate('Orders') }],
           );
           return;
@@ -230,6 +246,12 @@ export function CartScreen() {
             <Text style={[styles.payText, paymentMethod === 'VNPAY_SANDBOX' && { color: 'white' }]}>
               VNPay
             </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.payOption, paymentMethod === 'VIETQR' && styles.payOptionActive]}
+            onPress={() => setPaymentMethod('VIETQR')}
+          >
+            <Text style={[styles.payText, paymentMethod === 'VIETQR' && { color: 'white' }]}>VietQR</Text>
           </Pressable>
         </View>
 
