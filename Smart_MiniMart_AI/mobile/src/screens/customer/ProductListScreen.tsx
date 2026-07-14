@@ -43,7 +43,7 @@ export function ProductListScreen() {
   const { data: categories = [] } = useCategories();
 
   const queryParams = useMemo(() => {
-    const p: any = { page, limit: 12, sortBy };
+    const p: any = { page, limit: 24, sortBy };
     if (search) p.search = search;
     if (categoryId) p.categoryId = categoryId;
     if (inStockOnly) p.inStock = 'true';

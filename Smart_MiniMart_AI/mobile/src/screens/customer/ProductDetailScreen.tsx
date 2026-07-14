@@ -38,8 +38,11 @@ export function ProductDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView>
-        <Image source={{ uri: product.imageUrl ?? 'https://via.placeholder.com/600' }}
-          style={styles.image} />
+        <Image
+          source={{ uri: product.imageUrl || `https://placehold.co/600x600/png?text=${encodeURIComponent((product.name || 'SP').slice(0, 20))}` }}
+          style={styles.image}
+          resizeMode="cover"
+        />
         <View style={styles.body}>
           <Text style={styles.name}>{product.name}</Text>
           {product.brand && <Text style={styles.brand}>{product.brand}</Text>}

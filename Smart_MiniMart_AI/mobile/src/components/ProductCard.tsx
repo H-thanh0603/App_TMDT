@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, shadow, spacing, typography } from '@/theme';
 import type { Product } from '@/types';
@@ -9,16 +10,27 @@ interface Props {
   variant?: 'grid' | 'list';
 }
 
+function productPlaceholder(name?: string) {
+  const text = encodeURIComponent((name || 'SP').slice(0, 18));
+  return `https://placehold.co/400x400/png?text=${text}`;
+}
+
 export function ProductCard({ product, onPress, variant = 'grid' }: Props) {
   const finalPrice = Number(product.salePrice ?? product.price);
   const hasSale = product.salePrice && Number(product.salePrice) < Number(product.price);
+  const [failed, setFailed] = useState(false);
+  const uri = !failed && product.imageUrl
+    ? product.imageUrl
+    : productPlaceholder(product.name);
 
   if (variant === 'list') {
     return (
       <Pressable onPress={onPress} style={[styles.list, shadow.sm]}>
         <Image
-          source={{ uri: product.imageUrl ?? 'https://via.placeholder.com/96' }}
+          source={{ uri }}
           style={styles.listImage}
+          onError={() => setFailed(true)}
+          resizeMode="cover"
         />
         <View style={styles.listBody}>
           <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
@@ -37,10 +49,16 @@ export function ProductCard({ product, onPress, variant = 'grid' }: Props) {
   return (
     <Pressable onPress={onPress} style={[styles.grid, shadow.sm]}>
       <Image
-        source={{ uri: product.imageUrl ?? 'https://via.placeholder.com/200' }}
+        source={{ uri }}
         style={styles.gridImage}
+        onError={() => setFailed(true)}
+        resizeMode="cover"
       />
-      {hasSale && <View style={styles.saleBadge}><Text style={styles.saleBadgeText}>SALE</Text></View>}
+      {hasSale && (
+        <View style={styles.saleBadge}>
+          <Text style={styles.saleBadgeText}>SALE</Text>
+        </View>
+      )}
       <View style={styles.gridBody}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         <Text style={styles.brand} numberOfLines={1}>{product.brand ?? product.unit}</Text>
