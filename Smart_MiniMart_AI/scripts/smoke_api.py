@@ -58,9 +58,12 @@ def main():
     check("POST /auth/login staff", code, 200)
     st = (staff_login.get("data") or {}).get("accessToken")
 
-    code, prods = req("GET", "/products?limit=5")
+    code, prods = req("GET", "/products?limit=20&isActive=true")
     check("GET /products", code, 200)
-    pid = (prods.get("data") or {}).get("items", [{}])[0].get("id")
+    pitems = (prods.get("data") or {}).get("items", [])
+    pid = pitems[0].get("id") if pitems else None
+    if not pid:
+        print("No product id found"); sys.exit(1)
 
     code, _ = req("GET", "/categories")
     check("GET /categories", code, 200)
@@ -78,8 +81,10 @@ def main():
     else:
         addr = items[0]["id"]
 
-    code, _ = req("POST", "/cart/items", token=ct, body={"productId": pid, "quantity": 1})
+    code, cart = req("POST", "/cart/items", token=ct, body={"productId": pid, "quantity": 1})
     check("POST /cart/items", code, (200, 201))
+    if code not in (200, 201):
+        print("  cart add resp:", cart)
     code, _ = req("GET", "/cart", token=ct)
     check("GET /cart", code, 200)
 
