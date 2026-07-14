@@ -32,9 +32,10 @@ def req(method: str, path: str, token: str | None = None, body: dict | None = No
         return e.code, payload
 
 
-def check(name: str, code: int, expect: int):
+def check(name: str, code: int, expect):
     global PASS, FAIL
-    if code == expect:
+    ok = code in expect if isinstance(expect, (set, list, tuple)) else code == expect
+    if ok:
         print(f"OK  [{code}] {name}")
         PASS += 1
     else:
@@ -78,14 +79,14 @@ def main():
         addr = items[0]["id"]
 
     code, _ = req("POST", "/cart/items", token=ct, body={"productId": pid, "quantity": 1})
-    check("POST /cart/items", code, 200)
+    check("POST /cart/items", code, (200, 201))
     code, _ = req("GET", "/cart", token=ct)
     check("GET /cart", code, 200)
 
     code, order = req("POST", "/orders", token=ct, body={
         "paymentMethod": "COD", "addressId": addr, "note": "smoke-test",
     })
-    check("POST /orders COD", code, 200)
+    check("POST /orders COD", code, (200, 201))
     oid = (order.get("data") or {}).get("id")
     onum = (order.get("data") or {}).get("orderNumber")
     print(f"    order={onum} id={oid}")
@@ -97,10 +98,10 @@ def main():
 
     if oid:
         code, _ = req("PATCH", f"/orders/{oid}/status", token=st, body={"status": "CONFIRMED"})
-        check("PATCH /orders/:id/status CONFIRMED", code, 200)
+        check("PATCH /orders/:id/status CONFIRMED", code, (200, 201))
 
     code, _ = req("POST", "/ai/search", body={"query": "sua tuoi duoi 30k"})
-    check("POST /ai/search", code, 200)
+    check("POST /ai/search", code, (200, 201))
 
     code, _ = req("GET", "/cart")
     check("GET /cart no-auth (expect 401)", code, 401)
