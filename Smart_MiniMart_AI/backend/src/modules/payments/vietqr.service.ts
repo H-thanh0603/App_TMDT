@@ -28,7 +28,7 @@ export class VietQrService {
   private getConfig(dto: Partial<VietQrConfig>): VietQrConfig {
     return {
       bankBin: dto.bankBin || this.cfg.get<string>('VIETQR_BANK_BIN', '970422'), // MB default
-      accountNo: dto.accountNo || this.cfg.get<string>('VIETQR_ACCOUNT_NO', ''),
+      accountNo: dto.accountNo || this.cfg.get<string>('VIETQR_ACCOUNT_NO', '0123456789'), // demo STK, đổi trên Render
       accountName: dto.accountName || this.cfg.get<string>('VIETQR_ACCOUNT_NAME', 'SMART MINIMART'),
       template: dto.template || this.cfg.get<'compact' | 'qr_only' | 'print'>('VIETQR_TEMPLATE', 'compact'),
     };
