@@ -1,0 +1,53 @@
+# Exported from render.com Blueprint
+# https://render.com/docs/blueprint-spec
+#
+# After connecting GitHub repo H-thanh0603/App_TMDT:
+# Render Dashboard → New → Blueprint → select this file
+# Then set env secrets in dashboard (JWT, DEEPSEEK, DATABASE_URL from Neon).
+
+services:
+  - type: web
+    name: smart-minimart-api
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: Smart_MiniMart_AI/backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      - key: API_PREFIX
+        value: api/v1
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: JWT_ACCESS_EXPIRES
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES
+        value: 14d
+      - key: AI_DEFAULT_PROVIDER
+        value: deepseek
+      - key: AI_DEFAULT_MODEL
+        value: deepseek-chat
+      - key: AI_FALLBACK_PROVIDER
+        value: mock
+      - key: OCR_DEFAULT_ENGINE
+        value: mock
+      - key: OCR_SERVICE_URL
+        value: ""
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: AI_ENCRYPTION_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPSEEK_BASE_URL
+        value: https://api.deepseek.com

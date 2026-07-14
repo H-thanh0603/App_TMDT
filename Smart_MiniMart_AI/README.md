@@ -125,6 +125,20 @@ Tất cả password: `123456`
 | `admin@minimart.vn` | STORE_ADMIN | Tổng quan, CRUD SP / NV / KM |
 | `ai@minimart.vn` | AI_MANAGER | Cấu hình AI provider, log |
 
+## Deploy free (online)
+
+Xem hướng dẫn chi tiết: [`docs/DEPLOY_FREE.md`](docs/DEPLOY_FREE.md)
+
+Tóm tắt stack free:
+- **DB:** Neon Postgres
+- **API:** Render (Docker, free)
+- **Mobile:** Expo Go trỏ `https://<service>.onrender.com/api/v1`
+
+```bash
+# sau khi có URL public
+python scripts/smoke_api.py https://YOUR-SERVICE.onrender.com/api/v1
+```
+
 ## Seed kịch bản demo (P0)
 
 Sau khi đã có DB + users/products:
