@@ -125,6 +125,25 @@ Tất cả password: `123456`
 | `admin@minimart.vn` | STORE_ADMIN | Tổng quan, CRUD SP / NV / KM |
 | `ai@minimart.vn` | AI_MANAGER | Cấu hình AI provider, log |
 
+## Seed kịch bản demo (P0)
+
+Sau khi đã có DB + users/products:
+
+```bash
+cd backend
+npm run db:seed:demo      # 40 orders đủ status, reviews, receipts, SP cận date/bán chậm
+npm run db:purge-inactive # xóa SP crawl inactive (OFF/DJ/FS)
+```
+
+Smoke test API:
+
+```bash
+bash scripts/smoke_api.sh
+# hoặc: bash scripts/smoke_api.sh http://localhost:4000/api/v1
+```
+
+Postman: `postman/Smart_MiniMart_AI.postman_collection.json` + env local.
+
 ## Tính năng
 
 ### Customer
