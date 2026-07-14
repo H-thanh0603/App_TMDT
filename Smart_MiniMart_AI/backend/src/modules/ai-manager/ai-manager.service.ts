@@ -77,16 +77,100 @@ export class AIManagerService {
   async testProvider(id: string) {
     const p = await this.prisma.aIProvider.findUnique({ where: { id } });
     if (!p) throw new NotFoundException('Provider không tồn tại');
-    // Stub: thực tế gọi provider.chat({...}) và đo latency
-    const result = {
-      success: true,
-      latencyMs: Math.floor(Math.random() * 500 + 200),
-      model: p.defaultModel ?? 'default',
-      message: 'Test connection thành công (stub)',
+
+    const start = Date.now();
+    const model = p.defaultModel ?? this.cfg.get<string>('AI_DEFAULT_MODEL', 'deepseek-chat');
+    let result: {
+      success: boolean;
+      latencyMs: number;
+      model: string;
+      message: string;
+      sample?: string;
     };
+
+    try {
+      if (p.type === 'MOCK') {
+        result = {
+          success: true,
+          latencyMs: Date.now() - start,
+          model: model || 'mock-v1',
+          message: 'Mock provider sẵn sàng (không gọi mạng)',
+        };
+      } else {
+        // Resolve API key: DB encrypted → env fallback
+        let apiKey: string | undefined;
+        if (p.apiKeyEncrypted) {
+          try {
+            apiKey = this.decrypt(p.apiKeyEncrypted);
+          } catch {
+            apiKey = undefined;
+          }
+        }
+        if (!apiKey) {
+          if (p.type === 'DEEPSEEK' || p.isSystemDefault) {
+            apiKey = this.cfg.get<string>('DEEPSEEK_API_KEY') || undefined;
+          } else if (p.type === 'OPENAI_COMPATIBLE') {
+            apiKey = this.cfg.get<string>('OPENAI_API_KEY') || undefined;
+          }
+        }
+        if (!apiKey) {
+          throw new Error('Chưa có API key (DB hoặc env)');
+        }
+
+        const baseURL =
+          p.baseUrl ||
+          (p.type === 'DEEPSEEK'
+            ? this.cfg.get<string>('DEEPSEEK_BASE_URL', 'https://api.deepseek.com')
+            : this.cfg.get<string>('OPENAI_BASE_URL', 'https://api.openai.com/v1'));
+
+        const axios = (await import('axios')).default;
+        const { data } = await axios.post(
+          `${baseURL.replace(/\/$/, '')}/chat/completions`,
+          {
+            model,
+            messages: [
+              { role: 'system', content: 'Reply with exactly: OK' },
+              { role: 'user', content: 'ping' },
+            ],
+            max_tokens: 8,
+            temperature: 0,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 20_000,
+          },
+        );
+
+        const sample = data?.choices?.[0]?.message?.content?.slice(0, 80) ?? '';
+        result = {
+          success: true,
+          latencyMs: Date.now() - start,
+          model: data?.model ?? model,
+          message: 'Test connection thành công',
+          sample,
+        };
+      }
+    } catch (err: any) {
+      result = {
+        success: false,
+        latencyMs: Date.now() - start,
+        model,
+        message: err?.response?.data?.error?.message
+          || err?.message
+          || 'Test connection thất bại',
+      };
+    }
+
     await this.prisma.aIProvider.update({
       where: { id },
-      data: { lastTestedAt: new Date(), lastTestResult: result },
+      data: {
+        lastTestedAt: new Date(),
+        lastTestResult: result,
+        status: result.success ? 'ACTIVE' : 'ERROR',
+      },
     });
     return result;
   }

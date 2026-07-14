@@ -20,6 +20,10 @@ export class ProductQueryDto {
   @IsOptional() @IsBooleanString()
   isFeatured?: string;
 
+  /** Admin: include inactive products when true */
+  @IsOptional() @IsBooleanString()
+  includeInactive?: string;
+
   @IsOptional() @IsString()
   tag?: string;
 

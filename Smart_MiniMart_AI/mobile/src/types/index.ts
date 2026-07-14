@@ -97,6 +97,8 @@ export interface Address {
   district?: string;
   city?: string;
   isDefault: boolean;
+  /** Client-only helper — backend không trả field này. Dùng formatAddress(). */
+  fullAddress?: string;
 }
 
 export interface Notification {

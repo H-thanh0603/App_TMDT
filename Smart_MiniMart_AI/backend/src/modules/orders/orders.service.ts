@@ -4,12 +4,15 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { OrderStatus, Prisma, Role } from '@prisma/client';
+import { OrderStatus, Prisma, PromotionType, Role } from '@prisma/client';
 
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
+
+/** Ngưỡng điểm VIP (khớp mobile UserStats.nextVipThreshold). */
+const VIP_THRESHOLD = 1_000;
 
 @Injectable()
 export class OrdersService {
@@ -42,10 +45,12 @@ export class OrdersService {
 
     // Compute totals
     let subtotal = 0;
+    const cartProductIds = new Set<string>();
     const itemsData = cart.items.map((it) => {
       const price = Number(it.product.salePrice ?? it.product.price);
       const lineTotal = price * it.quantity;
       subtotal += lineTotal;
+      cartProductIds.add(it.product.id);
       return {
         productId: it.product.id,
         productName: it.product.name,
@@ -56,11 +61,27 @@ export class OrdersService {
     });
 
     const shippingFee = subtotal >= 200_000 ? 0 : 15_000;
-    const totalAmount = subtotal + shippingFee;
 
+    // Apply promotion (nếu có)
+    let discountAmount = 0;
+    let appliedPromoCode: string | null = null;
+    let promoIdToIncrement: string | null = null;
+
+    if (dto.promotionCode?.trim()) {
+      const promo = await this.resolvePromotion(
+        dto.promotionCode.trim().toUpperCase(),
+        subtotal,
+        cartProductIds,
+      );
+      discountAmount = promo.discountAmount;
+      appliedPromoCode = promo.code;
+      promoIdToIncrement = promo.id;
+    }
+
+    const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
     const orderNumber = await this.nextOrderNumber();
 
-    // Transaction: create order + decrement stock + log + clear cart
+    // Transaction: create order + decrement stock + log + clear cart + usageCount
     return this.prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: {
@@ -69,9 +90,10 @@ export class OrdersService {
           addressId: dto.addressId,
           paymentMethod: dto.paymentMethod,
           subtotal,
+          discountAmount,
           shippingFee,
           totalAmount,
-          promotionCode: dto.promotionCode,
+          promotionCode: appliedPromoCode,
           note: dto.note,
           items: { create: itemsData },
         },
@@ -102,8 +124,17 @@ export class OrdersService {
         });
       }
 
+      if (promoIdToIncrement) {
+        await tx.promotion.update({
+          where: { id: promoIdToIncrement },
+          data: { usageCount: { increment: 1 } },
+        });
+      }
+
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
-      this.logger.log(`Đơn hàng ${orderNumber} được tạo bởi ${userId}`);
+      this.logger.log(
+        `Đơn ${orderNumber} bởi ${userId} | sub=${subtotal} disc=${discountAmount} ship=${shippingFee} total=${totalAmount}`,
+      );
       return order;
     });
   }
@@ -184,12 +215,18 @@ export class OrdersService {
     }
 
     const data: Prisma.OrderUpdateInput = { status: dto.status };
-    if (dto.status === OrderStatus.CONFIRMED)  data.confirmedAt = new Date();
+    if (dto.status === OrderStatus.CONFIRMED) data.confirmedAt = new Date();
     if (dto.status === OrderStatus.DELIVERING) data.deliveredAt = new Date();
+
+    // Chỉ cộng điểm 1 lần khi COMPLETED (tránh double nếu đã có loyaltyEarned)
+    let loyaltyToAward = 0;
     if (dto.status === OrderStatus.COMPLETED) {
       data.completedAt = new Date();
       data.paymentStatus = 'PAID';
-      data.loyaltyEarned = Math.floor(Number(order.totalAmount) / 10_000);
+      if (!order.loyaltyEarned || order.loyaltyEarned === 0) {
+        loyaltyToAward = Math.floor(Number(order.totalAmount) / 10_000);
+        data.loyaltyEarned = loyaltyToAward;
+      }
     }
     if (dto.status === OrderStatus.CANCELED) {
       data.canceledAt = new Date();
@@ -227,12 +264,19 @@ export class OrdersService {
         }
       }
 
-      // Cộng điểm khi hoàn tất
-      if (dto.status === OrderStatus.COMPLETED && data.loyaltyEarned) {
-        await tx.user.update({
+      // Cộng điểm + auto VIP khi hoàn tất
+      if (dto.status === OrderStatus.COMPLETED && loyaltyToAward > 0) {
+        const user = await tx.user.update({
           where: { id: order.userId },
-          data: { loyaltyPoints: { increment: data.loyaltyEarned as number } },
+          data: { loyaltyPoints: { increment: loyaltyToAward } },
         });
+        if (!user.isVip && user.loyaltyPoints >= VIP_THRESHOLD) {
+          await tx.user.update({
+            where: { id: order.userId },
+            data: { isVip: true },
+          });
+          this.logger.log(`User ${order.userId} upgraded to VIP (${user.loyaltyPoints} pts)`);
+        }
       }
 
       return updated;
@@ -240,6 +284,70 @@ export class OrdersService {
   }
 
   // ========== Helpers ==========
+
+  private async resolvePromotion(
+    code: string,
+    subtotal: number,
+    cartProductIds: Set<string>,
+  ): Promise<{ id: string; code: string; discountAmount: number }> {
+    const now = new Date();
+    const promo = await this.prisma.promotion.findUnique({
+      where: { code },
+      include: { products: { select: { productId: true } } },
+    });
+    if (!promo || !promo.isActive) {
+      throw new BadRequestException('Mã khuyến mãi không hợp lệ hoặc đã tắt');
+    }
+    if (promo.startDate > now || promo.endDate < now) {
+      throw new BadRequestException('Mã khuyến mãi chưa đến hạn hoặc đã hết hạn');
+    }
+    if (promo.usageLimit != null && promo.usageCount >= promo.usageLimit) {
+      throw new BadRequestException('Mã khuyến mãi đã hết lượt sử dụng');
+    }
+    const minOrder = promo.minOrderValue != null ? Number(promo.minOrderValue) : 0;
+    if (subtotal < minOrder) {
+      throw new BadRequestException(
+        `Đơn tối thiểu ${minOrder.toLocaleString('vi-VN')}đ để dùng mã ${promo.code}`,
+      );
+    }
+
+    // Nếu promo gắn SP cụ thể: chỉ áp khi giỏ có ≥1 SP trong list
+    if (promo.products.length > 0) {
+      const allowed = new Set(promo.products.map((p) => p.productId));
+      const hit = [...cartProductIds].some((id) => allowed.has(id));
+      if (!hit) {
+        throw new BadRequestException('Mã khuyến mãi không áp dụng cho sản phẩm trong giỏ');
+      }
+    }
+
+    const value = Number(promo.discountValue);
+    let discount = 0;
+    switch (promo.type) {
+      case PromotionType.PERCENT:
+      case PromotionType.EXPIRY_DISCOUNT:
+      case PromotionType.FLASH_SALE:
+        discount = (subtotal * value) / 100;
+        break;
+      case PromotionType.AMOUNT:
+      case PromotionType.COMBO:
+        discount = value;
+        break;
+      default:
+        discount = value;
+    }
+
+    if (promo.maxDiscount != null) {
+      discount = Math.min(discount, Number(promo.maxDiscount));
+    }
+    discount = Math.min(Math.max(0, discount), subtotal);
+    discount = Math.round(discount);
+
+    if (discount <= 0) {
+      throw new BadRequestException('Mã khuyến mãi không tạo được giảm giá cho đơn này');
+    }
+
+    return { id: promo.id, code: promo.code, discountAmount: discount };
+  }
 
   private async nextOrderNumber(): Promise<string> {
     const year = new Date().getFullYear();
@@ -256,12 +364,12 @@ export class OrdersService {
 
   private canTransition(from: OrderStatus, to: OrderStatus): boolean {
     const flow: Record<OrderStatus, OrderStatus[]> = {
-      PENDING:    [OrderStatus.CONFIRMED, OrderStatus.CANCELED],
-      CONFIRMED:  [OrderStatus.PREPARING, OrderStatus.CANCELED],
-      PREPARING:  [OrderStatus.DELIVERING, OrderStatus.CANCELED],
+      PENDING: [OrderStatus.CONFIRMED, OrderStatus.CANCELED],
+      CONFIRMED: [OrderStatus.PREPARING, OrderStatus.CANCELED],
+      PREPARING: [OrderStatus.DELIVERING, OrderStatus.CANCELED],
       DELIVERING: [OrderStatus.COMPLETED, OrderStatus.CANCELED],
-      COMPLETED:  [],
-      CANCELED:   [],
+      COMPLETED: [],
+      CANCELED: [],
     };
     return flow[from]?.includes(to) ?? false;
   }

@@ -177,9 +177,12 @@ Tất cả password: `123456`
 
 ### Orders & Cart
 - `GET /cart` - Lấy giỏ hàng
-- `POST /cart/add` - Thêm vào giỏ
-- `POST /orders` - Tạo đơn
-- `GET /orders/me` - Đơn của tôi
+- `POST /cart/items` - Thêm sản phẩm vào giỏ `{ productId, quantity }`
+- `PATCH /cart/items/:productId` - Cập nhật số lượng
+- `DELETE /cart/items/:productId` - Xóa item
+- `POST /orders` - Tạo đơn (`paymentMethod`: `COD` | `VNPAY_SANDBOX` | `QR_DEMO` | `WALLET_DEMO`)
+- `GET /orders/mine` - Đơn của tôi (Customer)
+- `GET /orders` - Tất cả đơn (Staff/Admin)
 - `GET /orders/:id` - Chi tiết đơn
 - `PATCH /orders/:id/status` - Cập nhật trạng thái (staff/admin)
 

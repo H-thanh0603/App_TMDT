@@ -20,7 +20,12 @@ build/
 .env
 .env.local
 .env.*.local
+.env.bak*
 !.env.example
+
+# Local artifacts
+**/expo-qr.png
+**/uploads/
 
 # Editor
 .vscode/

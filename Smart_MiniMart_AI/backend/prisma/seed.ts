@@ -42,20 +42,20 @@ async function seedUsers() {
 
 async function seedCategories() {
   const categories = [
-    { name: 'Đồ uống',     slug: 'do-uong',     imageUrl: '/img/cat/do-uong.png',     sortOrder: 1 },
-    { name: 'Sữa',         slug: 'sua',         imageUrl: '/img/cat/sua.png',         sortOrder: 2 },
-    { name: 'Mì gói',      slug: 'mi-goi',      imageUrl: '/img/cat/mi-goi.png',      sortOrder: 3 },
-    { name: 'Bánh kẹo',    slug: 'banh-keo',    imageUrl: '/img/cat/banh-keo.png',    sortOrder: 4 },
-    { name: 'Đồ ăn nhanh', slug: 'do-an-nhanh', imageUrl: '/img/cat/an-nhanh.png',    sortOrder: 5 },
-    { name: 'Gia vị',      slug: 'gia-vi',      imageUrl: '/img/cat/gia-vi.png',      sortOrder: 6 },
-    { name: 'Đồ cá nhân',  slug: 'do-ca-nhan',  imageUrl: '/img/cat/ca-nhan.png',     sortOrder: 7 },
-    { name: 'Đồ gia dụng', slug: 'do-gia-dung', imageUrl: '/img/cat/gia-dung.png',    sortOrder: 8 },
-    { name: 'Cà phê & Trà', slug: 'cafe-tra',   imageUrl: '/img/cat/cafe-tra.png',    sortOrder: 9 },
+    { name: 'Đồ uống',     slug: 'do-uong',     imageUrl: 'https://placehold.co/200x200/png?text=Do+uong',     sortOrder: 1 },
+    { name: 'Sữa',         slug: 'sua',         imageUrl: 'https://placehold.co/200x200/png?text=Sua',         sortOrder: 2 },
+    { name: 'Mì gói',      slug: 'mi-goi',      imageUrl: 'https://placehold.co/200x200/png?text=Mi+goi',      sortOrder: 3 },
+    { name: 'Bánh kẹo',    slug: 'banh-keo',    imageUrl: 'https://placehold.co/200x200/png?text=Banh+keo',    sortOrder: 4 },
+    { name: 'Đồ ăn nhanh', slug: 'do-an-nhanh', imageUrl: 'https://placehold.co/200x200/png?text=An+nhanh',    sortOrder: 5 },
+    { name: 'Gia vị',      slug: 'gia-vi',      imageUrl: 'https://placehold.co/200x200/png?text=Gia+vi',      sortOrder: 6 },
+    { name: 'Đồ cá nhân',  slug: 'do-ca-nhan',  imageUrl: 'https://placehold.co/200x200/png?text=Ca+nhan',     sortOrder: 7 },
+    { name: 'Đồ gia dụng', slug: 'do-gia-dung', imageUrl: 'https://placehold.co/200x200/png?text=Gia+dung',    sortOrder: 8 },
+    { name: 'Cà phê & Trà', slug: 'cafe-tra',   imageUrl: 'https://placehold.co/200x200/png?text=Cafe+Tra',    sortOrder: 9 },
   ];
   for (const c of categories) {
     await prisma.category.upsert({
       where: { slug: c.slug },
-      update: {},
+      update: { imageUrl: c.imageUrl },
       create: c,
     });
   }

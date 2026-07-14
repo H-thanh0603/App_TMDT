@@ -40,3 +40,24 @@ export function statusLabel(status: string): string {
   };
   return map[status] ?? status;
 }
+
+/** Ghép địa chỉ từ các field API (line1/ward/district/city). */
+export function formatAddress(addr?: {
+  line1?: string | null;
+  ward?: string | null;
+  district?: string | null;
+  city?: string | null;
+  fullAddress?: string | null;
+} | null): string {
+  if (!addr) return '';
+  if (addr.fullAddress) return addr.fullAddress;
+  return [addr.line1, addr.ward, addr.district, addr.city]
+    .map((p) => (p ?? '').trim())
+    .filter(Boolean)
+    .join(', ');
+}
+
+/** Ước phí ship client-side khớp backend: free nếu ≥ 200_000. */
+export function estimateShippingFee(subtotal: number): number {
+  return subtotal >= 200_000 ? 0 : 15_000;
+}

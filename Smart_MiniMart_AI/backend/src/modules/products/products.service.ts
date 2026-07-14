@@ -21,7 +21,8 @@ export class ProductsService {
     const limit = Math.min(query.limit ?? 20, 100);
     const skip = (page - 1) * limit;
 
-    const where: Prisma.ProductWhereInput = { isActive: true };
+    const where: Prisma.ProductWhereInput =
+      query.includeInactive === 'true' ? {} : { isActive: true };
 
     if (query.search) {
       where.OR = [

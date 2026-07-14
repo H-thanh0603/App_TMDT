@@ -100,8 +100,12 @@ export function useMyOrders() {
 export function useCreateOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (params: { paymentMethod: string; addressId?: string; note?: string }) =>
-      unwrap<Order>(await api.post('/orders', params)),
+    mutationFn: async (params: {
+      paymentMethod: 'COD' | 'VNPAY_SANDBOX' | 'QR_DEMO' | 'WALLET_DEMO';
+      addressId?: string;
+      note?: string;
+      promotionCode?: string;
+    }) => unwrap<Order>(await api.post('/orders', params)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cart'] });
       qc.invalidateQueries({ queryKey: ['orders'] });
@@ -393,5 +397,33 @@ export function useActivePromos() {
   return useQuery({
     queryKey: ['promos-active'],
     queryFn: async () => unwrap<any[]>(await api.get('/promotions/active')),
+  });
+}
+
+// ===== Admin: Product CRUD =====
+export function useCreateProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: Record<string, any>) =>
+      unwrap(await api.post('/products', dto)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  });
+}
+
+export function useUpdateProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, dto }: { id: string; dto: Record<string, any> }) =>
+      unwrap(await api.patch(`/products/${id}`, dto)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  });
+}
+
+export function useDeleteProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      unwrap(await api.delete(`/products/${id}`)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
   });
 }
