@@ -8,6 +8,9 @@ import {
   useCategories, useCreateProduct, useDeleteProduct, useProducts, useUpdateProduct,
 } from '@/services/queries';
 import { Badge } from '@/components/Badge';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 import { colors } from '@/theme/colors';
 import { formatVnd } from '@/utils/format';
 
@@ -73,7 +76,7 @@ export function AdminProductsScreen() {
     return p;
   }, [search, categoryId]);
 
-  const { data, isLoading, refetch, isFetching } = useProducts(queryParams);
+  const { data, isLoading, isError, refetch, isFetching } = useProducts(queryParams);
   const allItems = data?.items ?? [];
 
   const items = useMemo(() => {
@@ -241,70 +244,78 @@ export function AdminProductsScreen() {
         ))}
       </ScrollView>
 
-      {isLoading ? (
-        <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(p: any) => p.id}
-          contentContainerStyle={{ padding: 12, paddingBottom: 40 }}
-          onRefresh={refetch}
-          refreshing={isFetching && !isLoading}
-          renderItem={({ item }) => {
-            const minStock = (item as any).minStock ?? 10;
-            const outOfStock = item.stock === 0;
-            const lowStock = item.stock > 0 && item.stock < minStock;
-            const inactive = item.isActive === false;
+      {isLoading && !data ? (
+              <ListRowSkeleton count={6} />
+            ) : isError && !data ? (
+              <ErrorState
+                title="Không tải được sản phẩm"
+                onRetry={() => refetch()}
+              />
+            ) : (
+              <FlatList
+                data={items}
+                keyExtractor={(p: any) => p.id}
+                contentContainerStyle={{ padding: 12, paddingBottom: 40, flexGrow: 1 }}
+                onRefresh={refetch}
+                refreshing={isFetching && !isLoading}
+                renderItem={({ item }) => {
+                  const minStock = (item as any).minStock ?? 10;
+                  const outOfStock = item.stock === 0;
+                  const lowStock = item.stock > 0 && item.stock < minStock;
+                  const inactive = (item as any).isActive === false;
 
-            return (
-              <Pressable style={[styles.productCard, inactive && { opacity: 0.55 }]} onPress={() => openEdit(item)}>
-                <View style={styles.imgWrap}>
-                  {item.imageUrl ? (
-                    <Image source={{ uri: item.imageUrl }} style={styles.img} />
-                  ) : (
-                    <Text style={styles.imgPlaceholder}>📦</Text>
-                  )}
-                  {item.isFeatured && (
-                    <View style={styles.featuredBadge}>
-                      <Text style={styles.featuredText}>★</Text>
-                    </View>
-                  )}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={styles.cardHeader}>
-                    <Text style={styles.sku}>{item.sku}</Text>
-                    {inactive && <Badge label="ẨN" variant="default" size="sm" />}
-                    {outOfStock && <Badge label="HẾT" variant="danger" size="sm" />}
-                    {lowStock && <Badge label="SẮP HẾT" variant="warning" size="sm" />}
-                  </View>
-                  <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
-                  <Text style={styles.category}>{(item as any).category?.name || ''}</Text>
-                  <View style={styles.metaRow}>
-                    <Text style={styles.price}>{formatVnd(Number(item.price))}</Text>
-                    <Text style={[styles.stock, outOfStock && { color: colors.danger }]}>
-                      Tồn: {item.stock} {item.unit}
-                    </Text>
-                  </View>
-                  <View style={styles.actions}>
-                    <Pressable style={styles.editChip} onPress={() => openEdit(item)}>
-                      <Text style={styles.editChipText}>Sửa</Text>
+                  return (
+                    <Pressable style={[styles.productCard, inactive && { opacity: 0.55 }]} onPress={() => openEdit(item)}>
+                      <View style={styles.imgWrap}>
+                        {item.imageUrl ? (
+                          <Image source={{ uri: item.imageUrl }} style={styles.img} />
+                        ) : (
+                          <Text style={styles.imgPlaceholder}>📦</Text>
+                        )}
+                        {item.isFeatured && (
+                          <View style={styles.featuredBadge}>
+                            <Text style={styles.featuredText}>★</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.cardHeader}>
+                          <Text style={styles.sku}>{item.sku}</Text>
+                          {inactive && <Badge label="ẨN" variant="neutral" size="sm" />}
+                          {outOfStock && <Badge label="HẾT" variant="danger" size="sm" />}
+                          {lowStock && <Badge label="SẮP HẾT" variant="warning" size="sm" />}
+                        </View>
+                        <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
+                        <Text style={styles.category}>{(item as any).category?.name || ''}</Text>
+                        <View style={styles.metaRow}>
+                          <Text style={styles.price}>{formatVnd(Number(item.price))}</Text>
+                          <Text style={[styles.stock, outOfStock && { color: colors.danger }]}>
+                            Tồn: {item.stock} {item.unit}
+                          </Text>
+                        </View>
+                        <View style={styles.actions}>
+                          <Pressable style={styles.editChip} onPress={() => openEdit(item)}>
+                            <Text style={styles.editChipText}>Sửa</Text>
+                          </Pressable>
+                          <Pressable style={styles.delChip} onPress={() => confirmDelete(item)}>
+                            <Text style={styles.delChipText}>Ngừng</Text>
+                          </Pressable>
+                        </View>
+                      </View>
                     </Pressable>
-                    <Pressable style={styles.delChip} onPress={() => confirmDelete(item)}>
-                      <Text style={styles.delChipText}>Ngừng</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              </Pressable>
-            );
-          }}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={{ fontSize: 56 }}>📦</Text>
-              <Text style={styles.emptyText}>Không có sản phẩm</Text>
-            </View>
-          }
-        />
-      )}
+                  );
+                }}
+                ListEmptyComponent={
+                  <EmptyState
+                    icon="📦"
+                    title="Không có sản phẩm"
+                    description="Thêm sản phẩm mới để bắt đầu bán."
+                    actionLabel="Thêm sản phẩm"
+                    onAction={() => openCreate()}
+                  />
+                }
+              />
+            )}
 
       <Modal visible={modalOpen} animationType="slide" transparent>
         <View style={styles.modalOverlay}>

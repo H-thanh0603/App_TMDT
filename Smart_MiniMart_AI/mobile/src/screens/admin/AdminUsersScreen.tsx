@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Pressable, Alert,
-  Modal, TextInput, ScrollView, ActivityIndicator,
+  Modal, TextInput, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/theme/colors';
 import {
   useAdminUsers, useCreateStaff, useUpdateUser, useAdjustLoyalty,
 } from '@/services/queries';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 
 const ROLES = ['CUSTOMER', 'STAFF', 'STORE_ADMIN', 'AI_MANAGER'] as const;
 const ROLE_LABELS: Record<string, string> = {
@@ -29,13 +32,13 @@ export function AdminUsersScreen() {
   const [createOpen, setCreateOpen] = useState(false);
   const [pointsOpen, setPointsOpen] = useState<any>(null);
 
-  const { data, isLoading, refetch } = useAdminUsers({
-    role: filterRole === 'ALL' ? undefined : filterRole,
-    q: search || undefined,
-    page: 1,
-  });
+  const { data, isLoading, isError, refetch, isFetching } = useAdminUsers({
+      role: filterRole === 'ALL' ? undefined : filterRole,
+      q: search || undefined,
+      page: 1,
+    });
 
-  const items = data?.items || [];
+    const items = data?.items || [];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -70,53 +73,65 @@ export function AdminUsersScreen() {
         style={styles.searchInput}
       />
 
-      {isLoading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
-      ) : items.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>Không tìm thấy người dùng nào</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item: any) => item.id}
-          contentContainerStyle={{ padding: 12 }}
-          renderItem={({ item }) => {
-            const color = ROLE_COLORS[item.role] || ROLE_COLORS.CUSTOMER;
-            return (
-              <View style={styles.userCard}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{item.fullName?.charAt(0) || '?'}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.userName}>{item.fullName}</Text>
-                  <Text style={styles.userEmail}>{item.email}</Text>
-                  {item.phone && <Text style={styles.userPhone}>{item.phone}</Text>}
-                  <View style={styles.tagRow}>
-                    <View style={[styles.tag, { backgroundColor: color.bg }]}>
-                      <Text style={[styles.tagText, { color: color.fg }]}>
-                        {ROLE_LABELS[item.role]}
-                      </Text>
-                    </View>
-                    {item.isVip && (
-                      <View style={[styles.tag, { backgroundColor: colors.goldSoft }]}>
-                        <Text style={[styles.tagText, { color: colors.gold }]}>⭐ VIP</Text>
+      {isLoading && !data ? (
+              <ListRowSkeleton count={5} />
+            ) : isError && !data ? (
+              <ErrorState title="Không tải được người dùng" onRetry={() => refetch()} />
+            ) : (
+              <FlatList
+                data={items}
+                keyExtractor={(item: any) => item.id}
+                contentContainerStyle={{ padding: 12, flexGrow: 1 }}
+                onRefresh={refetch}
+                refreshing={isFetching && !isLoading}
+                renderItem={({ item }) => {
+                  const color = ROLE_COLORS[item.role] || ROLE_COLORS.CUSTOMER;
+                  return (
+                    <View style={styles.userCard}>
+                      <View style={styles.avatar}>
+                        <Text style={styles.avatarText}>{item.fullName?.charAt(0) || '?'}</Text>
                       </View>
-                    )}
-                    <Text style={styles.points}>{item.loyaltyPoints} điểm</Text>
-                  </View>
-                </View>
-                <Pressable
-                  style={styles.editBtn}
-                  onPress={() => setPointsOpen(item)}
-                >
-                  <Text style={styles.editBtnText}>±</Text>
-                </Pressable>
-              </View>
-            );
-          }}
-        />
-      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.userName}>{item.fullName}</Text>
+                        <Text style={styles.userEmail}>{item.email}</Text>
+                        {item.phone && <Text style={styles.userPhone}>{item.phone}</Text>}
+                        <View style={styles.tagRow}>
+                          <View style={[styles.tag, { backgroundColor: color.bg }]}>
+                            <Text style={[styles.tagText, { color: color.fg }]}>
+                              {ROLE_LABELS[item.role]}
+                            </Text>
+                          </View>
+                          {item.isVip && (
+                            <View style={[styles.tag, { backgroundColor: colors.goldSoft }]}>
+                              <Text style={[styles.tagText, { color: colors.gold }]}>⭐ VIP</Text>
+                            </View>
+                          )}
+                          <Text style={styles.points}>{item.loyaltyPoints} điểm</Text>
+                        </View>
+                      </View>
+                      <Pressable
+                        style={styles.editBtn}
+                        onPress={() => setPointsOpen(item)}
+                      >
+                        <Text style={styles.editBtnText}>±</Text>
+                      </Pressable>
+                    </View>
+                  );
+                }}
+                ListEmptyComponent={
+                  <EmptyState
+                    icon="👥"
+                    title="Không tìm thấy người dùng"
+                    description={filterRole === 'ALL' ? 'Chưa có user trong hệ thống.' : 'Thử đổi bộ lọc vai trò hoặc tìm kiếm.'}
+                    actionLabel={filterRole === 'STAFF' ? 'Tạo nhân viên' : 'Tải lại'}
+                    onAction={() => {
+                      if (filterRole === 'STAFF') setCreateOpen(true);
+                      else refetch();
+                    }}
+                  />
+                }
+              />
+            )}
 
       <CreateStaffModal open={createOpen} onClose={() => { setCreateOpen(false); refetch(); }} />
       <AdjustPointsModal user={pointsOpen} onClose={() => { setPointsOpen(null); refetch(); }} />

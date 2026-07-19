@@ -1,6 +1,9 @@
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAILogs } from '@/services/queries';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 import { colors, radius, spacing, typography } from '@/theme';
 import { formatRelativeTime } from '@/utils/format';
 
@@ -12,7 +15,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function AILogsScreen() {
-  const { data, isLoading } = useAILogs({ limit: 50 });
+  const { data, isLoading, isError, refetch, isFetching } = useAILogs({ limit: 50 });
   const items = data?.items ?? [];
 
   return (
@@ -22,13 +25,17 @@ export function AILogsScreen() {
         <Text style={styles.subtitle}>{data?.total ?? 0} requests</Text>
       </View>
 
-      {isLoading ? (
-        <View style={styles.center}><ActivityIndicator color={colors.roleAiManager} /></View>
+      {isLoading && !data ? (
+        <ListRowSkeleton count={6} />
+      ) : isError && !data ? (
+        <ErrorState title="Không tải được AI logs" onRetry={() => refetch()} />
       ) : (
         <FlatList
           data={items}
           keyExtractor={(l: any) => l.id}
-          contentContainerStyle={{ padding: spacing.lg }}
+          contentContainerStyle={{ padding: spacing.lg, flexGrow: 1 }}
+          onRefresh={refetch}
+          refreshing={isFetching && !isLoading}
           renderItem={({ item }: any) => (
             <View style={styles.card}>
               <View style={styles.row}>
@@ -62,10 +69,14 @@ export function AILogsScreen() {
             </View>
           )}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={{ fontSize: 48 }}>📜</Text>
-              <Text style={styles.emptyText}>Chưa có log nào</Text>
-            </View>
+            <EmptyState
+              icon="📜"
+              title="Chưa có log nào"
+              description="Chạy AI Search / Chat để sinh log mới."
+              actionLabel="Tải lại"
+              onAction={() => refetch()}
+              actionVariant="outline"
+            />
           }
         />
       )}
@@ -75,7 +86,6 @@ export function AILogsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { padding: spacing.lg, paddingBottom: spacing.sm },
   title: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.text },
   subtitle: { fontSize: typography.size.sm, color: colors.textSecondary, marginTop: 2 },
@@ -89,6 +99,4 @@ const styles = StyleSheet.create({
   error: { fontSize: typography.size.xs, color: colors.danger, marginTop: 4 },
   statsRow: { flexDirection: 'row', gap: 12, marginTop: 6 },
   stat: { fontSize: typography.size.xs, color: colors.text, fontWeight: typography.weight.semibold },
-  empty: { alignItems: 'center', paddingTop: spacing['2xl'] },
-  emptyText: { color: colors.textSecondary, marginTop: spacing.md },
 });

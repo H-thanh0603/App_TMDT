@@ -10,6 +10,9 @@ import {
   useCreateVnpay, useCreateVietQr,
 } from '@/services/queries';
 import { Badge } from '@/components/Badge';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 import { colors } from '@/theme/colors';
 import { formatAddress, formatVnd, estimateShippingFee } from '@/utils/format';
 import type { Address, PaymentMethod } from '@/types';
@@ -146,37 +149,39 @@ export function CartScreen() {
   };
 
   if (isLoading) {
-    return (
-      <SafeAreaView style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </SafeAreaView>
-    );
-  }
+      return (
+        <SafeAreaView style={styles.container}>
+          <ListRowSkeleton count={4} />
+        </SafeAreaView>
+      );
+    }
 
-  if (isError) {
-    return (
-      <SafeAreaView style={[styles.container, styles.center]}>
-        <Text style={styles.emptyTitle}>Không tải được giỏ hàng</Text>
-        <Text style={styles.emptyText}>{(error as any)?.message ?? 'Thử lại sau'}</Text>
-        <Pressable style={styles.exploreBtn} onPress={() => refetch()}>
-          <Text style={styles.exploreBtnText}>{isFetching ? 'Đang tải…' : 'Thử lại'}</Text>
-        </Pressable>
-      </SafeAreaView>
-    );
-  }
+    if (isError) {
+      return (
+        <SafeAreaView style={[styles.container, styles.center]}>
+          <ErrorState
+            title="Không tải được giỏ hàng"
+            description={(error as any)?.message ?? 'Thử lại sau'}
+            onRetry={() => refetch()}
+            retryLabel={isFetching ? 'Đang tải…' : 'Thử lại'}
+          />
+        </SafeAreaView>
+      );
+    }
 
-  if (!items.length) {
-    return (
-      <SafeAreaView style={[styles.container, styles.center]}>
-        <Text style={{ fontSize: 48 }}>🛒</Text>
-        <Text style={styles.emptyTitle}>Giỏ hàng trống</Text>
-        <Text style={styles.emptyText}>Thêm sản phẩm để bắt đầu mua sắm</Text>
-        <Pressable style={styles.exploreBtn} onPress={() => nav.navigate('Home')}>
-          <Text style={styles.exploreBtnText}>Khám phá sản phẩm</Text>
-        </Pressable>
-      </SafeAreaView>
-    );
-  }
+    if (!items.length) {
+      return (
+        <SafeAreaView style={[styles.container, styles.center]}>
+          <EmptyState
+            icon="🛒"
+            title="Giỏ hàng trống"
+            description="Thêm sản phẩm để bắt đầu mua sắm"
+            actionLabel="Khám phá sản phẩm"
+            onAction={() => nav.navigate('Home')}
+          />
+        </SafeAreaView>
+      );
+    }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -210,7 +215,7 @@ export function CartScreen() {
           )
         }
         renderItem={({ item }) => {
-          const price = Number(item.product?.salePrice ?? item.product?.price ?? item.unitPrice ?? 0);
+          const price = Number(item.product?.salePrice ?? item.product?.price ?? (item as any).unitPrice ?? 0);
           const img = item.product?.imageUrl || PLACEHOLDER;
           return (
             <View style={styles.itemCard}>

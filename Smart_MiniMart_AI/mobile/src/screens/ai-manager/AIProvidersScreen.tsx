@@ -1,6 +1,9 @@
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAIProviders } from '@/services/queries';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 import { colors, radius, spacing, typography } from '@/theme';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -20,7 +23,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function AIProvidersScreen() {
-  const { data: providers = [], isLoading } = useAIProviders();
+  const { data: providers = [], isLoading, isError, refetch, isFetching } = useAIProviders();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -29,13 +32,17 @@ export function AIProvidersScreen() {
         <Text style={styles.subtitle}>{providers.length} provider được cấu hình</Text>
       </View>
 
-      {isLoading ? (
-        <View style={styles.center}><ActivityIndicator color={colors.roleAiManager} /></View>
+      {isLoading && providers.length === 0 && !isError ? (
+        <ListRowSkeleton count={4} />
+      ) : isError && providers.length === 0 ? (
+        <ErrorState title="Không tải được providers" onRetry={() => refetch()} />
       ) : (
         <FlatList
           data={providers}
           keyExtractor={(p: any) => p.id}
-          contentContainerStyle={{ padding: spacing.lg }}
+          contentContainerStyle={{ padding: spacing.lg, flexGrow: 1 }}
+          onRefresh={refetch}
+          refreshing={isFetching && !isLoading}
           renderItem={({ item }: any) => (
             <View style={[styles.card, item.isSystemDefault && styles.cardDefault]}>
               <View style={styles.cardHeader}>
@@ -74,10 +81,14 @@ export function AIProvidersScreen() {
             </View>
           )}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={{ fontSize: 48 }}>🔌</Text>
-              <Text style={styles.emptyText}>Chưa có provider</Text>
-            </View>
+            <EmptyState
+              icon="🔌"
+              title="Chưa có provider"
+              description="Cấu hình provider AI trong backend/seed để bắt đầu."
+              actionLabel="Tải lại"
+              onAction={() => refetch()}
+              actionVariant="outline"
+            />
           }
         />
       )}
@@ -87,7 +98,6 @@ export function AIProvidersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { padding: spacing.lg, paddingBottom: spacing.sm },
   title: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.text },
   subtitle: { fontSize: typography.size.sm, color: colors.textSecondary, marginTop: 2 },
@@ -105,6 +115,4 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: 'row', gap: 8, marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.divider },
   actionBtn: { flex: 1, padding: spacing.sm, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
   actionText: { fontSize: typography.size.xs, fontWeight: typography.weight.semibold, color: colors.text },
-  empty: { alignItems: 'center', paddingTop: spacing['2xl'] },
-  emptyText: { color: colors.textSecondary, marginTop: spacing.md },
 });

@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Pressable, Alert,
-  Modal, TextInput, ScrollView, ActivityIndicator,
+  Modal, TextInput, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { colors } from '@/theme/colors';
 import { api, unwrap } from '@/services/api';
 import { formatVnd } from '@/utils/format';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 
 const useAdminPromos = () =>
   useQuery({
@@ -34,7 +37,7 @@ const useTogglePromo = () => {
 };
 
 export function AdminPromotionsScreen() {
-  const { data: promos = [], isLoading, refetch } = useAdminPromos();
+  const { data: promos = [], isLoading, isError, refetch, isFetching } = useAdminPromos();
   const toggle = useTogglePromo();
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -49,78 +52,86 @@ export function AdminPromotionsScreen() {
         </Pressable>
       </View>
 
-      {isLoading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
-      ) : promos.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>🎁</Text>
-          <Text style={styles.emptyText}>Chưa có khuyến mãi nào</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={promos}
-          keyExtractor={(item: any) => item.id}
-          contentContainerStyle={{ padding: 12 }}
-          renderItem={({ item }) => {
-            const expired = new Date(item.endsAt).getTime() < now;
-            const upcoming = new Date(item.startsAt).getTime() > now;
-            const status = !item.isActive
-              ? { text: 'Đã tắt', color: '#991B1B', bg: '#FEE2E2' }
-              : expired
-              ? { text: 'Đã hết hạn', color: '#92400E', bg: '#FEF3C7' }
-              : upcoming
-              ? { text: 'Sắp diễn ra', color: '#1E40AF', bg: '#DBEAFE' }
-              : { text: 'Đang chạy', color: colors.primaryDark, bg: colors.primarySoft };
+      {isLoading && promos.length === 0 && !isError ? (
+              <ListRowSkeleton count={4} />
+            ) : isError && promos.length === 0 ? (
+              <ErrorState title="Không tải được khuyến mãi" onRetry={() => refetch()} />
+            ) : (
+              <FlatList
+                data={promos}
+                keyExtractor={(item: any) => item.id}
+                contentContainerStyle={{ padding: 12, flexGrow: 1 }}
+                onRefresh={refetch}
+                refreshing={isFetching && !isLoading}
+                renderItem={({ item }) => {
+                  const expired = new Date(item.endsAt).getTime() < now;
+                  const upcoming = new Date(item.startsAt).getTime() > now;
+                  const status = !item.isActive
+                    ? { text: 'Đã tắt', color: '#991B1B', bg: '#FEE2E2' }
+                    : expired
+                    ? { text: 'Đã hết hạn', color: '#92400E', bg: '#FEF3C7' }
+                    : upcoming
+                    ? { text: 'Sắp diễn ra', color: '#1E40AF', bg: '#DBEAFE' }
+                    : { text: 'Đang chạy', color: colors.primaryDark, bg: colors.primarySoft };
 
-            return (
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.codeBadge}>
-                    <Text style={styles.codeText}>{item.code}</Text>
-                  </View>
-                  <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-                    <Text style={[styles.statusText, { color: status.color }]}>{status.text}</Text>
-                  </View>
-                </View>
-                <Text style={styles.promoName}>{item.name}</Text>
-                {item.description && (
-                  <Text style={styles.promoDesc}>{item.description}</Text>
-                )}
-                <View style={styles.discountRow}>
-                  <Text style={styles.discountLabel}>Giảm:</Text>
-                  <Text style={styles.discountValue}>
-                    {item.discountType === 'PERCENT'
-                      ? `${item.discountValue}%`
-                      : formatVnd(Number(item.discountValue))}
-                  </Text>
-                  {Number(item.maxDiscount) > 0 && item.discountType === 'PERCENT' && (
-                    <Text style={styles.maxDiscount}>tối đa {formatVnd(Number(item.maxDiscount))}</Text>
-                  )}
-                </View>
-                {Number(item.minOrderValue) > 0 && (
-                  <Text style={styles.minOrder}>
-                    Đơn từ {formatVnd(Number(item.minOrderValue))}
-                  </Text>
-                )}
-                <Text style={styles.dateRange}>
-                  {new Date(item.startsAt).toLocaleDateString('vi-VN')} →{' '}
-                  {new Date(item.endsAt).toLocaleDateString('vi-VN')}
-                </Text>
-                <Pressable
-                  style={styles.toggleBtn}
-                  onPress={() =>
-                    toggle.mutateAsync({ id: item.id, active: !item.isActive })
-                  }
-                >
-                  <Text style={styles.toggleText}>
-                    {item.isActive ? '⏸ Tắt' : '▶ Bật'}
-                  </Text>
-                </Pressable>
-              </View>
-            );
-          }}
-        />
-      )}
+                  return (
+                    <View style={styles.card}>
+                      <View style={styles.cardHeader}>
+                        <View style={styles.codeBadge}>
+                          <Text style={styles.codeText}>{item.code}</Text>
+                        </View>
+                        <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+                          <Text style={[styles.statusText, { color: status.color }]}>{status.text}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.promoName}>{item.name}</Text>
+                      {item.description && (
+                        <Text style={styles.promoDesc}>{item.description}</Text>
+                      )}
+                      <View style={styles.discountRow}>
+                        <Text style={styles.discountLabel}>Giảm:</Text>
+                        <Text style={styles.discountValue}>
+                          {item.discountType === 'PERCENT'
+                            ? `${item.discountValue}%`
+                            : formatVnd(Number(item.discountValue))}
+                        </Text>
+                        {Number(item.maxDiscount) > 0 && item.discountType === 'PERCENT' && (
+                          <Text style={styles.maxDiscount}>tối đa {formatVnd(Number(item.maxDiscount))}</Text>
+                        )}
+                      </View>
+                      {Number(item.minOrderValue) > 0 && (
+                        <Text style={styles.minOrder}>
+                          Đơn từ {formatVnd(Number(item.minOrderValue))}
+                        </Text>
+                      )}
+                      <Text style={styles.dateRange}>
+                        {new Date(item.startsAt).toLocaleDateString('vi-VN')} →{' '}
+                        {new Date(item.endsAt).toLocaleDateString('vi-VN')}
+                      </Text>
+                      <Pressable
+                        style={styles.toggleBtn}
+                        onPress={() =>
+                          toggle.mutateAsync({ id: item.id, active: !item.isActive })
+                        }
+                      >
+                        <Text style={styles.toggleText}>
+                          {item.isActive ? '⏸ Tắt' : '▶ Bật'}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  );
+                }}
+                ListEmptyComponent={
+                  <EmptyState
+                    icon="🎁"
+                    title="Chưa có khuyến mãi nào"
+                    description="Tạo voucher để tăng chuyển đổi đơn hàng."
+                    actionLabel="Tạo khuyến mãi"
+                    onAction={() => setCreateOpen(true)}
+                  />
+                }
+              />
+            )}
 
       <CreatePromoModal open={createOpen} onClose={() => { setCreateOpen(false); refetch(); }} />
     </SafeAreaView>

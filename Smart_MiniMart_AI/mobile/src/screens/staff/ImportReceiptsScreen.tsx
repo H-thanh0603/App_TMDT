@@ -1,11 +1,13 @@
 import React from 'react';
 import {
-  ActivityIndicator, FlatList, StyleSheet, Text, View, Pressable,
+  FlatList, StyleSheet, Text, View, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useImportReceipts } from '@/services/queries';
-import { Badge } from '@/components/Badge';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 import { colors } from '@/theme/colors';
 import { formatDateTime, formatVnd } from '@/utils/format';
 
@@ -29,7 +31,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function ImportReceiptsScreen() {
   const nav = useNavigation<any>();
-  const { data, isLoading } = useImportReceipts();
+  const { data, isLoading, isError, refetch, isFetching } = useImportReceipts();
   const items = data?.items ?? [];
 
   return (
@@ -41,13 +43,20 @@ export function ImportReceiptsScreen() {
         </Pressable>
       </View>
 
-      {isLoading ? (
-        <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
+      {isLoading && !data ? (
+        <ListRowSkeleton count={5} />
+      ) : isError && !data ? (
+        <ErrorState
+          title="Không tải được phiếu nhập"
+          onRetry={() => refetch()}
+        />
       ) : (
         <FlatList
           data={items}
           keyExtractor={(r) => r.id}
-          contentContainerStyle={{ padding: 20 }}
+          contentContainerStyle={{ padding: 20, flexGrow: 1 }}
+          onRefresh={refetch}
+          refreshing={isFetching && !isLoading}
           renderItem={({ item }) => (
             <Pressable style={styles.card}
               onPress={() => nav.navigate('ReceiptDetail', { id: item.id })}>
@@ -68,11 +77,13 @@ export function ImportReceiptsScreen() {
             </Pressable>
           )}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={{ fontSize: 56 }}>📄</Text>
-              <Text style={styles.emptyText}>Chưa có phiếu nhập nào</Text>
-              <Text style={styles.emptyHint}>Bấm "Quét phiếu" để bắt đầu</Text>
-            </View>
+            <EmptyState
+              icon="📄"
+              title="Chưa có phiếu nhập nào"
+              description='Bấm "Quét phiếu" để bắt đầu OCR nhập hàng.'
+              actionLabel="Quét phiếu"
+              onAction={() => nav.navigate('OCRScan')}
+            />
           }
         />
       )}
@@ -82,7 +93,6 @@ export function ImportReceiptsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20 },
   title: { fontSize: 20, fontWeight: '800', color: colors.text },
   card: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 },
@@ -93,9 +103,6 @@ const styles = StyleSheet.create({
   date: { fontSize: 11, color: colors.textTertiary, marginTop: 2 },
   itemCount: { fontSize: 13, color: colors.textSecondary },
   total: { fontWeight: '800', color: colors.primary },
-  empty: { alignItems: 'center', paddingTop: 32 },
-  emptyText: { color: colors.text, marginTop: 12, fontSize: 14, fontWeight: '600' },
-  emptyHint: { color: colors.textSecondary, marginTop: 4, fontSize: 13 },
   scanBtn: { backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
   scanBtnText: { color: 'white', fontWeight: '700', fontSize: 13 },
 });

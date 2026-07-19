@@ -1,15 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/theme/colors';
 import { useNotifications, useMarkRead, useMarkAllRead } from '@/services/queries';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 
 const TYPE_ICONS: Record<string, string> = {
   ORDER: '🛒', PROMOTION: '🎁', EXPIRY: '⏰', SYSTEM: '🔔',
 };
 
 export function NotificationsScreen() {
-  const { data, isLoading } = useNotifications();
+  const { data, isLoading, isError, refetch, isFetching } = useNotifications();
   const markRead = useMarkRead();
   const markAll = useMarkAllRead();
 
@@ -27,18 +30,17 @@ export function NotificationsScreen() {
         )}
       </View>
 
-      {isLoading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
-      ) : items.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>🔔</Text>
-          <Text style={styles.emptyText}>Chưa có thông báo nào</Text>
-        </View>
+      {isLoading && !data ? (
+        <ListRowSkeleton count={5} />
+      ) : isError && !data ? (
+        <ErrorState title="Không tải được thông báo" onRetry={() => refetch()} />
       ) : (
         <FlatList
           data={items}
           keyExtractor={(item: any) => item.id}
-          contentContainerStyle={{ padding: 12 }}
+          contentContainerStyle={{ padding: 12, flexGrow: 1 }}
+          onRefresh={refetch}
+          refreshing={isFetching && !isLoading}
           renderItem={({ item }) => (
             <Pressable
               style={[styles.card, !item.isRead && styles.unread]}
@@ -55,6 +57,16 @@ export function NotificationsScreen() {
               {!item.isRead && <View style={styles.dot} />}
             </Pressable>
           )}
+          ListEmptyComponent={
+            <EmptyState
+              icon="🔔"
+              title="Chưa có thông báo nào"
+              description="Đơn hàng, KM và cảnh báo kho sẽ hiện ở đây."
+              actionLabel="Tải lại"
+              onAction={() => refetch()}
+              actionVariant="outline"
+            />
+          }
         />
       )}
     </SafeAreaView>
@@ -70,9 +82,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '800', color: colors.text },
   markAllBtn: { paddingHorizontal: 10, paddingVertical: 6 },
   markAllText: { color: colors.primary, fontWeight: '700' },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyText: { color: colors.textSecondary },
   card: {
     flexDirection: 'row', backgroundColor: 'white', padding: 12,
     marginBottom: 8, borderRadius: 12, gap: 10, alignItems: 'center',

@@ -1,13 +1,15 @@
 import { useState, useMemo } from 'react';
 import {
-  ActivityIndicator, FlatList, StyleSheet, Text, View, Pressable,
+  FlatList, StyleSheet, Text, View, Pressable,
   TextInput, ScrollView, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useProducts, useCategories } from '@/services/queries';
 import { ProductCard } from '@/components/ProductCard';
-import { Badge } from '@/components/Badge';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ProductGridSkeleton } from '@/components/Skeleton';
 import { colors, spacing, typography } from '@/theme';
 import type { Product } from '@/types';
 
@@ -55,10 +57,10 @@ export function ProductListScreen() {
     return p;
   }, [page, search, categoryId, sortBy, pricePreset, inStockOnly]);
 
-  const { data, isLoading, isFetching, refetch } = useProducts(queryParams);
-  const items = data?.items ?? [];
-  const total = data?.total ?? 0;
-  const totalPages = data?.totalPages ?? 1;
+  const { data, isLoading, isFetching, isError, refetch } = useProducts(queryParams);
+    const items = data?.items ?? [];
+    const total = data?.total ?? 0;
+    const totalPages = data?.totalPages ?? 1;
 
   const activeFilters =
     (categoryId ? 1 : 0) +
@@ -131,59 +133,74 @@ export function ProductListScreen() {
       </View>
 
       {/* Product grid */}
-      {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(p: Product) => p.id}
-          numColumns={2}
-          contentContainerStyle={styles.list}
-          columnWrapperStyle={{ justifyContent: 'space-between' }}
-          onRefresh={refetch}
-          refreshing={isFetching && !isLoading}
-          renderItem={({ item }) => (
-            <ProductCard
-              product={item}
-              onPress={() => nav.navigate('ProductDetail', { idOrSlug: item.slug })}
-            />
-          )}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>📦</Text>
-              <Text style={styles.emptyText}>Không tìm thấy sản phẩm</Text>
-              {activeFilters > 0 && (
-                <Pressable style={styles.resetBtn} onPress={resetFilters}>
-                  <Text style={styles.resetBtnText}>Xoá bộ lọc</Text>
-                </Pressable>
-              )}
-            </View>
-          }
-          ListFooterComponent={
-            totalPages > 1 ? (
-              <View style={styles.pagination}>
-                <Pressable
-                  style={[styles.pageBtn, page === 1 && styles.pageBtnDisabled]}
-                  onPress={() => setPage(Math.max(1, page - 1))}
-                  disabled={page === 1}
-                >
-                  <Text style={styles.pageBtnText}>‹ Trước</Text>
-                </Pressable>
-                <Text style={styles.pageInfo}>{page} / {totalPages}</Text>
-                <Pressable
-                  style={[styles.pageBtn, page === totalPages && styles.pageBtnDisabled]}
-                  onPress={() => setPage(Math.min(totalPages, page + 1))}
-                  disabled={page === totalPages}
-                >
-                  <Text style={styles.pageBtnText}>Sau ›</Text>
-                </Pressable>
+            {isLoading && !data ? (
+              <View style={{ paddingTop: 8 }}>
+                <ProductGridSkeleton count={6} />
               </View>
-            ) : null
-          }
-        />
-      )}
+            ) : isError && !data ? (
+              <ErrorState
+                title="Không tải được sản phẩm"
+                description="Lỗi mạng hoặc server. Thử lại nhé."
+                onRetry={() => refetch()}
+              />
+            ) : (
+              <FlatList
+                data={items}
+                keyExtractor={(p: Product) => p.id}
+                numColumns={2}
+                contentContainerStyle={styles.list}
+                columnWrapperStyle={items.length > 0 ? { justifyContent: 'space-between' } : undefined}
+                onRefresh={refetch}
+                refreshing={isFetching && !isLoading}
+                renderItem={({ item }) => (
+                  <ProductCard
+                    product={item}
+                    onPress={() => nav.navigate('ProductDetail', { idOrSlug: item.slug })}
+                  />
+                )}
+                ListEmptyComponent={
+                  <EmptyState
+                    icon="📦"
+                    title="Không tìm thấy sản phẩm"
+                    description={
+                      activeFilters > 0 || search
+                        ? 'Thử xoá bộ lọc hoặc đổi từ khoá tìm kiếm.'
+                        : 'Cửa hàng chưa có sản phẩm phù hợp.'
+                    }
+                    actionLabel={activeFilters > 0 || search ? 'Xoá bộ lọc' : 'Tải lại'}
+                    onAction={() => {
+                      if (activeFilters > 0 || search) {
+                        setSearch('');
+                        resetFilters();
+                      } else {
+                        refetch();
+                      }
+                    }}
+                  />
+                }
+                ListFooterComponent={
+                  totalPages > 1 ? (
+                    <View style={styles.pagination}>
+                      <Pressable
+                        style={[styles.pageBtn, page === 1 && styles.pageBtnDisabled]}
+                        onPress={() => setPage(Math.max(1, page - 1))}
+                        disabled={page === 1}
+                      >
+                        <Text style={styles.pageBtnText}>‹ Trước</Text>
+                      </Pressable>
+                      <Text style={styles.pageInfo}>{page} / {totalPages}</Text>
+                      <Pressable
+                        style={[styles.pageBtn, page === totalPages && styles.pageBtnDisabled]}
+                        onPress={() => setPage(Math.min(totalPages, page + 1))}
+                        disabled={page === totalPages}
+                      >
+                        <Text style={styles.pageBtnText}>Sau ›</Text>
+                      </Pressable>
+                    </View>
+                  ) : null
+                }
+              />
+            )}
 
       <FilterModal
         open={filterModalOpen}

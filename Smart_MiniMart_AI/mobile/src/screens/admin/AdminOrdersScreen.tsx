@@ -1,10 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import {
-  ActivityIndicator, FlatList, StyleSheet, Text, View, Pressable, Alert,
+  FlatList, StyleSheet, Text, View, Pressable, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAllOrders, useUpdateOrderStatus } from '@/services/queries';
 import { Badge } from '@/components/Badge';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 import { colors } from '@/theme/colors';
 import { formatDateTime, formatVnd, statusLabel } from '@/utils/format';
 import type { OrderStatus } from '@/types';
@@ -26,9 +29,9 @@ const STATUS_VARIANT: Record<string, any> = {
 
 export function AdminOrdersScreen() {
   const [filter, setFilter] = useState<OrderStatus | undefined>(undefined);
-  const { data, isLoading, refetch, isFetching } = useAllOrders(
-    filter ? { status: filter, limit: 100 } : { limit: 100 },
-  );
+  const { data, isLoading, isError, refetch, isFetching } = useAllOrders(
+      filter ? { status: filter, limit: 100 } : { limit: 100 },
+    );
   const update = useUpdateOrderStatus();
   const items = data?.items ?? [];
 
@@ -109,73 +112,85 @@ export function AdminOrdersScreen() {
         }}
       />
 
-      {isLoading ? (
-        <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(o: any) => o.id}
-          contentContainerStyle={{ padding: 12 }}
-          onRefresh={refetch}
-          refreshing={isFetching && !isLoading}
-          renderItem={({ item: rawItem }) => {
-            const item = rawItem as any;
-            const canCancel = ['PENDING', 'CONFIRMED'].includes(item.status);
-            return (
-              <View style={styles.orderCard}>
-                <View style={styles.orderHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.orderNumber}>#{item.orderNumber}</Text>
-                    <Text style={styles.orderTime}>{formatDateTime(item.createdAt)}</Text>
-                  </View>
-                  <Badge
-                    label={statusLabel(item.status)}
-                    variant={STATUS_VARIANT[item.status] || 'default'}
-                    size="md"
+      {isLoading && !data ? (
+              <ListRowSkeleton count={5} />
+            ) : isError && !data ? (
+              <ErrorState
+                title="Không tải được đơn hàng"
+                description="Lỗi mạng hoặc server."
+                onRetry={() => refetch()}
+              />
+            ) : (
+              <FlatList
+                data={items}
+                keyExtractor={(o: any) => o.id}
+                contentContainerStyle={{ padding: 12, flexGrow: 1 }}
+                onRefresh={refetch}
+                refreshing={isFetching && !isLoading}
+                renderItem={({ item: rawItem }) => {
+                  const item = rawItem as any;
+                  const canCancel = ['PENDING', 'CONFIRMED'].includes(item.status);
+                  return (
+                    <View style={styles.orderCard}>
+                      <View style={styles.orderHeader}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.orderNumber}>#{item.orderNumber}</Text>
+                          <Text style={styles.orderTime}>{formatDateTime(item.createdAt)}</Text>
+                        </View>
+                        <Badge
+                          label={statusLabel(item.status)}
+                          variant={STATUS_VARIANT[item.status] || 'default'}
+                          size="md"
+                        />
+                      </View>
+
+                      <View style={styles.divider} />
+
+                      <View style={styles.customerRow}>
+                        <Text style={{ fontSize: 16 }}>👤</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.customerName}>
+                            {item.customer?.fullName ?? item.shippingName ?? 'Khách'}
+                          </Text>
+                          <Text style={styles.customerPhone}>
+                            {item.customer?.phone ?? item.shippingPhone ?? ''}
+                          </Text>
+                        </View>
+                        <Text style={styles.payment}>
+                          {item.paymentMethod === 'COD' ? '💵 COD' : '🏦 ' + item.paymentMethod}
+                        </Text>
+                      </View>
+
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.itemCount}>{item.items?.length ?? 0} sản phẩm</Text>
+                        <Text style={styles.total}>{formatVnd(Number(item.totalAmount))}</Text>
+                      </View>
+
+                      {canCancel && (
+                        <Pressable
+                          style={styles.cancelBtn}
+                          onPress={() => cancel(item.id)}
+                        >
+                          <Text style={styles.cancelText}>Hủy đơn</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  );
+                }}
+                ListEmptyComponent={
+                  <EmptyState
+                    icon="📭"
+                    title="Không có đơn nào"
+                    description={filter ? 'Thử đổi bộ lọc trạng thái.' : 'Chưa có đơn hàng trong hệ thống.'}
+                    actionLabel={filter ? 'Xem tất cả' : 'Tải lại'}
+                    onAction={() => {
+                      if (filter) setFilter(undefined);
+                      else refetch();
+                    }}
                   />
-                </View>
-
-                <View style={styles.divider} />
-
-                <View style={styles.customerRow}>
-                  <Text style={{ fontSize: 16 }}>👤</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.customerName}>
-                      {item.customer?.fullName ?? item.shippingName ?? 'Khách'}
-                    </Text>
-                    <Text style={styles.customerPhone}>
-                      {item.customer?.phone ?? item.shippingPhone ?? ''}
-                    </Text>
-                  </View>
-                  <Text style={styles.payment}>
-                    {item.paymentMethod === 'COD' ? '💵 COD' : '🏦 ' + item.paymentMethod}
-                  </Text>
-                </View>
-
-                <View style={styles.summaryRow}>
-                  <Text style={styles.itemCount}>{item.items?.length ?? 0} sản phẩm</Text>
-                  <Text style={styles.total}>{formatVnd(Number(item.totalAmount))}</Text>
-                </View>
-
-                {canCancel && (
-                  <Pressable
-                    style={styles.cancelBtn}
-                    onPress={() => cancel(item.id)}
-                  >
-                    <Text style={styles.cancelText}>Hủy đơn</Text>
-                  </Pressable>
-                )}
-              </View>
-            );
-          }}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={{ fontSize: 56 }}>📭</Text>
-              <Text style={styles.emptyText}>Không có đơn nào</Text>
-            </View>
-          }
-        />
-      )}
+                }
+              />
+            )}
     </SafeAreaView>
   );
 }

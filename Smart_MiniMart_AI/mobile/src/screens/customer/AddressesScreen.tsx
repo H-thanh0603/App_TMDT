@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Pressable, Alert,
-  Modal, TextInput, ScrollView, Switch, ActivityIndicator,
+  Modal, TextInput, ScrollView, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/theme/colors';
 import { useAddresses, useCreateAddress, useUpdateAddress, useDeleteAddress } from '@/services/queries';
 import type { Address } from '@/types';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 
 const empty: any = {
   recipient: '', phone: '', line1: '',
@@ -14,7 +17,7 @@ const empty: any = {
 };
 
 export function AddressesScreen() {
-  const { data: addresses = [], isLoading } = useAddresses();
+  const { data: addresses = [], isLoading, isError, refetch, isFetching } = useAddresses();
   const create = useCreateAddress();
   const update = useUpdateAddress();
   const remove = useDeleteAddress();
@@ -72,47 +75,52 @@ export function AddressesScreen() {
         </Pressable>
       </View>
 
-      {isLoading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
-      ) : addresses.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>📍</Text>
-          <Text style={styles.emptyText}>Chưa có địa chỉ nào</Text>
-          <Pressable style={styles.emptyBtn} onPress={openCreate}>
-            <Text style={styles.emptyBtnText}>Thêm địa chỉ đầu tiên</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <FlatList
-          data={addresses}
-          keyExtractor={(item: Address) => item.id}
-          contentContainerStyle={{ padding: 16 }}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.recipient}>{item.recipient}</Text>
-                {item.isDefault && (
-                  <View style={styles.defaultBadge}>
-                    <Text style={styles.defaultText}>Mặc định</Text>
+      {isLoading && addresses.length === 0 && !isError ? (
+              <ListRowSkeleton count={3} />
+            ) : isError && addresses.length === 0 ? (
+              <ErrorState title="Không tải được địa chỉ" onRetry={() => refetch()} />
+            ) : (
+              <FlatList
+                data={addresses}
+                keyExtractor={(item: Address) => item.id}
+                contentContainerStyle={{ padding: 16, flexGrow: 1 }}
+                onRefresh={refetch}
+                refreshing={isFetching && !isLoading}
+                renderItem={({ item }) => (
+                  <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                      <Text style={styles.recipient}>{item.recipient}</Text>
+                      {item.isDefault && (
+                        <View style={styles.defaultBadge}>
+                          <Text style={styles.defaultText}>Mặc định</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.phone}>{item.phone}</Text>
+                    <Text style={styles.address}>
+                      {[item.line1, item.ward, item.district, item.city].filter(Boolean).join(', ')}
+                    </Text>
+                    <View style={styles.actions}>
+                      <Pressable onPress={() => openEdit(item)} style={styles.actionBtn}>
+                        <Text style={styles.actionText}>Sửa</Text>
+                      </Pressable>
+                      <Pressable onPress={() => del(item)} style={[styles.actionBtn, styles.dangerBtn]}>
+                        <Text style={[styles.actionText, { color: colors.danger }]}>Xóa</Text>
+                      </Pressable>
+                    </View>
                   </View>
                 )}
-              </View>
-              <Text style={styles.phone}>{item.phone}</Text>
-              <Text style={styles.address}>
-                {[item.line1, item.ward, item.district, item.city].filter(Boolean).join(', ')}
-              </Text>
-              <View style={styles.actions}>
-                <Pressable onPress={() => openEdit(item)} style={styles.actionBtn}>
-                  <Text style={styles.actionText}>Sửa</Text>
-                </Pressable>
-                <Pressable onPress={() => del(item)} style={[styles.actionBtn, styles.dangerBtn]}>
-                  <Text style={[styles.actionText, { color: colors.danger }]}>Xóa</Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-        />
-      )}
+                ListEmptyComponent={
+                  <EmptyState
+                    icon="📍"
+                    title="Chưa có địa chỉ nào"
+                    description="Thêm địa chỉ để checkout đơn hàng."
+                    actionLabel="Thêm địa chỉ đầu tiên"
+                    onAction={openCreate}
+                  />
+                }
+              />
+            )}
 
       <Modal visible={modalOpen} animationType="slide" presentationStyle="formSheet">
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>

@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator, FlatList, StyleSheet, Text, View, Pressable,
+  FlatList, StyleSheet, Text, View, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useExpiringProducts, useSlowMoving, useRestockSuggestions } from '@/services/queries';
 import { Badge } from '@/components/Badge';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 import { colors } from '@/theme/colors';
 import { formatVnd } from '@/utils/format';
 
@@ -22,7 +25,15 @@ export function AdminInventoryScreen() {
   const slow = useSlowMoving();
   const restock = useRestockSuggestions();
 
-  const isLoading = expiring.isLoading || slow.isLoading || restock.isLoading;
+  const activeQ = tab === 'expiring' ? expiring : tab === 'slow' ? slow : restock;
+  const isLoading = activeQ.isLoading && !activeQ.data;
+  const isError = activeQ.isError && !activeQ.data;
+
+  const retry = () => {
+    expiring.refetch();
+    slow.refetch();
+    restock.refetch();
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -41,12 +52,20 @@ export function AdminInventoryScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
+        <ListRowSkeleton count={5} />
+      ) : isError ? (
+        <ErrorState
+          title="Không tải được dữ liệu kho"
+          description="Kiểm tra mạng rồi thử lại."
+          onRetry={retry}
+        />
       ) : tab === 'expiring' ? (
         <FlatList
           data={expiring.data ?? []}
           keyExtractor={(p: any) => p.id}
-          contentContainerStyle={{ padding: 20 }}
+          contentContainerStyle={{ padding: 20, flexGrow: 1 }}
+          onRefresh={retry}
+          refreshing={expiring.isFetching && !expiring.isLoading}
           renderItem={({ item }: any) => (
             <View style={styles.card}>
               <View style={{ flex: 1 }}>
@@ -62,13 +81,24 @@ export function AdminInventoryScreen() {
               />
             </View>
           )}
-          ListEmptyComponent={<EmptyState text="Không có hàng cận date" />}
+          ListEmptyComponent={
+            <EmptyState
+              icon="✅"
+              title="Không có hàng cận date"
+              description="Không có sản phẩm sắp hết hạn trong 30 ngày."
+              actionLabel="Tải lại"
+              onAction={retry}
+              actionVariant="outline"
+            />
+          }
         />
       ) : tab === 'slow' ? (
         <FlatList
           data={slow.data ?? []}
           keyExtractor={(p: any) => p.id}
-          contentContainerStyle={{ padding: 20 }}
+          contentContainerStyle={{ padding: 20, flexGrow: 1 }}
+          onRefresh={retry}
+          refreshing={slow.isFetching && !slow.isLoading}
           renderItem={({ item }: any) => (
             <View style={styles.card}>
               <View style={{ flex: 1 }}>
@@ -83,13 +113,24 @@ export function AdminInventoryScreen() {
               <Text style={styles.priceTag}>{formatVnd(Number(item.price))}</Text>
             </View>
           )}
-          ListEmptyComponent={<EmptyState text="Không có hàng bán chậm" />}
+          ListEmptyComponent={
+            <EmptyState
+              icon="📈"
+              title="Không có hàng bán chậm"
+              description="Tất cả sản phẩm đang xoay vòng ổn."
+              actionLabel="Tải lại"
+              onAction={retry}
+              actionVariant="outline"
+            />
+          }
         />
       ) : (
         <FlatList
           data={restock.data ?? []}
           keyExtractor={(p: any) => p.id}
-          contentContainerStyle={{ padding: 20 }}
+          contentContainerStyle={{ padding: 20, flexGrow: 1 }}
+          onRefresh={retry}
+          refreshing={restock.isFetching && !restock.isLoading}
           renderItem={({ item }: any) => (
             <View style={styles.card}>
               <View style={{ flex: 1 }}>
@@ -108,25 +149,24 @@ export function AdminInventoryScreen() {
               />
             </View>
           )}
-          ListEmptyComponent={<EmptyState text="Tồn kho ổn — chưa cần nhập" />}
+          ListEmptyComponent={
+            <EmptyState
+              icon="📦"
+              title="Tồn kho ổn"
+              description="Chưa cần nhập thêm hàng."
+              actionLabel="Tải lại"
+              onAction={retry}
+              actionVariant="outline"
+            />
+          }
         />
       )}
     </SafeAreaView>
   );
 }
 
-function EmptyState({ text }: { text: string }) {
-  return (
-    <View style={styles.empty}>
-      <Text style={{ fontSize: 48 }}>📦</Text>
-      <Text style={styles.emptyText}>{text}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { padding: 20, paddingBottom: 8 },
   title: { fontSize: 20, fontWeight: '800', color: colors.text },
   tabRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 8 },
@@ -139,11 +179,5 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 13, fontWeight: '600', color: colors.text },
   itemMeta: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
   suggestion: { fontSize: 11, color: colors.primary, marginTop: 4, fontWeight: '600' },
-  tier: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginLeft: 8 },
-  tierText: { fontSize: 11, fontWeight: '800', color: colors.text },
-  urgency: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginLeft: 8 },
-  urgencyText: { fontSize: 11, fontWeight: '800', color: colors.text },
   priceTag: { fontWeight: '800', color: colors.primary, fontSize: 13, marginLeft: 8 },
-  empty: { alignItems: 'center', paddingTop: 32 },
-  emptyText: { color: colors.textSecondary, marginTop: 12 },
 });

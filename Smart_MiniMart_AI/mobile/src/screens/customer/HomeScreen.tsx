@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View,
+  FlatList, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -9,8 +9,10 @@ import {
 } from '@/services/queries';
 import { useAuthStore } from '@/store/auth.store';
 import { ProductCard } from '@/components/ProductCard';
-import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { CategoryRowSkeleton, ProductGridSkeleton } from '@/components/Skeleton';
 import { colors } from '@/theme/colors';
 
 const CAT_EMOJI: Record<string, string> = {
@@ -27,14 +29,34 @@ const CAT_COLORS = [
 export function HomeScreen() {
   const nav = useNavigation<any>();
   const { user } = useAuthStore();
-  const { data: categories = [] } = useCategories();
-  const { data: featured = [] } = useFeaturedProducts();
-  const { data: promos = [] } = useActivePromos();
-  const { data: notifData } = useNotifications();
+  const categoriesQ = useCategories();
+  const featuredQ = useFeaturedProducts();
+  const promosQ = useActivePromos();
+  const notifQ = useNotifications();
+
+  const categories = categoriesQ.data ?? [];
+  const featured = featuredQ.data ?? [];
+  const promos = promosQ.data ?? [];
+  const notifData = notifQ.data;
 
   const firstName = user?.fullName?.split(' ').pop() ?? '';
   const unread = notifData?.unread ?? 0;
   const topPromo = promos[0];
+
+  const isBootLoading =
+    (categoriesQ.isLoading && !categoriesQ.data) ||
+    (featuredQ.isLoading && !featuredQ.data);
+
+  const isBootError =
+    (!categoriesQ.data && categoriesQ.isError) ||
+    (!featuredQ.data && featuredQ.isError);
+
+  const retryHome = () => {
+    categoriesQ.refetch();
+    featuredQ.refetch();
+    promosQ.refetch();
+    notifQ.refetch();
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -84,97 +106,132 @@ export function HomeScreen() {
           </View>
         </Pressable>
 
-        {/* Promo Banner */}
-        {topPromo && (
-          <Pressable
-            style={styles.promoBanner}
-            onPress={() => nav.navigate('ProductList', { title: 'Khuyến mãi' })}
-          >
-            <View style={styles.promoLeft}>
-              <View style={styles.promoBadge}>
-                <Text style={styles.promoBadgeText}>HOT</Text>
-              </View>
-              <Text style={styles.promoTitle} numberOfLines={1}>{topPromo.name}</Text>
-              <Text style={styles.promoCode}>Mã: {topPromo.code}</Text>
-              <Text style={styles.promoDiscount}>
-                {topPromo.discountType === 'PERCENT'
-                  ? `Giảm ${topPromo.discountValue}%`
-                  : `Giảm ${Number(topPromo.discountValue).toLocaleString('vi-VN')}đ`}
-              </Text>
-            </View>
-            <Text style={styles.promoEmoji}>🎁</Text>
-          </Pressable>
-        )}
-
-        {/* Quick links */}
-        <View style={styles.quickRow}>
-          <QuickLink icon="🤖" label="AI Chat" color={colors.aiSoft}
-            textColor={colors.aiDark} onPress={() => nav.navigate('AI')} />
-          <QuickLink icon="🛒" label="Giỏ hàng" color={colors.primarySoft}
-            textColor={colors.primaryDark} onPress={() => nav.navigate('Cart')} />
-          <QuickLink icon="📦" label="Đơn hàng" color={colors.goldSoft}
-            textColor='#92400E' onPress={() => nav.navigate('Orders')} />
-          <QuickLink icon="📍" label="Địa chỉ" color="#FCE7F3"
-            textColor="#BE185D" onPress={() => nav.navigate('Addresses')} />
-        </View>
-
-        {/* Categories */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Danh mục</Text>
-          <Pressable onPress={() => nav.navigate('ProductList')}>
-            <Text style={styles.seeAll}>Xem tất cả ›</Text>
-          </Pressable>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 8 }}
-        >
-          {categories.map((cat: any, idx: number) => (
-            <Pressable
-              key={cat.id}
-              style={styles.catCard}
-              onPress={() => nav.navigate('ProductList', { categoryId: cat.id, title: cat.name })}
-            >
-              <View
-                style={[
-                  styles.catIconBg,
-                  { backgroundColor: CAT_COLORS[idx % CAT_COLORS.length] },
-                ]}
+        {isBootError ? (
+          <ErrorState
+            title="Không tải được trang chủ"
+            description="Kiểm tra kết nối mạng hoặc thử lại sau."
+            onRetry={retryHome}
+          />
+        ) : (
+          <>
+            {/* Promo Banner */}
+            {topPromo && (
+              <Pressable
+                style={styles.promoBanner}
+                onPress={() => nav.navigate('ProductList', { title: 'Khuyến mãi' })}
               >
-                <Text style={styles.catEmoji}>{CAT_EMOJI[cat.name] ?? '📦'}</Text>
+                <View style={styles.promoLeft}>
+                  <View style={styles.promoBadge}>
+                    <Text style={styles.promoBadgeText}>HOT</Text>
+                  </View>
+                  <Text style={styles.promoTitle} numberOfLines={1}>{topPromo.name}</Text>
+                  <Text style={styles.promoCode}>Mã: {topPromo.code}</Text>
+                  <Text style={styles.promoDiscount}>
+                    {topPromo.discountType === 'PERCENT'
+                      ? `Giảm ${topPromo.discountValue}%`
+                      : `Giảm ${Number(topPromo.discountValue).toLocaleString('vi-VN')}đ`}
+                  </Text>
+                </View>
+                <Text style={styles.promoEmoji}>🎁</Text>
+              </Pressable>
+            )}
+
+            {/* Quick links */}
+            <View style={styles.quickRow}>
+              <QuickLink icon="🤖" label="AI Chat" color={colors.aiSoft}
+                textColor={colors.aiDark} onPress={() => nav.navigate('AI')} />
+              <QuickLink icon="🛒" label="Giỏ hàng" color={colors.primarySoft}
+                textColor={colors.primaryDark} onPress={() => nav.navigate('Cart')} />
+              <QuickLink icon="📦" label="Đơn hàng" color={colors.goldSoft}
+                textColor="#92400E" onPress={() => nav.navigate('Orders')} />
+              <QuickLink icon="📍" label="Địa chỉ" color="#FCE7F3"
+                textColor="#BE185D" onPress={() => nav.navigate('Addresses')} />
+            </View>
+
+            {/* Categories */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Danh mục</Text>
+              <Pressable onPress={() => nav.navigate('ProductList')}>
+                <Text style={styles.seeAll}>Xem tất cả ›</Text>
+              </Pressable>
+            </View>
+
+            {isBootLoading ? (
+              <CategoryRowSkeleton />
+            ) : categories.length === 0 ? (
+              <EmptyState
+                icon="🗂️"
+                title="Chưa có danh mục"
+                description="Cửa hàng đang cập nhật danh mục sản phẩm."
+                actionLabel="Tải lại"
+                onAction={retryHome}
+                actionVariant="outline"
+              />
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 8 }}
+              >
+                {categories.map((cat: any, idx: number) => (
+                  <Pressable
+                    key={cat.id}
+                    style={styles.catCard}
+                    onPress={() => nav.navigate('ProductList', { categoryId: cat.id, title: cat.name })}
+                  >
+                    <View
+                      style={[
+                        styles.catIconBg,
+                        { backgroundColor: CAT_COLORS[idx % CAT_COLORS.length] },
+                      ]}
+                    >
+                      <Text style={styles.catEmoji}>{CAT_EMOJI[cat.name] ?? '📦'}</Text>
+                    </View>
+                    <Text style={styles.catName} numberOfLines={2}>{cat.name}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+
+            {/* Featured */}
+            <View style={styles.sectionHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Nổi bật</Text>
+                <Text style={styles.sectionSub}>Sản phẩm bán chạy nhất</Text>
               </View>
-              <Text style={styles.catName} numberOfLines={2}>{cat.name}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+              <Pressable onPress={() => nav.navigate('ProductList')}>
+                <Text style={styles.seeAll}>Xem tất cả ›</Text>
+              </Pressable>
+            </View>
 
-        {/* Featured */}
-        <View style={styles.sectionHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.sectionTitle}>Nổi bật</Text>
-            <Text style={styles.sectionSub}>Sản phẩm bán chạy nhất</Text>
-          </View>
-          <Pressable onPress={() => nav.navigate('ProductList')}>
-            <Text style={styles.seeAll}>Xem tất cả ›</Text>
-          </Pressable>
-        </View>
-
-        <FlatList
-          data={featured.slice(0, 6)}
-          keyExtractor={(p: any) => p.id}
-          numColumns={2}
-          scrollEnabled={false}
-          contentContainerStyle={{ paddingHorizontal: 12 }}
-          columnWrapperStyle={{ justifyContent: 'space-between' }}
-          renderItem={({ item }) => (
-            <ProductCard
-              product={item}
-              onPress={() => nav.navigate('ProductDetail', { idOrSlug: item.slug })}
-            />
-          )}
-        />
+            {isBootLoading ? (
+              <ProductGridSkeleton count={4} />
+            ) : featured.length === 0 ? (
+              <EmptyState
+                icon="⭐"
+                title="Chưa có sản phẩm nổi bật"
+                description="Hãy khám phá toàn bộ danh mục cửa hàng."
+                actionLabel="Xem sản phẩm"
+                onAction={() => nav.navigate('ProductList')}
+              />
+            ) : (
+              <FlatList
+                data={featured.slice(0, 6)}
+                keyExtractor={(p: any) => p.id}
+                numColumns={2}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingHorizontal: 12 }}
+                columnWrapperStyle={{ justifyContent: 'space-between' }}
+                renderItem={({ item }) => (
+                  <ProductCard
+                    product={item}
+                    onPress={() => nav.navigate('ProductDetail', { idOrSlug: item.slug })}
+                  />
+                )}
+              />
+            )}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

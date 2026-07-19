@@ -1,12 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import {
-  ActivityIndicator, FlatList, StyleSheet, Text, View, Pressable,
+  FlatList, StyleSheet, Text, View, Pressable,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMyOrders } from '@/services/queries';
 import { Badge } from '@/components/Badge';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 import { colors } from '@/theme/colors';
 import { formatDateTime, formatVnd, statusLabel } from '@/utils/format';
 import type { OrderStatus } from '@/types';
@@ -30,7 +33,7 @@ export function OrdersScreen() {
   const initialFilter = route.params?.filter as OrderStatus | undefined;
   const [filter, setFilter] = useState<OrderStatus | undefined>(initialFilter);
 
-  const { data, isLoading, refetch, isFetching } = useMyOrders();
+  const { data, isLoading, isError, refetch, isFetching } = useMyOrders();
   const allItems = data?.items ?? [];
 
   const items = useMemo(() => {
@@ -44,10 +47,22 @@ export function OrdersScreen() {
     return c;
   }, [allItems]);
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
-      <SafeAreaView style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <ListRowSkeleton count={5} />
+      </SafeAreaView>
+    );
+  }
+
+  if (isError && !data) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center]} edges={['bottom']}>
+        <ErrorState
+          title="Không tải được đơn hàng"
+          description="Kiểm tra mạng rồi thử lại."
+          onRetry={() => refetch()}
+        />
       </SafeAreaView>
     );
   }
@@ -84,7 +99,7 @@ export function OrdersScreen() {
       <FlatList
         data={items}
         keyExtractor={(o: any) => o.id}
-        contentContainerStyle={{ padding: 12 }}
+        contentContainerStyle={{ padding: 12, flexGrow: 1 }}
         onRefresh={refetch}
         refreshing={isFetching && !isLoading}
         renderItem={({ item }) => (
@@ -127,15 +142,20 @@ export function OrdersScreen() {
           </Pressable>
         )}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={{ fontSize: 64 }}>📦</Text>
-            <Text style={styles.emptyTitle}>
-              {filter ? 'Không có đơn ' + statusLabel(filter).toLowerCase() : 'Chưa có đơn hàng'}
-            </Text>
-            <Text style={styles.emptyText}>
-              {filter ? 'Đổi bộ lọc để xem đơn khác' : 'Hãy mua sắm để có đơn hàng đầu tiên'}
-            </Text>
-          </View>
+          <EmptyState
+            icon="📦"
+            title={filter ? `Không có đơn ${statusLabel(filter).toLowerCase()}` : 'Chưa có đơn hàng'}
+            description={
+              filter
+                ? 'Đổi bộ lọc để xem đơn khác.'
+                : 'Hãy mua sắm để có đơn hàng đầu tiên.'
+            }
+            actionLabel={filter ? 'Xem tất cả' : 'Mua sắm ngay'}
+            onAction={() => {
+              if (filter) setFilter(undefined);
+              else nav.navigate('ProductList');
+            }}
+          />
         }
       />
     </SafeAreaView>
@@ -181,7 +201,4 @@ const styles = StyleSheet.create({
   payment: { color: colors.textSecondary, fontSize: 12, fontWeight: '600' },
   itemCount: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   total: { fontWeight: '900', color: colors.primary, fontSize: 17 },
-  empty: { alignItems: 'center', paddingTop: 80 },
-  emptyTitle: { fontSize: 16, fontWeight: '800', color: colors.text, marginTop: 16 },
-  emptyText: { fontSize: 13, color: colors.textMuted, marginTop: 6 },
 });

@@ -1,33 +1,83 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors';
+import { colors, radius, spacing, typography } from '@/theme';
+import { Button } from './Button';
 
 interface Props {
   icon?: string;
   title: string;
   description?: string;
+  /** Tuỳ chọn: React node custom (ưu tiên hơn actionLabel) */
   action?: React.ReactNode;
+  /** Nút CTA chuẩn — dùng với onAction */
+  actionLabel?: string;
+  onAction?: () => void;
+  actionVariant?: 'primary' | 'outline' | 'secondary' | 'ghost' | 'danger';
 }
 
-export const EmptyState: React.FC<Props> = ({ icon = '○', title, description, action }) => (
-  <View style={styles.wrap}>
-    <View style={styles.iconCircle}>
-      <Text style={styles.icon}>{icon}</Text>
+/**
+ * Empty state chuẩn: minh hoạ + title + mô tả + CTA (tạo mới / mua sắm / xoá lọc…).
+ */
+export function EmptyState({
+  icon = '📭',
+  title,
+  description,
+  action,
+  actionLabel,
+  onAction,
+  actionVariant = 'primary',
+}: Props) {
+  const cta =
+    action ??
+    (actionLabel && onAction ? (
+      <Button title={actionLabel} onPress={onAction} variant={actionVariant} size="md" />
+    ) : null);
+
+  return (
+    <View style={styles.wrap}>
+      <View style={styles.iconCircle}>
+        <Text style={styles.icon}>{icon}</Text>
+      </View>
+      <Text style={styles.title}>{title}</Text>
+      {description ? <Text style={styles.desc}>{description}</Text> : null}
+      {cta ? <View style={styles.action}>{cta}</View> : null}
     </View>
-    <Text style={styles.title}>{title}</Text>
-    {description ? <Text style={styles.desc}>{description}</Text> : null}
-    {action ? <View style={styles.action}>{action}</View> : null}
-  </View>
-);
+  );
+}
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', justifyContent: 'center', padding: 40 },
-  iconCircle: {
-    width: 80, height: 80, borderRadius: 40, marginBottom: 16,
-    backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center',
+  wrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing['3xl'],
   },
-  icon: { fontSize: 36, color: colors.primary },
-  title: { fontSize: 16, fontWeight: '700', color: colors.text, textAlign: 'center' },
-  desc: { fontSize: 13, color: colors.textMuted, marginTop: 6, textAlign: 'center', lineHeight: 18 },
-  action: { marginTop: 16 },
+  iconCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    marginBottom: spacing.base,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  icon: { fontSize: 40 },
+  title: {
+    fontSize: typography.size.base,
+    fontWeight: typography.weight.bold,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  desc: {
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  action: {
+    marginTop: spacing.lg,
+    minWidth: 160,
+    borderRadius: radius.base,
+  },
 });

@@ -1,6 +1,9 @@
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAIOverview, useAITaskConfigs } from '@/services/queries';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 import { colors, radius, spacing, typography } from '@/theme';
 
 const TASK_LABELS: Record<string, string> = {
@@ -15,13 +18,43 @@ const TASK_LABELS: Record<string, string> = {
 };
 
 export function AIControlCenterScreen() {
-  const { data: overview, isLoading } = useAIOverview();
-  const { data: tasks = [] } = useAITaskConfigs();
+  const overviewQ = useAIOverview();
+  const tasksQ = useAITaskConfigs();
+  const overview = overviewQ.data;
+  const tasks = tasksQ.data ?? [];
 
-  if (isLoading || !overview) {
+  if (overviewQ.isLoading && !overview) {
     return (
-      <SafeAreaView style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color={colors.roleAiManager} />
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <ListRowSkeleton count={6} />
+      </SafeAreaView>
+    );
+  }
+
+  if (overviewQ.isError && !overview) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center]} edges={['top']}>
+        <ErrorState
+          title="Không tải được AI Control Center"
+          onRetry={() => {
+            overviewQ.refetch();
+            tasksQ.refetch();
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (!overview) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center]} edges={['top']}>
+        <EmptyState
+          icon="🎛️"
+          title="Chưa có dữ liệu AI"
+          description="Seed provider/task config rồi thử lại."
+          actionLabel="Tải lại"
+          onAction={() => overviewQ.refetch()}
+        />
       </SafeAreaView>
     );
   }
@@ -54,27 +87,42 @@ export function AIControlCenterScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Cấu hình tác vụ AI</Text>
-        {tasks.map((t: any) => (
-          <View key={t.id} style={styles.taskCard}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.taskName}>{TASK_LABELS[t.taskType] ?? t.taskType}</Text>
-              <Text style={styles.taskMode}>
-                Mode: {t.mode}
-                {t.primaryProvider ? ` • ${t.primaryProvider.name}` : ''}
-                {t.primaryModel ? ` (${t.primaryModel})` : ''}
-              </Text>
+        {tasks.length === 0 ? (
+          <EmptyState
+            icon="⚙️"
+            title="Chưa có task config"
+            description="Seed AI task mapping để hiển thị tại đây."
+            actionLabel="Tải lại"
+            onAction={() => tasksQ.refetch()}
+            actionVariant="outline"
+          />
+        ) : (
+          tasks.map((t: any) => (
+            <View key={t.id} style={styles.taskCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.taskName}>{TASK_LABELS[t.taskType] ?? t.taskType}</Text>
+                <Text style={styles.taskMode}>
+                  Mode: {t.mode}
+                  {t.primaryProvider ? ` • ${t.primaryProvider.name}` : ''}
+                  {t.primaryModel ? ` (${t.primaryModel})` : ''}
+                </Text>
+              </View>
+              <View style={[styles.statusDot, t.isEnabled && { backgroundColor: colors.success }]} />
             </View>
-            <View style={[styles.statusDot, t.isEnabled && { backgroundColor: colors.success }]} />
-          </View>
-        ))}
+          ))
+        )}
 
         <Text style={styles.sectionTitle}>Lưu lượng theo task (24h)</Text>
-        {overview.taskBreakdown?.map((t: any) => (
-          <View key={t.taskType} style={styles.row}>
-            <Text style={styles.rowLabel}>{TASK_LABELS[t.taskType] ?? t.taskType}</Text>
-            <Text style={styles.rowValue}>{t.count}</Text>
-          </View>
-        ))}
+        {(overview.taskBreakdown?.length ?? 0) === 0 ? (
+          <Text style={styles.emptyBreakdown}>Chưa có request trong 24h.</Text>
+        ) : (
+          overview.taskBreakdown?.map((t: any) => (
+            <View key={t.taskType} style={styles.row}>
+              <Text style={styles.rowLabel}>{TASK_LABELS[t.taskType] ?? t.taskType}</Text>
+              <Text style={styles.rowValue}>{t.count}</Text>
+            </View>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -98,4 +146,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.surface, padding: spacing.base, marginHorizontal: spacing.lg, marginBottom: spacing.xs, borderRadius: radius.sm },
   rowLabel: { fontSize: typography.size.sm, color: colors.text },
   rowValue: { fontSize: typography.size.sm, fontWeight: typography.weight.bold, color: colors.roleAiManager },
+  emptyBreakdown: { marginHorizontal: spacing.lg, color: colors.textMuted, fontSize: typography.size.sm },
 });

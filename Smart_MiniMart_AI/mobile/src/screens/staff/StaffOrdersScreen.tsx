@@ -1,13 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import {
-  ActivityIndicator, FlatList, StyleSheet, Text, View, Pressable, Alert,
+  FlatList, StyleSheet, Text, View, Pressable, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAllOrders, useUpdateOrderStatus } from '@/services/queries';
 import { useAuthStore } from '@/store/auth.store';
-import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { StatCard } from '@/components/StatCard';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 import { colors } from '@/theme/colors';
 import { formatDateTime, formatVnd, statusLabel } from '@/utils/format';
 import type { OrderStatus } from '@/types';
@@ -38,7 +40,7 @@ const NEXT_LABEL: Record<string, string> = {
 export function StaffOrdersScreen() {
   const { user } = useAuthStore();
   const [filter, setFilter] = useState<OrderStatus | undefined>('PENDING');
-  const { data, isLoading, refetch, isFetching } = useAllOrders(filter ? { status: filter, limit: 100 } : { limit: 100 });
+  const { data, isLoading, isError, refetch, isFetching } = useAllOrders(filter ? { status: filter, limit: 100 } : { limit: 100 });
   const update = useUpdateOrderStatus();
   const items = data?.items ?? [];
 
@@ -134,81 +136,89 @@ export function StaffOrdersScreen() {
         }}
       />
 
-      {isLoading ? (
-        <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(o: any) => o.id}
-          contentContainerStyle={{ padding: 12 }}
-          onRefresh={refetch}
-          refreshing={isFetching && !isLoading}
-          renderItem={({ item: rawItem }) => {
-            const item = rawItem as any;
-            const next = NEXT_STATUS[item.status as OrderStatus];
-            const itemCount = item.items?.length ?? 0;
-            return (
-              <View style={styles.orderCard}>
-                <View style={styles.orderHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.orderNumber}>#{item.orderNumber}</Text>
-                    <Text style={styles.orderTime}>{formatDateTime(item.createdAt)}</Text>
-                  </View>
-                  <Badge
-                    label={statusLabel(item.status)}
-                    variant={STATUS_VARIANT[item.status] || 'default'}
-                    size="md"
+      {isLoading && !data ? (
+              <ListRowSkeleton count={5} />
+            ) : isError && !data ? (
+              <ErrorState title="Không tải được đơn hàng" onRetry={() => refetch()} />
+            ) : (
+              <FlatList
+                data={items}
+                keyExtractor={(o: any) => o.id}
+                contentContainerStyle={{ padding: 12, flexGrow: 1 }}
+                onRefresh={refetch}
+                refreshing={isFetching && !isLoading}
+                renderItem={({ item: rawItem }) => {
+                  const item = rawItem as any;
+                  const next = NEXT_STATUS[item.status as OrderStatus];
+                  const itemCount = item.items?.length ?? 0;
+                  return (
+                    <View style={styles.orderCard}>
+                      <View style={styles.orderHeader}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.orderNumber}>#{item.orderNumber}</Text>
+                          <Text style={styles.orderTime}>{formatDateTime(item.createdAt)}</Text>
+                        </View>
+                        <Badge
+                          label={statusLabel(item.status)}
+                          variant={STATUS_VARIANT[item.status] || 'neutral'}
+                          size="md"
+                        />
+                      </View>
+
+                      <View style={styles.divider} />
+
+                      <View style={styles.customerRow}>
+                        <View style={styles.customerIcon}>
+                          <Text style={{ fontSize: 16 }}>👤</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.customerName}>
+                            {item.customer?.fullName ?? item.shippingName ?? 'Khách'}
+                          </Text>
+                          <Text style={styles.customerPhone}>
+                            {item.customer?.phone ?? item.shippingPhone ?? ''}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {item.shippingAddress && (
+                        <Text style={styles.address} numberOfLines={2}>
+                          📍 {item.shippingAddress}
+                        </Text>
+                      )}
+
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.itemCount}>{itemCount} sản phẩm</Text>
+                        <Text style={styles.total}>{formatVnd(Number(item.totalAmount))}</Text>
+                      </View>
+
+                      {next && (
+                        <Pressable
+                          style={styles.actionBtn}
+                          onPress={() => advance(item.id, item.status)}
+                        >
+                          <Text style={styles.actionText}>
+                            → {NEXT_LABEL[next] || next}
+                          </Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  );
+                }}
+                ListEmptyComponent={
+                  <EmptyState
+                    icon="📭"
+                    title="Không có đơn nào"
+                    description={filter ? 'Thử đổi bộ lọc trạng thái.' : 'Chưa có đơn cần xử lý.'}
+                    actionLabel={filter ? 'Xem tất cả' : 'Tải lại'}
+                    onAction={() => {
+                      if (filter) setFilter(undefined);
+                      else refetch();
+                    }}
                   />
-                </View>
-
-                <View style={styles.divider} />
-
-                <View style={styles.customerRow}>
-                  <View style={styles.customerIcon}>
-                    <Text style={{ fontSize: 16 }}>👤</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.customerName}>
-                      {item.customer?.fullName ?? item.shippingName ?? 'Khách'}
-                    </Text>
-                    <Text style={styles.customerPhone}>
-                      {item.customer?.phone ?? item.shippingPhone ?? ''}
-                    </Text>
-                  </View>
-                </View>
-
-                {item.shippingAddress && (
-                  <Text style={styles.address} numberOfLines={2}>
-                    📍 {item.shippingAddress}
-                  </Text>
-                )}
-
-                <View style={styles.summaryRow}>
-                  <Text style={styles.itemCount}>{itemCount} sản phẩm</Text>
-                  <Text style={styles.total}>{formatVnd(Number(item.totalAmount))}</Text>
-                </View>
-
-                {next && (
-                  <Pressable
-                    style={styles.actionBtn}
-                    onPress={() => advance(item.id, item.status)}
-                  >
-                    <Text style={styles.actionText}>
-                      → {NEXT_LABEL[next] || next}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-            );
-          }}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={{ fontSize: 56 }}>📭</Text>
-              <Text style={styles.emptyText}>Không có đơn nào</Text>
-            </View>
-          }
-        />
-      )}
+                }
+              />
+            )}
     </SafeAreaView>
   );
 }

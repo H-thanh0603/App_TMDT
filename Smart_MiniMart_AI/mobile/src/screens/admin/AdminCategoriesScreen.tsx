@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Pressable, Alert,
-  Modal, TextInput, ActivityIndicator,
+  Modal, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { colors } from '@/theme/colors';
 import { api, unwrap } from '@/services/api';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { ListRowSkeleton } from '@/components/Skeleton';
 
 const useAdminCategories = () =>
   useQuery({
@@ -39,7 +42,7 @@ const useDeleteCategory = () => {
 };
 
 export function AdminCategoriesScreen() {
-  const { data: cats = [], isLoading, refetch } = useAdminCategories();
+  const { data: cats = [], isLoading, isError, refetch, isFetching } = useAdminCategories();
   const create = useCreateCategory();
   const update = useUpdateCategory();
   const remove = useDeleteCategory();
@@ -114,35 +117,48 @@ export function AdminCategoriesScreen() {
         </Pressable>
       </View>
 
-      {isLoading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
-      ) : (
-        <FlatList
-          data={cats}
-          keyExtractor={(item: any) => item.id}
-          contentContainerStyle={{ padding: 12 }}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <View style={styles.icon}>
-                <Text style={{ fontSize: 22 }}>📁</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.catName}>{item.name}</Text>
-                <Text style={styles.catSlug}>{item.slug}</Text>
-                {item._count && (
-                  <Text style={styles.catCount}>{item._count.products || 0} sản phẩm</Text>
+      {isLoading && cats.length === 0 && !isError ? (
+              <ListRowSkeleton count={5} />
+            ) : isError && cats.length === 0 ? (
+              <ErrorState title="Không tải được danh mục" onRetry={() => refetch()} />
+            ) : (
+              <FlatList
+                data={cats}
+                keyExtractor={(item: any) => item.id}
+                contentContainerStyle={{ padding: 12, flexGrow: 1 }}
+                onRefresh={refetch}
+                refreshing={isFetching && !isLoading}
+                renderItem={({ item }) => (
+                  <View style={styles.card}>
+                    <View style={styles.icon}>
+                      <Text style={{ fontSize: 22 }}>📁</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.catName}>{item.name}</Text>
+                      <Text style={styles.catSlug}>{item.slug}</Text>
+                      {item._count && (
+                        <Text style={styles.catCount}>{item._count.products || 0} sản phẩm</Text>
+                      )}
+                    </View>
+                    <Pressable onPress={() => openEdit(item)} style={styles.editBtn}>
+                      <Text style={styles.editText}>Sửa</Text>
+                    </Pressable>
+                    <Pressable onPress={() => del(item)} style={[styles.editBtn, styles.delBtn]}>
+                      <Text style={[styles.editText, { color: colors.danger }]}>×</Text>
+                    </Pressable>
+                  </View>
                 )}
-              </View>
-              <Pressable onPress={() => openEdit(item)} style={styles.editBtn}>
-                <Text style={styles.editText}>Sửa</Text>
-              </Pressable>
-              <Pressable onPress={() => del(item)} style={[styles.editBtn, styles.delBtn]}>
-                <Text style={[styles.editText, { color: colors.danger }]}>×</Text>
-              </Pressable>
-            </View>
-          )}
-        />
-      )}
+                ListEmptyComponent={
+                  <EmptyState
+                    icon="🗂️"
+                    title="Chưa có danh mục"
+                    description="Thêm danh mục để tổ chức sản phẩm."
+                    actionLabel="Thêm danh mục"
+                    onAction={openCreate}
+                  />
+                }
+              />
+            )}
 
       <Modal visible={open} animationType="slide" presentationStyle="formSheet">
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>

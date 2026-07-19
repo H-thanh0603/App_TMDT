@@ -64,3 +64,6 @@ ocr-service/uploads/
 
 # OS
 desktop.ini
+
+.render-env-snippet.txt
+backend/.render-env-snippet.txt
