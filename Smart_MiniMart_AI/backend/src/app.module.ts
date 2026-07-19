@@ -20,6 +20,7 @@ import { HealthModule } from './modules/health/health.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
     NotificationsModule,
     SettingsModule,
     PaymentsModule,
+    UploadsModule,
   ],
   providers: [
     // Global rate limit: 100 req / 60s per IP

@@ -1,23 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { radius, spacing, typography } from '@/theme/typography';
 import { Button } from './Button';
 
 interface Props {
   icon?: string;
   title: string;
   description?: string;
-  /** Tuỳ chọn: React node custom (ưu tiên hơn actionLabel) */
   action?: React.ReactNode;
-  /** Nút CTA chuẩn — dùng với onAction */
   actionLabel?: string;
   onAction?: () => void;
   actionVariant?: 'primary' | 'outline' | 'secondary' | 'ghost' | 'danger';
 }
 
-/**
- * Empty state chuẩn: minh hoạ + title + mô tả + CTA (tạo mới / mua sắm / xoá lọc…).
- */
 export function EmptyState({
   icon = '📭',
   title,
@@ -27,6 +23,7 @@ export function EmptyState({
   onAction,
   actionVariant = 'primary',
 }: Props) {
+  const { colors } = useTheme();
   const cta =
     action ??
     (actionLabel && onAction ? (
@@ -35,11 +32,11 @@ export function EmptyState({
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.iconCircle}>
+      <View style={[styles.iconCircle, { backgroundColor: colors.primarySoft }]}>
         <Text style={styles.icon}>{icon}</Text>
       </View>
-      <Text style={styles.title}>{title}</Text>
-      {description ? <Text style={styles.desc}>{description}</Text> : null}
+      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+      {description ? <Text style={[styles.desc, { color: colors.textMuted }]}>{description}</Text> : null}
       {cta ? <View style={styles.action}>{cta}</View> : null}
     </View>
   );
@@ -57,7 +54,6 @@ const styles = StyleSheet.create({
     height: 88,
     borderRadius: 44,
     marginBottom: spacing.base,
-    backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -65,12 +61,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.bold,
-    color: colors.text,
     textAlign: 'center',
   },
   desc: {
     fontSize: typography.size.sm,
-    color: colors.textMuted,
     marginTop: spacing.sm,
     textAlign: 'center',
     lineHeight: 20,

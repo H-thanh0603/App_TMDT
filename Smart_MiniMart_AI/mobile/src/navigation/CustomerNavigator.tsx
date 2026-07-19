@@ -15,18 +15,20 @@ import { OrderDetailScreen } from '@/screens/customer/OrderDetailScreen';
 import { AddressesScreen } from '@/screens/customer/AddressesScreen';
 import { ProfileScreen } from '@/screens/customer/ProfileScreen';
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
-import { colors } from '@/theme';
+import { useTheme } from '@/theme';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function CustomerTabs() {
+  const { colors } = useTheme();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         tabBarLabelStyle: { fontSize: 11 },
         tabBarIcon: ({ color, size }) => {
           const icon: Record<string, string> = {
@@ -46,9 +48,17 @@ function CustomerTabs() {
 }
 
 export function CustomerNavigator() {
+  const { colors, navigationTheme } = useTheme();
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: colors.primary }, headerTintColor: 'white', headerTitleStyle: { fontWeight: '700' } }}>
+    <NavigationContainer theme={navigationTheme}>
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: colors.primary },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      >
         <Stack.Screen name="Tabs" component={CustomerTabs} options={{ headerShown: false }} />
         <Stack.Screen name="ProductList" component={ProductListScreen} options={{ title: 'Sản phẩm' }} />
         <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: 'Chi tiết sản phẩm' }} />

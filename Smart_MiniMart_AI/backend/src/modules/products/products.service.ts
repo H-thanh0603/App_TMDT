@@ -3,18 +3,24 @@ import {
   NotFoundException,
   ConflictException,
   Logger,
+  Inject,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
-import { PrismaService } from '@/common/prisma/prisma.service';
 import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
+import {
+  IProductRepository,
+  PRODUCT_REPOSITORY,
+} from './repositories/product.repository';
 
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    @Inject(PRODUCT_REPOSITORY) private readonly products: IProductRepository,
+  ) {}
 
   async list(query: ProductQueryDto) {
     const page = query.page ?? 1;
@@ -43,13 +49,13 @@ export class ProductsService {
 
     const orderBy = this.buildSort(query.sortBy);
 
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.product.findMany({
+    const [items, total] = await this.products.transactionList(
+      {
         where, orderBy, skip, take: limit,
         include: { category: { select: { id: true, name: true, slug: true } } },
-      }),
-      this.prisma.product.count({ where }),
-    ]);
+      },
+      { where },
+    );
 
     return {
       items, total, page, limit,
@@ -58,7 +64,7 @@ export class ProductsService {
   }
 
   async findOne(idOrSlug: string) {
-    const product = await this.prisma.product.findFirst({
+    const product = await this.products.findFirst({
       where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
       include: {
         category: true,
@@ -72,7 +78,7 @@ export class ProductsService {
     });
     if (!product) throw new NotFoundException('Sản phẩm không tồn tại');
 
-    await this.prisma.product.update({
+    await this.products.update({
       where: { id: product.id },
       data: { viewCount: { increment: 1 } },
     });
@@ -80,7 +86,7 @@ export class ProductsService {
   }
 
   async findFeatured(limit = 10) {
-    return this.prisma.product.findMany({
+    return this.products.findMany({
       where: { isActive: true, isFeatured: true, stock: { gt: 0 } },
       take: limit,
       orderBy: { soldCount: 'desc' },
@@ -89,16 +95,16 @@ export class ProductsService {
   }
 
   async create(dto: CreateProductDto) {
-    const dup = await this.prisma.product.findFirst({
+    const dup = await this.products.findFirst({
       where: { OR: [{ sku: dto.sku }, { slug: dto.slug }] },
     });
     if (dup) throw new ConflictException('SKU hoặc slug đã tồn tại');
 
-    const cat = await this.prisma.category.findUnique({ where: { id: dto.categoryId } });
+    const cat = await this.products.categoryFindUnique({ where: { id: dto.categoryId } });
     if (!cat) throw new NotFoundException('Danh mục không tồn tại');
 
     const { attributes, ...rest } = dto;
-    return this.prisma.product.create({
+    return this.products.create({
       data: {
         ...rest,
         expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : null,
@@ -110,11 +116,11 @@ export class ProductsService {
   }
 
   async update(id: string, dto: UpdateProductDto) {
-    const product = await this.prisma.product.findUnique({ where: { id } });
+    const product = await this.products.findUnique({ where: { id } });
     if (!product) throw new NotFoundException('Sản phẩm không tồn tại');
 
     const { attributes, ...rest } = dto;
-    return this.prisma.product.update({
+    return this.products.update({
       where: { id },
       data: {
         ...rest,
@@ -127,17 +133,14 @@ export class ProductsService {
   }
 
   async remove(id: string) {
-    const product = await this.prisma.product.findUnique({ where: { id } });
+    const product = await this.products.findUnique({ where: { id } });
     if (!product) throw new NotFoundException('Sản phẩm không tồn tại');
-    // Soft delete: deactivate thay vì xóa cứng (giữ lịch sử order)
-    await this.prisma.product.update({
+    await this.products.update({
       where: { id },
       data: { isActive: false },
     });
     return { message: `Đã ngừng kinh doanh ${product.name}` };
   }
-
-  // ========== Helpers ==========
 
   private buildSort(sortBy?: string): Prisma.ProductOrderByWithRelationInput {
     switch (sortBy) {

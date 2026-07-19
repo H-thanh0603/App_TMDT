@@ -1,7 +1,7 @@
 import { ActivityIndicator, View } from 'react-native';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/store/auth.store';
-import { colors } from '@/theme';
+import { useTheme } from '@/theme';
 import { AuthNavigator } from './AuthNavigator';
 import { CustomerNavigator } from './CustomerNavigator';
 import { StaffNavigator } from './StaffNavigator';
@@ -10,6 +10,7 @@ import { AIManagerNavigator } from './AIManagerNavigator';
 
 export function RoleShell() {
   const { user, initialized, initialize } = useAuthStore();
+  const { colors } = useTheme();
 
   useEffect(() => {
     initialize();

@@ -26,6 +26,7 @@ build/
 # Local artifacts
 **/expo-qr.png
 **/uploads/
+!backend/src/modules/uploads/
 
 # Editor
 .vscode/

@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { radius, spacing, typography } from '@/theme/typography';
 import { Button } from './Button';
 
 type Props = {
@@ -11,9 +12,6 @@ type Props = {
   icon?: string;
 };
 
-/**
- * Error UI chuẩn cho list/screen — luôn có nút Thử lại khi truyền onRetry.
- */
 export function ErrorState({
   title = 'Có lỗi xảy ra',
   description = 'Không tải được dữ liệu. Kiểm tra mạng và thử lại.',
@@ -21,13 +19,14 @@ export function ErrorState({
   retryLabel = 'Thử lại',
   icon = '⚠️',
 }: Props) {
+  const { colors } = useTheme();
   return (
     <View style={styles.wrap} accessibilityRole="alert">
-      <View style={styles.iconCircle}>
+      <View style={[styles.iconCircle, { backgroundColor: colors.dangerSoft }]}>
         <Text style={styles.icon}>{icon}</Text>
       </View>
-      <Text style={styles.title}>{title}</Text>
-      {!!description && <Text style={styles.desc}>{description}</Text>}
+      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+      {!!description && <Text style={[styles.desc, { color: colors.textMuted }]}>{description}</Text>}
       {onRetry ? (
         <View style={styles.action}>
           <Button title={retryLabel} onPress={onRetry} variant="primary" size="md" />
@@ -49,7 +48,6 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     marginBottom: spacing.base,
-    backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -57,12 +55,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.size.base,
     fontWeight: typography.weight.bold,
-    color: colors.text,
     textAlign: 'center',
   },
   desc: {
     fontSize: typography.size.sm,
-    color: colors.textMuted,
     marginTop: spacing.sm,
     textAlign: 'center',
     lineHeight: 20,

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View, ViewStyle } from 'react-native';
-import { colors, radius, spacing } from '@/theme';
+import { Animated, StyleSheet, View, type ViewStyle } from 'react-native';
+import { useTheme } from '@/theme';
+import { radius, spacing } from '@/theme/typography';
 
 type SkeletonProps = {
   width?: number | `${number}%` | 'auto';
@@ -16,21 +17,14 @@ export function Skeleton({
   borderRadius = radius.md,
   style,
 }: SkeletonProps) {
+  const { colors } = useTheme();
   const opacity = useRef(new Animated.Value(0.45)).current;
 
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 700,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0.45,
-          duration: 700,
-          useNativeDriver: true,
-        }),
+        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.45, duration: 700, useNativeDriver: true }),
       ]),
     );
     loop.start();
@@ -40,8 +34,8 @@ export function Skeleton({
   return (
     <Animated.View
       style={[
-        styles.base,
         {
+          backgroundColor: colors.skeleton,
           width: width as any,
           height,
           borderRadius,
@@ -53,12 +47,12 @@ export function Skeleton({
   );
 }
 
-/** Lưới card sản phẩm skeleton (Home / ProductList). */
 export function ProductGridSkeleton({ count = 4 }: { count?: number }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.grid}>
       {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={styles.productCard}>
+        <View key={i} style={[styles.productCard, { backgroundColor: colors.surface }]}>
           <Skeleton height={110} borderRadius={radius.base} />
           <Skeleton height={12} width="80%" style={{ marginTop: spacing.sm }} />
           <Skeleton height={12} width="50%" style={{ marginTop: spacing.xs }} />
@@ -69,7 +63,6 @@ export function ProductGridSkeleton({ count = 4 }: { count?: number }) {
   );
 }
 
-/** Hàng danh mục ngang skeleton. */
 export function CategoryRowSkeleton({ count = 5 }: { count?: number }) {
   return (
     <View style={styles.row}>
@@ -83,12 +76,12 @@ export function CategoryRowSkeleton({ count = 5 }: { count?: number }) {
   );
 }
 
-/** List order / admin row skeleton. */
 export function ListRowSkeleton({ count = 4 }: { count?: number }) {
+  const { colors } = useTheme();
   return (
     <View style={{ padding: spacing.md, gap: spacing.sm }}>
       {Array.from({ length: count }).map((_, i) => (
-        <View key={i} style={styles.rowCard}>
+        <View key={i} style={[styles.rowCard, { backgroundColor: colors.surface }]}>
           <View style={{ flex: 1, gap: 8 }}>
             <Skeleton height={14} width="55%" />
             <Skeleton height={11} width="35%" />
@@ -102,9 +95,6 @@ export function ListRowSkeleton({ count = 4 }: { count?: number }) {
 }
 
 const styles = StyleSheet.create({
-  base: {
-    backgroundColor: colors.border,
-  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -114,7 +104,6 @@ const styles = StyleSheet.create({
   },
   productCard: {
     width: '47%',
-    backgroundColor: colors.surface,
     borderRadius: radius.base,
     padding: spacing.sm,
     marginBottom: spacing.sm,
@@ -132,7 +121,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
     borderRadius: radius.base,
     padding: spacing.base,
   },

@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useMyStats } from '@/services/queries';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { colors } from '@/theme/colors';
 import { formatVnd } from '@/utils/format';
 
@@ -131,10 +132,16 @@ export function ProfileScreen() {
           </View>
         ))}
 
-        {/* Logout */}
-        <Pressable style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Đăng xuất</Text>
-        </Pressable>
+        {/* Theme */}
+                <View style={styles.menuGroup}>
+                  <Text style={styles.menuGroupTitle}>Giao diện</Text>
+                  <ThemeToggle compact />
+                </View>
+
+                {/* Logout */}
+                <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+                  <Text style={styles.logoutText}>Đăng xuất</Text>
+                </Pressable>
 
         <Text style={styles.versionText}>Smart MiniMart AI v1.0.0</Text>
       </ScrollView>

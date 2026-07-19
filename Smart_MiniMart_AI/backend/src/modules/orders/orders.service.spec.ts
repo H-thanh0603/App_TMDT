@@ -1,11 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 import { PaymentMethod } from '@prisma/client';
-
 import { OrdersService } from './orders.service';
+import { IOrderRepository } from './repositories/order.repository';
 
 describe('OrdersService', () => {
   let service: OrdersService;
-  let prisma: any;
+  let repo: jest.Mocked<IOrderRepository>;
 
   const product = {
     id: 'prod-1',
@@ -17,24 +17,20 @@ describe('OrdersService', () => {
   };
 
   beforeEach(() => {
-    prisma = {
-      cart: { findUnique: jest.fn() },
-      order: {
-        count: jest.fn().mockResolvedValue(0),
-        create: jest.fn(),
-      },
-      product: { update: jest.fn() },
-      inventoryTransaction: { create: jest.fn() },
-      cartItem: { deleteMany: jest.fn() },
-      promotion: { findFirst: jest.fn(), update: jest.fn() },
-      $transaction: jest.fn(),
+    repo = {
+      findCartWithItems: jest.fn(),
+      countOrders: jest.fn().mockResolvedValue(0),
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      transactionList: jest.fn(),
+      runInTransaction: jest.fn(),
     };
-    service = new OrdersService(prisma);
+    service = new OrdersService(repo);
   });
 
   describe('createOrder', () => {
     it('throws when cart is empty', async () => {
-      prisma.cart.findUnique.mockResolvedValue({ id: 'cart-1', items: [] });
+      repo.findCartWithItems.mockResolvedValue({ id: 'cart-1', items: [] });
 
       await expect(
         service.createOrder('user-1', {
@@ -44,14 +40,9 @@ describe('OrdersService', () => {
     });
 
     it('throws when product stock is insufficient', async () => {
-      prisma.cart.findUnique.mockResolvedValue({
+      repo.findCartWithItems.mockResolvedValue({
         id: 'cart-1',
-        items: [
-          {
-            quantity: 99,
-            product: { ...product, stock: 2 },
-          },
-        ],
+        items: [{ quantity: 99, product: { ...product, stock: 2 } }],
       });
 
       await expect(
@@ -65,8 +56,8 @@ describe('OrdersService', () => {
       });
     });
 
-    it('creates order, decrements stock and clears cart on success', async () => {
-      prisma.cart.findUnique.mockResolvedValue({
+    it('creates order and clears cart on success', async () => {
+      repo.findCartWithItems.mockResolvedValue({
         id: 'cart-1',
         items: [{ quantity: 2, product }],
       });
@@ -77,23 +68,13 @@ describe('OrdersService', () => {
         items: [],
       };
 
-      prisma.$transaction.mockImplementation(async (fn: any) => {
+      repo.runInTransaction.mockImplementation(async (fn: any) => {
         const tx = {
-          order: {
-            create: jest.fn().mockResolvedValue(createdOrder),
-          },
-          product: {
-            update: jest.fn().mockResolvedValue({}),
-          },
-          inventoryTransaction: {
-            create: jest.fn().mockResolvedValue({}),
-          },
-          cartItem: {
-            deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
-          },
-          promotion: {
-            update: jest.fn(),
-          },
+          order: { create: jest.fn().mockResolvedValue(createdOrder) },
+          product: { update: jest.fn().mockResolvedValue({}) },
+          inventoryTransaction: { create: jest.fn().mockResolvedValue({}) },
+          cartItem: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+          promotion: { update: jest.fn() },
         };
         return fn(tx);
       });
@@ -104,9 +85,7 @@ describe('OrdersService', () => {
       } as any);
 
       expect(result.id).toBe('order-1');
-      expect(prisma.$transaction).toHaveBeenCalled();
-      // nextOrderNumber uses prisma.order.count outside transaction
-      expect(prisma.order.count).toHaveBeenCalled();
+      expect(repo.runInTransaction).toHaveBeenCalled();
     });
   });
 });

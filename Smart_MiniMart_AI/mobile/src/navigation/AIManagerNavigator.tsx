@@ -7,18 +7,20 @@ import { AIControlCenterScreen } from '@/screens/ai-manager/AIControlCenterScree
 import { AIProvidersScreen } from '@/screens/ai-manager/AIProvidersScreen';
 import { AILogsScreen } from '@/screens/ai-manager/AILogsScreen';
 import { AIManagerProfileScreen } from '@/screens/ai-manager/AIManagerProfileScreen';
-import { colors } from '@/theme';
+import { useTheme } from '@/theme';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function AITabs() {
+  const { colors } = useTheme();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.roleAiManager,
         tabBarInactiveTintColor: colors.textTertiary,
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         tabBarLabelStyle: { fontSize: 11 },
         tabBarIcon: ({ color, size }) => {
           const icon: Record<string, string> = {
@@ -37,9 +39,10 @@ function AITabs() {
 }
 
 export function AIManagerNavigator() {
+  const { colors, navigationTheme } = useTheme();
   return (
-    <NavigationContainer>
-      <Stack.Navigator>
+    <NavigationContainer theme={navigationTheme}>
+      <Stack.Navigator screenOptions={{ contentStyle: { backgroundColor: colors.bg } }}>
         <Stack.Screen name="Tabs" component={AITabs} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>

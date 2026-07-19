@@ -12,18 +12,20 @@ import { AdminPromotionsScreen } from '@/screens/admin/AdminPromotionsScreen';
 import { AdminCategoriesScreen } from '@/screens/admin/AdminCategoriesScreen';
 import { AdminProfileScreen } from '@/screens/admin/AdminProfileScreen';
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
-import { colors } from '@/theme';
+import { useTheme } from '@/theme';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function AdminTabs() {
+  const { colors } = useTheme();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.roleAdmin,
         tabBarInactiveTintColor: colors.textTertiary,
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         tabBarLabelStyle: { fontSize: 11 },
         tabBarIcon: ({ color, size }) => {
           const icon: Record<string, string> = {
@@ -43,9 +45,16 @@ function AdminTabs() {
 }
 
 export function AdminNavigator() {
+  const { colors, navigationTheme } = useTheme();
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: colors.roleAdmin }, headerTintColor: 'white' }}>
+    <NavigationContainer theme={navigationTheme}>
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: colors.roleAdmin },
+          headerTintColor: 'white',
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      >
         <Stack.Screen name="Tabs" component={AdminTabs} options={{ headerShown: false }} />
         <Stack.Screen name="Inventory" component={AdminInventoryScreen} options={{ title: 'Kho hàng' }} />
         <Stack.Screen name="Categories" component={AdminCategoriesScreen} options={{ title: 'Danh mục' }} />

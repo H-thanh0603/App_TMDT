@@ -9,18 +9,20 @@ import { OCRScanScreen } from '@/screens/staff/OCRScanScreen';
 import { ReceiptDetailScreen } from '@/screens/staff/ReceiptDetailScreen';
 import { StaffProfileScreen } from '@/screens/staff/StaffProfileScreen';
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
-import { colors } from '@/theme';
+import { useTheme } from '@/theme';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function StaffTabs() {
+  const { colors } = useTheme();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.roleStaff,
         tabBarInactiveTintColor: colors.textTertiary,
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         tabBarLabelStyle: { fontSize: 11 },
         tabBarIcon: ({ color, size }) => {
           const icon: Record<string, string> = {
@@ -39,9 +41,16 @@ function StaffTabs() {
 }
 
 export function StaffNavigator() {
+  const { colors, navigationTheme } = useTheme();
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: colors.roleStaff }, headerTintColor: 'white' }}>
+    <NavigationContainer theme={navigationTheme}>
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: colors.roleStaff },
+          headerTintColor: 'white',
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      >
         <Stack.Screen name="Tabs" component={StaffTabs} options={{ headerShown: false }} />
         <Stack.Screen name="OCRScan" component={OCRScanScreen} options={{ title: 'Quét phiếu nhập' }} />
         <Stack.Screen name="ReceiptDetail" component={ReceiptDetailScreen} options={{ title: 'Chi tiết phiếu' }} />

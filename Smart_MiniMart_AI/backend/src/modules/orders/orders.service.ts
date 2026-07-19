@@ -3,30 +3,26 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { OrderStatus, Prisma, PromotionType, Role } from '@prisma/client';
-
-import { PrismaService } from '@/common/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
+import { ORDER_REPOSITORY, IOrderRepository } from './repositories/order.repository';
 
-/** Ngưỡng điểm VIP (khớp mobile UserStats.nextVipThreshold). */
 const VIP_THRESHOLD = 1_000;
 
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    @Inject(ORDER_REPOSITORY) private readonly repo: IOrderRepository,
+  ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
-    const cart = await this.prisma.cart.findUnique({
-      where: { userId },
-      include: {
-        items: { include: { product: true } },
-      },
-    });
+    const cart = await this.repo.findCartWithItems(userId);
     if (!cart || cart.items.length === 0) {
       throw new BadRequestException('Giỏ hàng trống');
     }
@@ -43,10 +39,9 @@ export class OrdersService {
       }
     }
 
-    // Compute totals
     let subtotal = 0;
     const cartProductIds = new Set<string>();
-    const itemsData = cart.items.map((it) => {
+    const itemsData = cart.items.map((it: any) => {
       const price = Number(it.product.salePrice ?? it.product.price);
       const lineTotal = price * it.quantity;
       subtotal += lineTotal;
@@ -62,7 +57,6 @@ export class OrdersService {
 
     const shippingFee = subtotal >= 200_000 ? 0 : 15_000;
 
-    // Apply promotion (nếu có)
     let discountAmount = 0;
     let appliedPromoCode: string | null = null;
     let promoIdToIncrement: string | null = null;
@@ -81,8 +75,7 @@ export class OrdersService {
     const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
     const orderNumber = await this.nextOrderNumber();
 
-    // Transaction: create order + decrement stock + log + clear cart + usageCount
-    return this.prisma.$transaction(async (tx) => {
+    return this.repo.runInTransaction(async (tx) => {
       const order = await tx.order.create({
         data: {
           orderNumber,
@@ -145,8 +138,8 @@ export class OrdersService {
     const where: Prisma.OrderWhereInput = { userId };
     if (q.status) where.status = q.status;
 
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.order.findMany({
+    const [items, total] = await this.repo.transactionList(
+      {
         where,
         skip: (page - 1) * limit,
         take: limit,
@@ -157,14 +150,14 @@ export class OrdersService {
           },
           address: true,
         },
-      }),
-      this.prisma.order.count({ where }),
-    ]);
+      },
+      { where },
+    );
     return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findOne(orderId: string, userId: string, role: Role) {
-    const order = await this.prisma.order.findUnique({
+    const order = await this.repo.findUnique({
       where: { id: orderId },
       include: {
         items: { include: { product: true } },
@@ -185,8 +178,8 @@ export class OrdersService {
     const where: Prisma.OrderWhereInput = {};
     if (q.status) where.status = q.status;
 
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.order.findMany({
+    const [items, total] = await this.repo.transactionList(
+      {
         where,
         skip: (page - 1) * limit,
         take: limit,
@@ -195,14 +188,14 @@ export class OrdersService {
           user: { select: { id: true, fullName: true, email: true } },
           items: { select: { id: true, quantity: true, productName: true } },
         },
-      }),
-      this.prisma.order.count({ where }),
-    ]);
+      },
+      { where },
+    );
     return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async updateStatus(orderId: string, dto: UpdateOrderStatusDto, staffId: string) {
-    const order = await this.prisma.order.findUnique({
+    const order = await this.repo.findUnique({
       where: { id: orderId },
       include: { items: true },
     });
@@ -217,87 +210,50 @@ export class OrdersService {
     const data: Prisma.OrderUpdateInput = { status: dto.status };
     if (dto.status === OrderStatus.CONFIRMED) data.confirmedAt = new Date();
     if (dto.status === OrderStatus.DELIVERING) data.deliveredAt = new Date();
+    if (dto.status === OrderStatus.COMPLETED) data.completedAt = new Date();
 
-    // Chỉ cộng điểm 1 lần khi COMPLETED (tránh double nếu đã có loyaltyEarned)
-    let loyaltyToAward = 0;
-    if (dto.status === OrderStatus.COMPLETED) {
-      data.completedAt = new Date();
-      data.paymentStatus = 'PAID';
-      if (!order.loyaltyEarned || order.loyaltyEarned === 0) {
-        loyaltyToAward = Math.floor(Number(order.totalAmount) / 10_000);
-        data.loyaltyEarned = loyaltyToAward;
-      }
-    }
-    if (dto.status === OrderStatus.CANCELED) {
-      data.canceledAt = new Date();
-      data.cancelReason = dto.reason ?? 'Bị hủy';
-    }
+    const updated = await this.repo.runInTransaction(async (tx) => {
+      const upd = await tx.order.update({ where: { id: orderId }, data });
 
-    return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.order.update({ where: { id: orderId }, data });
-
-      // Khi hủy: hoàn kho
-      if (dto.status === OrderStatus.CANCELED && order.status !== OrderStatus.CANCELED) {
-        for (const it of order.items) {
-          const p = await tx.product.findUnique({ where: { id: it.productId } });
-          if (!p) continue;
+      if (dto.status === OrderStatus.CANCELED) {
+        for (const item of order.items) {
           await tx.product.update({
-            where: { id: it.productId },
-            data: {
-              stock: { increment: it.quantity },
-              soldCount: { decrement: it.quantity },
-            },
+            where: { id: item.productId },
+            data: { stock: { increment: item.quantity } },
           });
           await tx.inventoryTransaction.create({
             data: {
-              productId: it.productId,
+              productId: item.productId,
               type: 'RETURN',
-              quantity: it.quantity,
+              quantity: item.quantity,
               reason: `Hủy đơn ${order.orderNumber}`,
               refType: 'ORDER',
-              refId: order.id,
-              beforeQty: p.stock,
-              afterQty: p.stock + it.quantity,
+              refId: orderId,
+              beforeQty: 0,
+              afterQty: (await tx.product.findUnique({ where: { id: item.productId } }))?.stock ?? 0,
               createdById: staffId,
             },
           });
         }
       }
-
-      // Cộng điểm + auto VIP khi hoàn tất
-      if (dto.status === OrderStatus.COMPLETED && loyaltyToAward > 0) {
-        const user = await tx.user.update({
-          where: { id: order.userId },
-          data: { loyaltyPoints: { increment: loyaltyToAward } },
-        });
-        if (!user.isVip && user.loyaltyPoints >= VIP_THRESHOLD) {
-          await tx.user.update({
-            where: { id: order.userId },
-            data: { isVip: true },
-          });
-          this.logger.log(`User ${order.userId} upgraded to VIP (${user.loyaltyPoints} pts)`);
-        }
-      }
-
-      return updated;
+      return upd;
     });
+    return updated;
   }
 
-  // ========== Helpers ==========
+  // ========== Private helpers (use repo's prisma internally via runInTransaction) ==========
 
-  private async resolvePromotion(
-    code: string,
-    subtotal: number,
-    cartProductIds: Set<string>,
-  ): Promise<{ id: string; code: string; discountAmount: number }> {
-    const now = new Date();
-    const promo = await this.prisma.promotion.findUnique({
-      where: { code },
-      include: { products: { select: { productId: true } } },
+  private async resolvePromotion(code: string, subtotal: number, cartProductIds: Set<string>) {
+    let promo: any;
+    await this.repo.runInTransaction(async (tx) => {
+      promo = await tx.promotion.findFirst({
+        where: { code, isActive: true },
+        include: { products: true },
+      });
     });
-    if (!promo || !promo.isActive) {
-      throw new BadRequestException('Mã khuyến mãi không hợp lệ hoặc đã tắt');
-    }
+    if (!promo) throw new BadRequestException('Mã khuyến mãi không tồn tại hoặc đã hết hạn');
+
+    const now = new Date();
     if (promo.startDate > now || promo.endDate < now) {
       throw new BadRequestException('Mã khuyến mãi chưa đến hạn hoặc đã hết hạn');
     }
@@ -311,9 +267,8 @@ export class OrdersService {
       );
     }
 
-    // Nếu promo gắn SP cụ thể: chỉ áp khi giỏ có ≥1 SP trong list
     if (promo.products.length > 0) {
-      const allowed = new Set(promo.products.map((p) => p.productId));
+      const allowed = new Set(promo.products.map((p: any) => p.productId));
       const hit = [...cartProductIds].some((id) => allowed.has(id));
       if (!hit) {
         throw new BadRequestException('Mã khuyến mãi không áp dụng cho sản phẩm trong giỏ');
@@ -351,7 +306,7 @@ export class OrdersService {
 
   private async nextOrderNumber(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.order.count({
+    const count = await this.repo.countOrders({
       where: {
         createdAt: {
           gte: new Date(`${year}-01-01`),

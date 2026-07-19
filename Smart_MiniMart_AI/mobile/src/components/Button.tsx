@@ -1,5 +1,9 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { colors, radius, spacing, typography } from '@/theme';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { useTheme } from '@/theme';
+import { radius, spacing, typography } from '@/theme/typography';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface Props {
   title: string;
@@ -15,49 +19,71 @@ interface Props {
 export function Button({
   title, onPress, loading, disabled, variant = 'primary', size = 'md', style, fullWidth,
 }: Props) {
+  const { colors } = useTheme();
   const isDisabled = disabled || loading;
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  const bg =
+    variant === 'primary' ? colors.primary
+      : variant === 'secondary' ? colors.secondary
+        : variant === 'danger' ? colors.danger
+          : variant === 'outline' || variant === 'ghost' ? 'transparent'
+            : colors.primary;
+
+  const borderW = variant === 'outline' ? 1.5 : 0;
+  const borderC = variant === 'outline' ? colors.primary : 'transparent';
+  const textColor =
+    variant === 'outline' || variant === 'ghost' ? colors.primary : '#fff';
+
+  const pad =
+    size === 'sm' ? { paddingVertical: spacing.sm, paddingHorizontal: spacing.base }
+      : size === 'lg' ? { paddingVertical: spacing.base, paddingHorizontal: spacing.xl }
+        : { paddingVertical: spacing.md, paddingHorizontal: spacing.lg };
+
+  const fontSize =
+    size === 'sm' ? typography.size.sm
+      : size === 'lg' ? typography.size.lg
+        : typography.size.base;
+
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       disabled={isDisabled}
-      style={({ pressed }) => [
-        styles.base, styles[`size_${size}`], styles[`variant_${variant}`],
-        fullWidth && styles.fullWidth,
-        pressed && !isDisabled && { opacity: 0.85 },
-        isDisabled && styles.disabled,
+      onPressIn={() => { if (!isDisabled) scale.value = withSpring(0.97, { damping: 16, stiffness: 420 }); }}
+      onPressOut={() => { scale.value = withSpring(1, { damping: 12, stiffness: 300 }); }}
+      style={[
+        {
+          borderRadius: radius.base,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: bg,
+          borderWidth: borderW,
+          borderColor: borderC,
+          opacity: isDisabled ? 0.5 : 1,
+        },
+        pad,
+        fullWidth && { alignSelf: 'stretch' },
+        animStyle,
         style,
       ]}
     >
       <View style={styles.content}>
-        {loading && <ActivityIndicator size="small" color={variant === 'primary' ? '#fff' : colors.primary} style={{ marginRight: 8 }} />}
-        <Text style={[styles.text, styles[`text_${variant}`], styles[`textSize_${size}`]]}>
+        {loading && (
+          <ActivityIndicator
+            size="small"
+            color={variant === 'primary' || variant === 'danger' || variant === 'secondary' ? '#fff' : colors.primary}
+            style={{ marginRight: 8 }}
+          />
+        )}
+        <Text style={{ fontWeight: typography.weight.semibold, color: textColor, fontSize }}>
           {title}
         </Text>
       </View>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
-  base: { borderRadius: radius.base, alignItems: 'center', justifyContent: 'center' },
-  fullWidth: { alignSelf: 'stretch' },
-  disabled: { opacity: 0.5 },
   content: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  size_sm: { paddingVertical: spacing.sm, paddingHorizontal: spacing.base },
-  size_md: { paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
-  size_lg: { paddingVertical: spacing.base, paddingHorizontal: spacing.xl },
-  variant_primary: { backgroundColor: colors.primary },
-  variant_secondary: { backgroundColor: colors.secondary },
-  variant_outline: { borderWidth: 1.5, borderColor: colors.primary, backgroundColor: 'transparent' },
-  variant_ghost: { backgroundColor: 'transparent' },
-  variant_danger: { backgroundColor: colors.danger },
-  text: { fontWeight: typography.weight.semibold },
-  text_primary: { color: '#fff' },
-  text_secondary: { color: '#fff' },
-  text_outline: { color: colors.primary },
-  text_ghost: { color: colors.primary },
-  text_danger: { color: '#fff' },
-  textSize_sm: { fontSize: typography.size.sm },
-  textSize_md: { fontSize: typography.size.base },
-  textSize_lg: { fontSize: typography.size.lg },
 });

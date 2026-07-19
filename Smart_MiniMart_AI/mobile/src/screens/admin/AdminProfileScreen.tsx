@@ -2,7 +2,8 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/auth.store';
 import { Button } from '@/components/Button';
-import { colors } from '@/theme/colors';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { colors, radius, spacing, typography } from '@/theme';
 
 export function AdminProfileScreen() {
   const { user, logout } = useAuthStore();
@@ -50,9 +51,13 @@ export function AdminProfileScreen() {
           ))}
         </View>
 
-        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
-          <Button title="Đăng xuất" onPress={handleLogout} variant="outline" fullWidth />
-        </View>
+        <View style={{ marginTop: 12, backgroundColor: colors.surface }}>
+                  <ThemeToggle compact />
+                </View>
+
+                <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
+                  <Button title="Đăng xuất" onPress={handleLogout} variant="outline" fullWidth />
+                </View>
       </ScrollView>
     </SafeAreaView>
   );
