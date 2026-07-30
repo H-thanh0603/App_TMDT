@@ -8,19 +8,24 @@ export class CreateProviderDto {
   @IsEnum(AIProviderType)
   type: AIProviderType;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   baseUrl?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   apiKey?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   defaultModel?: string;
 
-  @IsOptional() @IsEnum(AIProviderStatus)
+  @IsOptional()
+  @IsEnum(AIProviderStatus)
   status?: AIProviderStatus;
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isSystemDefault?: boolean;
 }
 

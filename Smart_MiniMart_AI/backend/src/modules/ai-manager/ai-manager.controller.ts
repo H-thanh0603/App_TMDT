@@ -1,5 +1,13 @@
 import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AITaskType, Role } from '@prisma/client';
@@ -28,7 +36,9 @@ export class AIManagerController {
 
   // -------- Providers --------
   @Get('providers')
-  listProviders() { return this.aiManager.listProviders(); }
+  listProviders() {
+    return this.aiManager.listProviders();
+  }
 
   @Post('providers')
   createProvider(@Body() dto: CreateProviderDto) {
@@ -52,7 +62,9 @@ export class AIManagerController {
 
   // -------- Task configs --------
   @Get('task-configs')
-  listTaskConfigs() { return this.aiManager.listTaskConfigs(); }
+  listTaskConfigs() {
+    return this.aiManager.listTaskConfigs();
+  }
 
   @Patch('task-configs')
   upsertTaskConfig(@Body() dto: UpdateTaskConfigDto) {
@@ -61,7 +73,9 @@ export class AIManagerController {
 
   // -------- OCR settings --------
   @Get('ocr-settings')
-  getOCRSettings() { return this.aiManager.getOCRSettings(); }
+  getOCRSettings() {
+    return this.aiManager.getOCRSettings();
+  }
 
   @Patch('ocr-settings')
   updateOCRSettings(@Body() dto: UpdateOCRSettingsDto) {

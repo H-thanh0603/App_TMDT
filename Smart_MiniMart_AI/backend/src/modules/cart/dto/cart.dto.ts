@@ -4,11 +4,13 @@ export class AddToCartDto {
   @IsString()
   productId: string;
 
-  @IsInt() @Min(1)
+  @IsInt()
+  @Min(1)
   quantity: number;
 }
 
 export class UpdateCartItemDto {
-  @IsInt() @Min(1)
+  @IsInt()
+  @Min(1)
   quantity: number;
 }

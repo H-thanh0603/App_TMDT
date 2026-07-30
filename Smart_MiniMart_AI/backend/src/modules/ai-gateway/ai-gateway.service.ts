@@ -6,9 +6,7 @@ import { PrismaService } from '@/common/prisma/prisma.service';
 import { DeepSeekProvider } from './providers/deepseek.provider';
 import { OpenAICompatibleProvider } from './providers/openai-compatible.provider';
 import { MockProvider } from './providers/mock.provider';
-import {
-  AIRequest, AIResponse, ChatRequest, IAIProvider,
-} from './interfaces/ai.interface';
+import { AIRequest, AIResponse, ChatRequest, IAIProvider } from './interfaces/ai.interface';
 
 @Injectable()
 export class AIGatewayService {
@@ -85,11 +83,13 @@ export class AIGatewayService {
       model: result.model,
       mode,
       latencyMs: Date.now() - start,
-      tokensUsed: result.usage ? {
-        prompt: result.usage.promptTokens,
-        completion: result.usage.completionTokens,
-        total: result.usage.totalTokens,
-      } : undefined,
+      tokensUsed: result.usage
+        ? {
+            prompt: result.usage.promptTokens,
+            completion: result.usage.completionTokens,
+            total: result.usage.totalTokens,
+          }
+        : undefined,
       costUsd: 0,
       error: errorMsg,
     };
@@ -111,11 +111,13 @@ export class AIGatewayService {
       model: result.model,
       mode,
       latencyMs: Date.now() - start,
-      tokensUsed: result.usage ? {
-        prompt: result.usage.promptTokens,
-        completion: result.usage.completionTokens,
-        total: result.usage.totalTokens,
-      } : undefined,
+      tokensUsed: result.usage
+        ? {
+            prompt: result.usage.promptTokens,
+            completion: result.usage.completionTokens,
+            total: result.usage.totalTokens,
+          }
+        : undefined,
       costUsd: result.costUsd,
     };
   }
@@ -176,7 +178,11 @@ export class AIGatewayService {
       // Try to extract JSON block từ markdown
       const match = text.match(/```(?:json)?\s*([\s\S]+?)```/);
       if (match) {
-        try { return JSON.parse(match[1]); } catch { /* ignore */ }
+        try {
+          return JSON.parse(match[1]);
+        } catch {
+          /* ignore */
+        }
       }
       return text;
     }

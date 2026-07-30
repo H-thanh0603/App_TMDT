@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { AITaskType } from '@prisma/client';
 
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { assertSafeHttpUrl } from '@/common/utils/url-safety';
 import { CreateProviderDto, UpdateProviderDto } from './dto/provider.dto';
 import { UpdateTaskConfigDto } from './dto/task-config.dto';
 import { UpdateOCRSettingsDto } from './dto/ocr-settings.dto';
@@ -21,10 +27,18 @@ export class AIManagerService {
     return this.prisma.aIProvider.findMany({
       orderBy: [{ isSystemDefault: 'desc' }, { createdAt: 'desc' }],
       select: {
-        id: true, name: true, type: true, baseUrl: true,
-        defaultModel: true, status: true, isSystemDefault: true,
-        apiKeyMasked: true, lastTestedAt: true, lastTestResult: true,
-        createdAt: true, updatedAt: true,
+        id: true,
+        name: true,
+        type: true,
+        baseUrl: true,
+        defaultModel: true,
+        status: true,
+        isSystemDefault: true,
+        apiKeyMasked: true,
+        lastTestedAt: true,
+        lastTestResult: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
   }
@@ -41,8 +55,14 @@ export class AIManagerService {
         apiKeyMasked: apiKey ? this.maskKey(apiKey) : null,
       },
       select: {
-        id: true, name: true, type: true, baseUrl: true, defaultModel: true,
-        status: true, isSystemDefault: true, apiKeyMasked: true,
+        id: true,
+        name: true,
+        type: true,
+        baseUrl: true,
+        defaultModel: true,
+        status: true,
+        isSystemDefault: true,
+        apiKeyMasked: true,
       },
     });
   }
@@ -61,8 +81,14 @@ export class AIManagerService {
           : {}),
       },
       select: {
-        id: true, name: true, type: true, baseUrl: true, defaultModel: true,
-        status: true, isSystemDefault: true, apiKeyMasked: true,
+        id: true,
+        name: true,
+        type: true,
+        baseUrl: true,
+        defaultModel: true,
+        status: true,
+        isSystemDefault: true,
+        apiKeyMasked: true,
       },
     });
   }
@@ -123,6 +149,9 @@ export class AIManagerService {
             ? this.cfg.get<string>('DEEPSEEK_BASE_URL', 'https://api.deepseek.com')
             : this.cfg.get<string>('OPENAI_BASE_URL', 'https://api.openai.com/v1'));
 
+        // Chống SSRF: baseUrl do admin cấu hình không được trỏ tới địa chỉ nội bộ
+        assertSafeHttpUrl(baseURL);
+
         const axios = (await import('axios')).default;
         const { data } = await axios.post(
           `${baseURL.replace(/\/$/, '')}/chat/completions`,
@@ -158,9 +187,7 @@ export class AIManagerService {
         success: false,
         latencyMs: Date.now() - start,
         model,
-        message: err?.response?.data?.error?.message
-          || err?.message
-          || 'Test connection thất bại',
+        message: err?.response?.data?.error?.message || err?.message || 'Test connection thất bại',
       };
     }
 
@@ -257,15 +284,29 @@ export class AIManagerService {
       totalLogs,
       last24h,
       errors24h,
-      errorRate: last24h > 0 ? Number((errors24h / last24h * 100).toFixed(2)) : 0,
+      errorRate: last24h > 0 ? Number(((errors24h / last24h) * 100).toFixed(2)) : 0,
       taskBreakdown: taskBreakdown.map((t) => ({ taskType: t.taskType, count: t._count._all })),
     };
   }
 
   // ========== Helpers (encryption) ==========
 
+  /**
+   * Lấy khóa mã hóa AES-256. Fail-closed: bắt buộc 64 ký tự hex (32 byte).
+   * KHÔNG dùng khóa mặc định — khóa yếu khiến API key trong DB coi như không mã hóa.
+   */
+  private getEncryptionKey(): Buffer {
+    const hex = this.cfg.get<string>('AI_ENCRYPTION_KEY');
+    if (!hex || !/^[0-9a-fA-F]{64}$/.test(hex.trim())) {
+      throw new ServiceUnavailableException(
+        'AI_ENCRYPTION_KEY chưa được cấu hình hợp lệ (cần chuỗi 64 ký tự hex).',
+      );
+    }
+    return Buffer.from(hex.trim(), 'hex');
+  }
+
   private encrypt(plaintext: string): string {
-    const key = Buffer.from(this.cfg.get<string>('AI_ENCRYPTION_KEY', '0'.repeat(64)), 'hex');
+    const key = this.getEncryptionKey();
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
     const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
@@ -278,7 +319,7 @@ export class AIManagerService {
     const iv = buf.subarray(0, 12);
     const authTag = buf.subarray(12, 28);
     const data = buf.subarray(28);
-    const key = Buffer.from(this.cfg.get<string>('AI_ENCRYPTION_KEY', '0'.repeat(64)), 'hex');
+    const key = this.getEncryptionKey();
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
     decipher.setAuthTag(authTag);
     return Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');

@@ -2,15 +2,18 @@ import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { PaymentMethod } from '@prisma/client';
 
 export class CreateOrderDto {
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   addressId?: string;
 
   @IsEnum(PaymentMethod)
   paymentMethod: PaymentMethod;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   promotionCode?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   note?: string;
 }

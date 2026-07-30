@@ -1,6 +1,4 @@
-import {
-  Body, Controller, Get, Patch, Query, UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Patch, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 
@@ -21,10 +19,7 @@ export class InventoryController {
 
   @Get('transactions')
   @ApiOperation({ summary: 'Lịch sử nhập/xuất kho' })
-  listTransactions(
-    @Query('productId') productId?: string,
-    @Query('limit') limit?: string,
-  ) {
+  listTransactions(@Query('productId') productId?: string, @Query('limit') limit?: string) {
     return this.inventory.listTransactions(productId, limit ? parseInt(limit, 10) : 50);
   }
 

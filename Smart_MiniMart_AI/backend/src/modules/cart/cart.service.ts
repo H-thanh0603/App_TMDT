@@ -16,8 +16,14 @@ export class CartService {
           include: {
             product: {
               select: {
-                id: true, name: true, slug: true, imageUrl: true,
-                price: true, salePrice: true, stock: true, unit: true,
+                id: true,
+                name: true,
+                slug: true,
+                imageUrl: true,
+                price: true,
+                salePrice: true,
+                stock: true,
+                unit: true,
               },
             },
           },
@@ -47,7 +53,9 @@ export class CartService {
     }
 
     const cart = await this.prisma.cart.upsert({
-      where: { userId }, update: {}, create: { userId },
+      where: { userId },
+      update: {},
+      create: { userId },
     });
 
     await this.prisma.cartItem.upsert({

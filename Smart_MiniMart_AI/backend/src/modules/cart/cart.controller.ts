@@ -1,6 +1,4 @@
-import {
-  Body, Controller, Delete, Get, Param, Patch, Post, UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CartService } from './cart.service';
@@ -37,10 +35,7 @@ export class CartController {
   }
 
   @Delete('items/:productId')
-  removeItem(
-    @CurrentUser('sub') userId: string,
-    @Param('productId') productId: string,
-  ) {
+  removeItem(@CurrentUser('sub') userId: string, @Param('productId') productId: string) {
     return this.cart.removeItem(userId, productId);
   }
 

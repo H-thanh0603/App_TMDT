@@ -5,30 +5,41 @@ export class UpdateTaskConfigDto {
   @IsEnum(AITaskType)
   taskType: AITaskType;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   primaryProviderId?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   primaryModel?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   fallbackProviderId?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   fallbackModel?: string;
 
-  @IsOptional() @IsEnum(AIMode)
+  @IsOptional()
+  @IsEnum(AIMode)
   mode?: AIMode;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   systemPrompt?: string;
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
   temperature?: number;
 
-  @IsOptional() @IsInt() @Min(1)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
   maxTokens?: number;
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isEnabled?: boolean;
 }

@@ -1,5 +1,10 @@
 import {
-  Controller, Post, UploadedFile, UseGuards, UseInterceptors, BadRequestException,
+  Controller,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -15,6 +20,7 @@ import { Roles } from '@/common/decorators/roles.decorator';
 import {
   assertImageBuffer,
   createImageUploadOptions,
+  sniffImageType,
 } from '@/common/upload/upload.config';
 
 @ApiTags('Uploads')
@@ -38,36 +44,32 @@ export class UploadsController {
     },
   })
   @UseInterceptors(
-    FileInterceptor(
-      'file',
-      createImageUploadOptions(Number(process.env.MAX_FILE_SIZE_MB || 10)),
-    ),
+    FileInterceptor('file', createImageUploadOptions(Number(process.env.MAX_FILE_SIZE_MB || 10))),
   )
   uploadImage(@UploadedFile() file: Express.Multer.File) {
     const maxMb = Number(this.cfg.get('MAX_FILE_SIZE_MB') || 10);
     const f = assertImageBuffer(file, maxMb);
 
     const uploadDir = this.cfg.get<string>('UPLOAD_DIR') || './uploads';
-    const absDir = path.isAbsolute(uploadDir)
-      ? uploadDir
-      : path.join(process.cwd(), uploadDir);
+    const absDir = path.isAbsolute(uploadDir) ? uploadDir : path.join(process.cwd(), uploadDir);
     fs.mkdirSync(absDir, { recursive: true });
 
     const ext =
-      f.mimetype === 'image/png' ? '.png'
-        : f.mimetype === 'image/webp' ? '.webp'
-          : f.mimetype.includes('heic') || f.mimetype.includes('heif') ? '.heic'
-            : '.jpg';
+      {
+        png: '.png',
+        webp: '.webp',
+        heic: '.heic',
+        jpeg: '.jpg',
+      }[sniffImageType(f.buffer) ?? 'jpeg'] ?? '.jpg';
     const filename = `${randomUUID()}${ext}`;
     const dest = path.join(absDir, filename);
     fs.writeFileSync(dest, f.buffer);
 
-    // Public URL path (static serve optional; client có thể dùng base64/file:// dev)
+    // Không trả absolute server path ra client (tránh lộ cấu trúc filesystem)
     return {
       filename,
       mimeType: f.mimetype,
       size: f.size,
-      path: dest,
       url: `/uploads/${filename}`,
     };
   }

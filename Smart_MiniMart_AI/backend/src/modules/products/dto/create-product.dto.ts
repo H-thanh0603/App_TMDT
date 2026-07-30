@@ -1,19 +1,34 @@
 import {
-  IsArray, IsBoolean, IsDateString, IsInt, IsNumber, IsOptional, IsString,
-  Min, MinLength, MaxLength,
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  MinLength,
+  MaxLength,
 } from 'class-validator';
 
 export class CreateProductDto {
-  @IsString() @MinLength(2) @MaxLength(150)
+  @IsString()
+  @MinLength(2)
+  @MaxLength(150)
   name: string;
 
-  @IsString() @MinLength(2) @MaxLength(150)
+  @IsString()
+  @MinLength(2)
+  @MaxLength(150)
   slug: string;
 
-  @IsString() @MinLength(2) @MaxLength(60)
+  @IsString()
+  @MinLength(2)
+  @MaxLength(60)
   sku: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   barcode?: string;
 
   @IsString()
@@ -23,34 +38,50 @@ export class CreateProductDto {
   @IsOptional() @IsString() shortDescription?: string;
   @IsOptional() @IsString() brand?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   unit?: string;
 
-  @IsNumber() @Min(0)
+  @IsNumber()
+  @Min(0)
   price: number;
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
   importPrice?: number;
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
   salePrice?: number;
 
-  @IsOptional() @IsInt() @Min(0)
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   stock?: number;
 
-  @IsOptional() @IsInt() @Min(0)
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   minStock?: number;
 
-  @IsOptional() @IsInt() @Min(0)
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   maxStock?: number;
 
-  @IsOptional() @IsDateString()
+  @IsOptional()
+  @IsDateString()
   expiryDate?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   imageUrl?: string;
 
-  @IsOptional() @IsArray() @IsString({ each: true })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   tags?: string[];
 
   @IsOptional()
@@ -62,53 +93,81 @@ export class CreateProductDto {
 
 /** PATCH: tất cả field optional (không extends Create để tránh PartialType decorator issues). */
 export class UpdateProductDto {
-  @IsOptional() @IsString() @MinLength(2) @MaxLength(150)
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(150)
   name?: string;
 
-  @IsOptional() @IsString() @MinLength(2) @MaxLength(150)
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(150)
   slug?: string;
 
-  @IsOptional() @IsString() @MinLength(2) @MaxLength(60)
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(60)
   sku?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   barcode?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   categoryId?: string;
 
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsString() shortDescription?: string;
   @IsOptional() @IsString() brand?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   unit?: string;
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
   price?: number;
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
   importPrice?: number;
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
   salePrice?: number;
 
-  @IsOptional() @IsInt() @Min(0)
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   stock?: number;
 
-  @IsOptional() @IsInt() @Min(0)
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   minStock?: number;
 
-  @IsOptional() @IsInt() @Min(0)
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   maxStock?: number;
 
-  @IsOptional() @IsDateString()
+  @IsOptional()
+  @IsDateString()
   expiryDate?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   imageUrl?: string;
 
-  @IsOptional() @IsArray() @IsString({ each: true })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   tags?: string[];
 
   @IsOptional()

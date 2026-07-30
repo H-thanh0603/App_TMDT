@@ -7,6 +7,7 @@ export class UpsertSettingDto {
   @IsOptional()
   value?: any;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   description?: string;
 }

@@ -5,9 +5,11 @@ export class OCRScanDto {
   @IsString()
   imageUrl: string;
 
-  @IsOptional() @IsEnum(OCREngine)
+  @IsOptional()
+  @IsEnum(OCREngine)
   engine?: OCREngine;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   supplierName?: string;
 }

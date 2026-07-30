@@ -1,5 +1,12 @@
 import {
-  IsArray, IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString, Min,
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
 } from 'class-validator';
 import { PromotionType } from '@prisma/client';
 
@@ -10,22 +17,30 @@ export class CreatePromotionDto {
   @IsString()
   name: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   description?: string;
 
   @IsEnum(PromotionType)
   type: PromotionType;
 
-  @IsNumber() @Min(0)
+  @IsNumber()
+  @Min(0)
   discountValue: number;
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
   minOrderValue?: number;
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
   maxDiscount?: number;
 
-  @IsOptional() @IsNumber() @Min(0)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
   usageLimit?: number;
 
   @IsDateString()
@@ -34,13 +49,17 @@ export class CreatePromotionDto {
   @IsDateString()
   endDate: string;
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isAutoApply?: boolean;
 
-  @IsOptional() @IsArray() @IsString({ each: true })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   productIds?: string[];
 }
 

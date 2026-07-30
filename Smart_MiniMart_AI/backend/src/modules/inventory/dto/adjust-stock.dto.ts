@@ -11,6 +11,7 @@ export class AdjustStockDto {
   @IsEnum(InventoryTxnType)
   type: InventoryTxnType;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   reason?: string;
 }

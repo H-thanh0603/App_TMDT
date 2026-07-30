@@ -13,8 +13,14 @@ export class UsersService {
       where: { id: userId },
       data: dto,
       select: {
-        id: true, email: true, phone: true, fullName: true,
-        avatarUrl: true, role: true, loyaltyPoints: true, isVip: true,
+        id: true,
+        email: true,
+        phone: true,
+        fullName: true,
+        avatarUrl: true,
+        role: true,
+        loyaltyPoints: true,
+        isVip: true,
       },
     });
   }
@@ -84,9 +90,17 @@ export class UsersService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         select: {
-          id: true, email: true, phone: true, fullName: true, avatarUrl: true,
-          role: true, status: true, loyaltyPoints: true, isVip: true,
-          lastLoginAt: true, createdAt: true,
+          id: true,
+          email: true,
+          phone: true,
+          fullName: true,
+          avatarUrl: true,
+          role: true,
+          status: true,
+          loyaltyPoints: true,
+          isVip: true,
+          lastLoginAt: true,
+          createdAt: true,
         },
       }),
       this.prisma.user.count({ where }),
@@ -99,9 +113,18 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
-        id: true, email: true, phone: true, fullName: true, avatarUrl: true,
-        role: true, status: true, loyaltyPoints: true, isVip: true,
-        lastLoginAt: true, createdAt: true, updatedAt: true,
+        id: true,
+        email: true,
+        phone: true,
+        fullName: true,
+        avatarUrl: true,
+        role: true,
+        status: true,
+        loyaltyPoints: true,
+        isVip: true,
+        lastLoginAt: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
@@ -116,8 +139,13 @@ export class UsersService {
     const user = await this.prisma.user.create({
       data: { ...rest, passwordHash },
       select: {
-        id: true, email: true, fullName: true, role: true,
-        status: true, isVip: true, createdAt: true,
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        status: true,
+        isVip: true,
+        createdAt: true,
       },
     });
     return user;
@@ -130,8 +158,13 @@ export class UsersService {
       where: { id },
       data: dto,
       select: {
-        id: true, email: true, fullName: true, role: true,
-        status: true, isVip: true, loyaltyPoints: true,
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        status: true,
+        isVip: true,
+        loyaltyPoints: true,
       },
     });
   }
@@ -157,14 +190,16 @@ export class UsersService {
       select: { id: true, email: true, loyaltyPoints: true, isVip: true },
     });
     // Log notification cho user
-    await this.prisma.notification.create({
-      data: {
-        userId: id,
-        title: delta > 0 ? 'Bạn được cộng điểm thưởng' : 'Điểm tích lũy được điều chỉnh',
-        body: `${delta > 0 ? '+' : ''}${delta} điểm. ${reason ?? ''}`.trim(),
-        type: 'SYSTEM',
-      },
-    }).catch(() => null);
+    await this.prisma.notification
+      .create({
+        data: {
+          userId: id,
+          title: delta > 0 ? 'Bạn được cộng điểm thưởng' : 'Điểm tích lũy được điều chỉnh',
+          body: `${delta > 0 ? '+' : ''}${delta} điểm. ${reason ?? ''}`.trim(),
+          type: 'SYSTEM',
+        },
+      })
+      .catch(() => null);
     return updated;
   }
 

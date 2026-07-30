@@ -6,6 +6,7 @@ import { OCREngine, AITaskType } from '@prisma/client';
 import { OCRParseResult, OCRItem } from './interfaces/ai.interface';
 import { AIGatewayService } from './ai-gateway.service';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { assertSafeHttpUrl } from '@/common/utils/url-safety';
 
 @Injectable()
 export class OCRClientService {
@@ -25,6 +26,11 @@ export class OCRClientService {
     const start = Date.now();
     if (engine === OCREngine.MOCK) {
       return this.mockParse(imageUrl, start);
+    }
+
+    // Chống SSRF: nếu imageUrl là http(s) thì phải là URL công khai (không trỏ nội bộ)
+    if (/^https?:/i.test(imageUrl)) {
+      assertSafeHttpUrl(imageUrl);
     }
 
     try {
@@ -54,9 +60,8 @@ export class OCRClientService {
       const items = await this.matchProducts(rawItems);
 
       // Step 5: Compute confidence
-      const matchedRatio = items.length > 0
-        ? items.filter(i => (i.confidence ?? 0) > 0.7).length / items.length
-        : 0;
+      const matchedRatio =
+        items.length > 0 ? items.filter((i) => (i.confidence ?? 0) > 0.7).length / items.length : 0;
       const finalConfidence = Math.min(baseConfidence * 0.5 + matchedRatio * 0.5, 1.0);
 
       return {
@@ -83,13 +88,13 @@ export class OCRClientService {
    */
   private cleanRawText(text: string): string {
     return text
-      .replace(/[│┃|]/g, '|')              // unify pipe chars
-      .replace(/[─━]/g, '-')                 // unify dashes
-      .replace(/[ \t]+/g, ' ')              // collapse spaces
-      .replace(/\n{3,}/g, '\n\n')          // collapse blank lines
-      .replace(/(\d)O/g, '$10')             // O -> 0 in numbers
+      .replace(/[│┃|]/g, '|') // unify pipe chars
+      .replace(/[─━]/g, '-') // unify dashes
+      .replace(/[ \t]+/g, ' ') // collapse spaces
+      .replace(/\n{3,}/g, '\n\n') // collapse blank lines
+      .replace(/(\d)O/g, '$10') // O -> 0 in numbers
       .replace(/O(\d)/g, '0$1')
-      .replace(/(\d) (\d{3})/g, '$1$2')    // join split thousands "12 000" -> "12000"
+      .replace(/(\d) (\d{3})/g, '$1$2') // join split thousands "12 000" -> "12000"
       .trim();
   }
 
@@ -103,7 +108,7 @@ export class OCRClientService {
       take: 50,
       orderBy: { soldCount: 'desc' },
     });
-    return products.map(p => `${p.sku} - ${p.name} (${p.unit})`);
+    return products.map((p) => `${p.sku} - ${p.name} (${p.unit})`);
   }
 
   /**
@@ -148,8 +153,10 @@ export class OCRClientService {
     if (!query || query.length < 3) return null;
 
     const norm = (s: string) =>
-      s.toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      s
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
         .replace(/đ/g, 'd')
         .replace(/[^a-z0-9 ]/g, '')
         .trim();
@@ -158,25 +165,29 @@ export class OCRClientService {
     if (!q) return null;
 
     // 1. Exact match by SKU or name
-    const exact = products.find(p => norm(p.sku) === q || norm(p.name) === q);
+    const exact = products.find((p) => norm(p.sku) === q || norm(p.name) === q);
     if (exact) return exact;
 
     // 2. SKU contains query OR query contains SKU
-    const skuMatch = products.find(p => {
+    const skuMatch = products.find((p) => {
       const ns = norm(p.sku);
       return ns && (q.includes(ns) || ns.includes(q));
     });
     if (skuMatch) return skuMatch;
 
     // 3. Token overlap (Jaccard-ish)
-    const qTokens = new Set(q.split(' ').filter(t => t.length >= 3));
+    const qTokens = new Set(q.split(' ').filter((t) => t.length >= 3));
     if (qTokens.size === 0) return null;
 
     let bestScore = 0;
     let best: any = null;
     for (const p of products) {
-      const pTokens = new Set(norm(p.name).split(' ').filter(t => t.length >= 3));
-      const overlap = [...qTokens].filter(t => pTokens.has(t)).length;
+      const pTokens = new Set(
+        norm(p.name)
+          .split(' ')
+          .filter((t) => t.length >= 3),
+      );
+      const overlap = [...qTokens].filter((t) => pTokens.has(t)).length;
       const score = overlap / Math.max(qTokens.size, pTokens.size);
       if (score > bestScore && score >= 0.4) {
         bestScore = score;
@@ -227,12 +238,30 @@ export class OCRClientService {
       supplierName: 'Nhà phân phối ABC',
       importDate: new Date().toISOString().slice(0, 10),
       items: [
-        { productName: 'Sữa TH True Milk 220ml', quantity: 50, unit: 'hộp', unitPrice: 8000,
-          expiryDate: '2026-08-20', confidence: 0.92 },
-        { productName: 'Mì Hảo Hảo tôm chua cay', quantity: 100, unit: 'gói', unitPrice: 3200,
-          expiryDate: '2026-12-10', confidence: 0.88 },
-        { productName: 'Cà phê G7 hộp 18 gói', quantity: 20, unit: 'hộp', unitPrice: 35_000,
-          expiryDate: '2027-03-15', confidence: 0.94 },
+        {
+          productName: 'Sữa TH True Milk 220ml',
+          quantity: 50,
+          unit: 'hộp',
+          unitPrice: 8000,
+          expiryDate: '2026-08-20',
+          confidence: 0.92,
+        },
+        {
+          productName: 'Mì Hảo Hảo tôm chua cay',
+          quantity: 100,
+          unit: 'gói',
+          unitPrice: 3200,
+          expiryDate: '2026-12-10',
+          confidence: 0.88,
+        },
+        {
+          productName: 'Cà phê G7 hộp 18 gói',
+          quantity: 20,
+          unit: 'hộp',
+          unitPrice: 35_000,
+          expiryDate: '2027-03-15',
+          confidence: 0.94,
+        },
       ],
     };
     return {

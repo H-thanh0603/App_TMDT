@@ -51,9 +51,8 @@ export class SettingsService {
   }
 
   async upsert(key: string, value: any) {
-    const v = value === undefined || value === null
-      ? Prisma.JsonNull
-      : (value as Prisma.InputJsonValue);
+    const v =
+      value === undefined || value === null ? Prisma.JsonNull : (value as Prisma.InputJsonValue);
     return this.prisma.systemSetting.upsert({
       where: { key },
       update: { value: v },

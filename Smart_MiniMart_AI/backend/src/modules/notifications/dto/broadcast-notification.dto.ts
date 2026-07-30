@@ -2,18 +2,25 @@ import { IsArray, IsEnum, IsOptional, IsString, MinLength } from 'class-validato
 import { Role } from '@prisma/client';
 
 export class BroadcastNotificationDto {
-  @IsString() @MinLength(2)
+  @IsString()
+  @MinLength(2)
   title: string;
 
-  @IsString() @MinLength(2)
+  @IsString()
+  @MinLength(2)
   body: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   type?: string; // ORDER | PROMOTION | EXPIRY | SYSTEM
 
-  @IsOptional() @IsArray() @IsEnum(Role, { each: true })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(Role, { each: true })
   targetRoles?: Role[]; // If empty -> all users
 
-  @IsOptional() @IsArray() @IsString({ each: true })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   targetUserIds?: string[];
 }

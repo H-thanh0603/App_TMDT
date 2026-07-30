@@ -51,10 +51,7 @@ export class PrismaProductRepository implements IProductRepository {
     return this.prisma.category.findUnique(args);
   }
 
-  transactionList(
-    findManyArgs: Prisma.ProductFindManyArgs,
-    countArgs: Prisma.ProductCountArgs,
-  ) {
+  transactionList(findManyArgs: Prisma.ProductFindManyArgs, countArgs: Prisma.ProductCountArgs) {
     return this.prisma.$transaction([
       this.prisma.product.findMany(findManyArgs),
       this.prisma.product.count(countArgs),

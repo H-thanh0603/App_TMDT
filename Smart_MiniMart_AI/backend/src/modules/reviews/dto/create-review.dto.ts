@@ -4,15 +4,21 @@ export class CreateReviewDto {
   @IsString()
   productId: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   orderId?: string;
 
-  @IsInt() @Min(1) @Max(5)
+  @IsInt()
+  @Min(1)
+  @Max(5)
   rating: number;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   comment?: string;
 
-  @IsOptional() @IsArray() @IsString({ each: true })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   imageUrls?: string[];
 }

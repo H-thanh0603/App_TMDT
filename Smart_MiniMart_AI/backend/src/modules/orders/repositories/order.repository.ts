@@ -43,10 +43,7 @@ export class PrismaOrderRepository implements IOrderRepository {
     return this.prisma.order.findMany(args);
   }
 
-  transactionList(
-    findManyArgs: Prisma.OrderFindManyArgs,
-    countArgs: Prisma.OrderCountArgs,
-  ) {
+  transactionList(findManyArgs: Prisma.OrderFindManyArgs, countArgs: Prisma.OrderCountArgs) {
     return this.prisma.$transaction([
       this.prisma.order.findMany(findManyArgs),
       this.prisma.order.count(countArgs),

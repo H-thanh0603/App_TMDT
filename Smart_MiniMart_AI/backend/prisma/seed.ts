@@ -6,8 +6,31 @@
 
 import { PrismaClient, Role, AITaskType, AIMode, OCREngine, AIProviderType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 const prisma = new PrismaClient();
+
+/**
+ * Mật khẩu seed: KHÔNG hard-code giá trị yếu.
+ * - Ưu tiên SEED_DEFAULT_PASSWORD từ env (>= 8 ký tự).
+ * - Production bắt buộc phải set env, nếu không sẽ dừng seed.
+ * - Dev: sinh ngẫu nhiên mạnh và in ra một lần để dùng.
+ */
+function resolveSeedPassword(): string {
+  const fromEnv = process.env.SEED_DEFAULT_PASSWORD;
+  if (fromEnv && fromEnv.length >= 8) return fromEnv;
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'SEED_DEFAULT_PASSWORD (>= 8 ký tự) là bắt buộc để seed tài khoản trên production.',
+    );
+  }
+  const generated = crypto.randomBytes(9).toString('base64url');
+  console.warn(
+    `  ⚠ SEED_DEFAULT_PASSWORD chưa set — dùng mật khẩu ngẫu nhiên cho dev: ${generated}`,
+  );
+  return generated;
+}
 
 async function main() {
   console.log('🌱 Seeding Smart MiniMart AI database...');
@@ -22,7 +45,7 @@ async function main() {
 }
 
 async function seedUsers() {
-  const passwordHash = await bcrypt.hash('123456', 10);
+  const passwordHash = await bcrypt.hash(resolveSeedPassword(), 10);
   const users = [
     { email: 'customer@minimart.vn',  fullName: 'Nguyễn Văn Khách', role: Role.CUSTOMER },
     { email: 'vip@minimart.vn',       fullName: 'Trần Thị VIP',     role: Role.CUSTOMER, isVip: true, loyaltyPoints: 5_000 },
