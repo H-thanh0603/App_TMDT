@@ -1,26 +1,15 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  Logger,
-  Inject,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger, Inject } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
-import {
-  IProductRepository,
-  PRODUCT_REPOSITORY,
-} from './repositories/product.repository';
+import { IProductRepository, PRODUCT_REPOSITORY } from './repositories/product.repository';
 
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
-  constructor(
-    @Inject(PRODUCT_REPOSITORY) private readonly products: IProductRepository,
-  ) {}
+  constructor(@Inject(PRODUCT_REPOSITORY) private readonly products: IProductRepository) {}
 
   async list(query: ProductQueryDto) {
     const page = query.page ?? 1;
@@ -51,14 +40,20 @@ export class ProductsService {
 
     const [items, total] = await this.products.transactionList(
       {
-        where, orderBy, skip, take: limit,
+        where,
+        orderBy,
+        skip,
+        take: limit,
         include: { category: { select: { id: true, name: true, slug: true } } },
       },
       { where },
     );
 
     return {
-      items, total, page, limit,
+      items,
+      total,
+      page,
+      limit,
       totalPages: Math.ceil(total / limit),
     };
   }
@@ -144,12 +139,17 @@ export class ProductsService {
 
   private buildSort(sortBy?: string): Prisma.ProductOrderByWithRelationInput {
     switch (sortBy) {
-      case 'price_asc':    return { price: 'asc' };
-      case 'price_desc':   return { price: 'desc' };
-      case 'best_selling': return { soldCount: 'desc' };
-      case 'name':         return { name: 'asc' };
+      case 'price_asc':
+        return { price: 'asc' };
+      case 'price_desc':
+        return { price: 'desc' };
+      case 'best_selling':
+        return { soldCount: 'desc' };
+      case 'name':
+        return { name: 'asc' };
       case 'newest':
-      default:             return { createdAt: 'desc' };
+      default:
+        return { createdAt: 'desc' };
     }
   }
 }

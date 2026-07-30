@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-  Inject,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
 import { OrderStatus, Prisma, PromotionType, Role } from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -17,17 +11,14 @@ const VIP_THRESHOLD = 1_000;
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
 
-  constructor(
-    @Inject(ORDER_REPOSITORY) private readonly repo: IOrderRepository,
-  ) {}
+  constructor(@Inject(ORDER_REPOSITORY) private readonly repo: IOrderRepository) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
+    // Pre-check (UX/validation nhanh) — nguồn xác thực THẬT nằm trong transaction bên dưới
     const cart = await this.repo.findCartWithItems(userId);
     if (!cart || cart.items.length === 0) {
       throw new BadRequestException('Giỏ hàng trống');
     }
-
-    // Validate stock
     for (const item of cart.items) {
       if (!item.product.isActive) {
         throw new BadRequestException(`Sản phẩm "${item.product.name}" không còn bán`);
@@ -39,23 +30,7 @@ export class OrdersService {
       }
     }
 
-    let subtotal = 0;
-    const cartProductIds = new Set<string>();
-    const itemsData = cart.items.map((it: any) => {
-      const price = Number(it.product.salePrice ?? it.product.price);
-      const lineTotal = price * it.quantity;
-      subtotal += lineTotal;
-      cartProductIds.add(it.product.id);
-      return {
-        productId: it.product.id,
-        productName: it.product.name,
-        unitPrice: price,
-        quantity: it.quantity,
-        subtotal: lineTotal,
-      };
-    });
-
-    const shippingFee = subtotal >= 200_000 ? 0 : 15_000;
+    const pre = this.assembleItems(cart.items);
 
     let discountAmount = 0;
     let appliedPromoCode: string | null = null;
@@ -64,72 +39,124 @@ export class OrdersService {
     if (dto.promotionCode?.trim()) {
       const promo = await this.resolvePromotion(
         dto.promotionCode.trim().toUpperCase(),
-        subtotal,
-        cartProductIds,
+        pre.subtotal,
+        pre.cartProductIds,
       );
       discountAmount = promo.discountAmount;
       appliedPromoCode = promo.code;
       promoIdToIncrement = promo.id;
     }
 
-    const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
-    const orderNumber = await this.nextOrderNumber();
+    // Retry để chống trùng orderNumber khi có đơn tạo đồng thời (SEC-008)
+    const MAX_ATTEMPTS = 4;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.repo.runInTransaction(async (tx) => {
+          // 1) Khóa dòng giỏ hàng → serialize checkout đồng thời của cùng user (chống double-submit, SEC-004)
+          const locked = await tx.$queryRaw<Array<{ id: string }>>`
+            SELECT id FROM carts WHERE "userId" = ${userId} FOR UPDATE`;
+          if (!locked.length) throw new BadRequestException('Giỏ hàng trống');
+          const cartId = locked[0].id;
 
-    return this.repo.runInTransaction(async (tx) => {
-      const order = await tx.order.create({
-        data: {
-          orderNumber,
-          userId,
-          addressId: dto.addressId,
-          paymentMethod: dto.paymentMethod,
-          subtotal,
-          discountAmount,
-          shippingFee,
-          totalAmount,
-          promotionCode: appliedPromoCode,
-          note: dto.note,
-          items: { create: itemsData },
-        },
-        include: { items: true },
-      });
+          // 2) Đọc lại items DƯỚI lock (nếu đơn trước đã xử lý xong sẽ thấy giỏ rỗng)
+          const freshItems = await tx.cartItem.findMany({
+            where: { cartId },
+            include: { product: true },
+          });
+          if (freshItems.length === 0) throw new BadRequestException('Giỏ hàng trống');
 
-      for (const it of cart.items) {
-        await tx.product.update({
-          where: { id: it.product.id },
-          data: {
-            stock: { decrement: it.quantity },
-            soldCount: { increment: it.quantity },
-          },
+          // Địa chỉ giao hàng (nếu có) phải thuộc về chính user (chống IDOR)
+          if (dto.addressId) {
+            const addr = await tx.address.findFirst({
+              where: { id: dto.addressId, userId },
+              select: { id: true },
+            });
+            if (!addr) throw new BadRequestException('Địa chỉ giao hàng không hợp lệ');
+          }
+
+          const { itemsData, subtotal } = this.assembleItems(freshItems);
+          const shippingFee = subtotal >= 200_000 ? 0 : 15_000;
+          const discount = Math.min(discountAmount, subtotal);
+          const totalAmount = Math.max(0, subtotal - discount + shippingFee);
+          const orderNumber = await this.nextOrderNumberTx(tx);
+
+          const order = await tx.order.create({
+            data: {
+              orderNumber,
+              userId,
+              addressId: dto.addressId,
+              paymentMethod: dto.paymentMethod,
+              subtotal,
+              discountAmount: discount,
+              shippingFee,
+              totalAmount,
+              promotionCode: appliedPromoCode,
+              note: dto.note,
+              items: { create: itemsData },
+            },
+            include: { items: true },
+          });
+
+          // 3) Trừ kho NGUYÊN TỬ có điều kiện — chống oversell / kho âm / race (SEC-003)
+          for (const it of freshItems) {
+            const dec = await tx.product.updateMany({
+              where: { id: it.productId, isActive: true, stock: { gte: it.quantity } },
+              data: {
+                stock: { decrement: it.quantity },
+                soldCount: { increment: it.quantity },
+              },
+            });
+            if (dec.count === 0) {
+              // Ném lỗi → rollback toàn bộ transaction (kể cả order vừa tạo)
+              throw new BadRequestException(`Sản phẩm "${it.product.name}" không đủ tồn kho`);
+            }
+
+            const after = await tx.product.findUnique({
+              where: { id: it.productId },
+              select: { stock: true },
+            });
+            const afterQty = after?.stock ?? 0;
+
+            await tx.inventoryTransaction.create({
+              data: {
+                productId: it.productId,
+                type: 'SALE',
+                quantity: -it.quantity,
+                reason: `Đơn ${orderNumber}`,
+                refType: 'ORDER',
+                refId: order.id,
+                beforeQty: afterQty + it.quantity,
+                afterQty,
+                createdById: userId,
+              },
+            });
+          }
+
+          if (promoIdToIncrement) {
+            // Tăng lượt dùng NGUYÊN TỬ, không vượt usageLimit khi có đơn đồng thời (SEC-015)
+            const claimed = await tx.$executeRaw`
+              UPDATE promotions SET "usageCount" = "usageCount" + 1
+              WHERE id = ${promoIdToIncrement}
+                AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")`;
+            if (claimed === 0) {
+              throw new BadRequestException('Mã khuyến mãi đã hết lượt sử dụng');
+            }
+          }
+
+          await tx.cartItem.deleteMany({ where: { cartId } });
+          this.logger.log(
+            `Đơn ${orderNumber} bởi ${userId} | sub=${subtotal} disc=${discount} ship=${shippingFee} total=${totalAmount}`,
+          );
+          return order;
         });
-
-        await tx.inventoryTransaction.create({
-          data: {
-            productId: it.product.id,
-            type: 'SALE',
-            quantity: -it.quantity,
-            reason: `Đơn ${orderNumber}`,
-            refType: 'ORDER',
-            refId: order.id,
-            beforeQty: it.product.stock,
-            afterQty: it.product.stock - it.quantity,
-            createdById: userId,
-          },
-        });
+      } catch (err) {
+        if (this.isDuplicateOrderNumber(err) && attempt < MAX_ATTEMPTS) {
+          this.logger.warn(`Trùng orderNumber, thử lại (lần ${attempt})`);
+          continue;
+        }
+        throw err;
       }
-
-      if (promoIdToIncrement) {
-        await tx.promotion.update({
-          where: { id: promoIdToIncrement },
-          data: { usageCount: { increment: 1 } },
-        });
-      }
-
-      await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
-      this.logger.log(
-        `Đơn ${orderNumber} bởi ${userId} | sub=${subtotal} disc=${discountAmount} ship=${shippingFee} total=${totalAmount}`,
-      );
-      return order;
-    });
+    }
   }
 
   async listMyOrders(userId: string, q: OrderQueryDto) {
@@ -211,15 +238,44 @@ export class OrdersService {
     if (dto.status === OrderStatus.CONFIRMED) data.confirmedAt = new Date();
     if (dto.status === OrderStatus.DELIVERING) data.deliveredAt = new Date();
     if (dto.status === OrderStatus.COMPLETED) data.completedAt = new Date();
+    if (dto.status === OrderStatus.CANCELED) {
+      data.canceledAt = new Date();
+      if (dto.reason) data.cancelReason = dto.reason;
+    }
 
     const updated = await this.repo.runInTransaction(async (tx) => {
       const upd = await tx.order.update({ where: { id: orderId }, data });
 
+      // Cộng điểm tích lũy khi đơn hoàn tất (10.000đ = 1 điểm), cập nhật hạng VIP
+      if (dto.status === OrderStatus.COMPLETED) {
+        const points = Math.floor(Number(order.totalAmount) / 10_000);
+        if (points > 0) {
+          const u = await tx.user.update({
+            where: { id: order.userId },
+            data: { loyaltyPoints: { increment: points } },
+            select: { loyaltyPoints: true },
+          });
+          await tx.user.update({
+            where: { id: order.userId },
+            data: { isVip: u.loyaltyPoints >= VIP_THRESHOLD },
+          });
+          await tx.order.update({
+            where: { id: orderId },
+            data: { loyaltyEarned: points },
+          });
+        }
+      }
+
       if (dto.status === OrderStatus.CANCELED) {
         for (const item of order.items) {
-          await tx.product.update({
+          // Hoàn kho + trả lại soldCount (nguyên tử trong 1 update)
+          const p = await tx.product.update({
             where: { id: item.productId },
-            data: { stock: { increment: item.quantity } },
+            data: {
+              stock: { increment: item.quantity },
+              soldCount: { decrement: item.quantity },
+            },
+            select: { stock: true },
           });
           await tx.inventoryTransaction.create({
             data: {
@@ -229,10 +285,17 @@ export class OrdersService {
               reason: `Hủy đơn ${order.orderNumber}`,
               refType: 'ORDER',
               refId: orderId,
-              beforeQty: 0,
-              afterQty: (await tx.product.findUnique({ where: { id: item.productId } }))?.stock ?? 0,
+              beforeQty: p.stock - item.quantity,
+              afterQty: p.stock,
               createdById: staffId,
             },
+          });
+        }
+        // Hoàn lại lượt dùng mã khuyến mãi đã áp cho đơn
+        if (order.promotionCode) {
+          await tx.promotion.updateMany({
+            where: { code: order.promotionCode, usageCount: { gt: 0 } },
+            data: { usageCount: { decrement: 1 } },
           });
         }
       }
@@ -304,9 +367,30 @@ export class OrdersService {
     return { id: promo.id, code: promo.code, discountAmount: discount };
   }
 
-  private async nextOrderNumber(): Promise<string> {
+  /** Gom itemsData + subtotal + tập productId từ danh sách cart item. */
+  private assembleItems(cartItems: any[]) {
+    let subtotal = 0;
+    const cartProductIds = new Set<string>();
+    const itemsData = cartItems.map((it: any) => {
+      const price = Number(it.product.salePrice ?? it.product.price);
+      const lineTotal = price * it.quantity;
+      subtotal += lineTotal;
+      cartProductIds.add(it.product.id);
+      return {
+        productId: it.product.id,
+        productName: it.product.name,
+        unitPrice: price,
+        quantity: it.quantity,
+        subtotal: lineTotal,
+      };
+    });
+    return { itemsData, subtotal, cartProductIds };
+  }
+
+  /** Sinh orderNumber trong transaction (count trong cùng tx để giảm khả năng trùng). */
+  private async nextOrderNumberTx(tx: Prisma.TransactionClient): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.repo.countOrders({
+    const count = await tx.order.count({
       where: {
         createdAt: {
           gte: new Date(`${year}-01-01`),
@@ -315,6 +399,15 @@ export class OrdersService {
       },
     });
     return `SMM-${year}-${String(count + 1).padStart(6, '0')}`;
+  }
+
+  /** Nhận diện lỗi vi phạm unique constraint orderNumber (Prisma P2002) để retry. */
+  private isDuplicateOrderNumber(err: unknown): boolean {
+    const e = err as { code?: string; meta?: { target?: unknown } };
+    if (e?.code !== 'P2002') return false;
+    const target = e.meta?.target;
+    const asText = Array.isArray(target) ? target.join(',') : String(target ?? '');
+    return asText.toLowerCase().includes('ordernumber');
   }
 
   private canTransition(from: OrderStatus, to: OrderStatus): boolean {

@@ -5,6 +5,7 @@ export class UpdateOrderStatusDto {
   @IsEnum(OrderStatus)
   status: OrderStatus;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   reason?: string;
 }

@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Role, UserStatus } from '@prisma/client';
@@ -152,9 +148,7 @@ describe('AuthService', () => {
         expiresAt: new Date(Date.now() + 86_400_000),
       });
 
-      await expect(service.refresh('revoked-token')).rejects.toBeInstanceOf(
-        UnauthorizedException,
-      );
+      await expect(service.refresh('revoked-token')).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
     it('throws BadRequest when refresh token missing', async () => {

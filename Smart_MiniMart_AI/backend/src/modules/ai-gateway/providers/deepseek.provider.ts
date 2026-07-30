@@ -3,11 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
 import { AIProviderType } from '@prisma/client';
 
-import {
-  ChatRequest,
-  ChatResponse,
-  IAIProvider,
-} from '../interfaces/ai.interface';
+import { ChatRequest, ChatResponse, IAIProvider } from '../interfaces/ai.interface';
 
 @Injectable()
 export class DeepSeekProvider implements IAIProvider {
@@ -73,8 +69,8 @@ export class DeepSeekProvider implements IAIProvider {
     if (!usage) return undefined;
     // DeepSeek-chat pricing (approx, USD per 1M tokens)
     // input: $0.14 (cache miss), output: $0.28
-    const pIn = (usage.prompt_tokens ?? 0) * 0.14 / 1_000_000;
-    const pOut = (usage.completion_tokens ?? 0) * 0.28 / 1_000_000;
+    const pIn = ((usage.prompt_tokens ?? 0) * 0.14) / 1_000_000;
+    const pOut = ((usage.completion_tokens ?? 0) * 0.28) / 1_000_000;
     return Number((pIn + pOut).toFixed(6));
   }
 }

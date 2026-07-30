@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/common/prisma/prisma.service';
 
@@ -30,7 +25,8 @@ export class VietQrService {
       bankBin: dto.bankBin || this.cfg.get<string>('VIETQR_BANK_BIN', '970422'), // MB default
       accountNo: dto.accountNo || this.cfg.get<string>('VIETQR_ACCOUNT_NO', '0123456789'), // demo STK, đổi trên Render
       accountName: dto.accountName || this.cfg.get<string>('VIETQR_ACCOUNT_NAME', 'SMART MINIMART'),
-      template: dto.template || this.cfg.get<'compact' | 'qr_only' | 'print'>('VIETQR_TEMPLATE', 'compact'),
+      template:
+        dto.template || this.cfg.get<'compact' | 'qr_only' | 'print'>('VIETQR_TEMPLATE', 'compact'),
     };
   }
 
@@ -39,13 +35,16 @@ export class VietQrService {
    * Ưu tiên dùng api.vietqr.io (public, không cần key cho tier cơ bản).
    * Nếu thất bại, fallback về URL img.vietqr.io (static).
    */
-  async generate(userId: string, dto: {
-    orderId: string;
-    bankBin?: string;
-    accountNo?: string;
-    accountName?: string;
-    template?: 'compact' | 'qr_only' | 'print';
-  }) {
+  async generate(
+    userId: string,
+    dto: {
+      orderId: string;
+      bankBin?: string;
+      accountNo?: string;
+      accountName?: string;
+      template?: 'compact' | 'qr_only' | 'print';
+    },
+  ) {
     const order = await this.prisma.order.findFirst({
       where: { id: dto.orderId, userId },
     });

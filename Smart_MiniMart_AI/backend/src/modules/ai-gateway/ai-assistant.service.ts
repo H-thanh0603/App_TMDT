@@ -23,8 +23,12 @@ export class AIAssistantService {
       take: 30,
       orderBy: [{ isFeatured: 'desc' }, { soldCount: 'desc' }],
       select: {
-        id: true, name: true, price: true, salePrice: true,
-        unit: true, tags: true,
+        id: true,
+        name: true,
+        price: true,
+        salePrice: true,
+        unit: true,
+        tags: true,
         category: { select: { name: true } },
       },
     });
@@ -39,10 +43,12 @@ export class AIAssistantService {
       select: { code: true, name: true, type: true, discountValue: true },
     });
 
-    const productCtx = products.map((p) => {
-      const price = Number(p.salePrice ?? p.price);
-      return `- ${p.name} (${p.category.name}): ${price.toLocaleString()}đ/${p.unit}`;
-    }).join('\n');
+    const productCtx = products
+      .map((p) => {
+        const price = Number(p.salePrice ?? p.price);
+        return `- ${p.name} (${p.category.name}): ${price.toLocaleString()}đ/${p.unit}`;
+      })
+      .join('\n');
 
     const promoCtx = promotionList.length
       ? promotionList.map((p) => `- ${p.code}: ${p.name}`).join('\n')

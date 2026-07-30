@@ -25,8 +25,9 @@ export class MockProvider implements IAIProvider {
         explanation: 'Đây là phản hồi mẫu từ Mock AI để demo khi chưa có API key thật.',
       });
     } else {
-      text = `[Mock AI] Đây là câu trả lời mẫu cho: "${userMsg.slice(0, 80)}". ` +
-             `Để dùng AI thật, AI Manager hãy cấu hình DeepSeek hoặc OpenAI provider.`;
+      text =
+        `[Mock AI] Đây là câu trả lời mẫu cho: "${userMsg.slice(0, 80)}". ` +
+        `Để dùng AI thật, AI Manager hãy cấu hình DeepSeek hoặc OpenAI provider.`;
     }
 
     return {
@@ -39,8 +40,21 @@ export class MockProvider implements IAIProvider {
   }
 
   private extractKeywords(text: string): string[] {
-    const tokens = ['nước', 'sữa', 'mì', 'bánh', 'kẹo', 'gia vị', 'snack', 'đồ ăn sáng',
-                    'cà phê', 'trà', 'gạo', 'dầu ăn', 'nước rửa chén'];
+    const tokens = [
+      'nước',
+      'sữa',
+      'mì',
+      'bánh',
+      'kẹo',
+      'gia vị',
+      'snack',
+      'đồ ăn sáng',
+      'cà phê',
+      'trà',
+      'gạo',
+      'dầu ăn',
+      'nước rửa chén',
+    ];
     return tokens.filter((t) => text.includes(t));
   }
 

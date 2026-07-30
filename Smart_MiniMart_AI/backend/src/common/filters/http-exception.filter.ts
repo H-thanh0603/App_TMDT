@@ -34,8 +34,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
         details = body.details;
       }
     } else if (exception instanceof Error) {
-      message = exception.message;
-      this.logger.error(exception.stack);
+      // Lỗi không lường trước (500): KHÔNG lộ message/stack kỹ thuật ra client.
+      // Chỉ log chi tiết phía server.
+      this.logger.error(`${req.method} ${req.url} → ${exception.message}`, exception.stack);
+      message = 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.';
+      code = 'INTERNAL_ERROR';
     }
 
     res.status(status).json({

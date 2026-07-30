@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { AuthService } from './auth.service';
@@ -50,10 +42,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Đăng xuất (revoke refresh token)' })
-  logout(
-    @CurrentUser('sub') userId: string,
-    @Body() dto: RefreshDto,
-  ) {
+  logout(@CurrentUser('sub') userId: string, @Body() dto: RefreshDto) {
     return this.auth.logout(userId, dto.refreshToken);
   }
 

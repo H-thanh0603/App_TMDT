@@ -1,11 +1,9 @@
-import {
-  Injectable, NotFoundException, BadRequestException, Logger, Inject,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger, Inject } from '@nestjs/common';
 import { ImportReceiptStatus, OCREngine } from '@prisma/client';
 
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { OCRClientService } from '@/modules/ai-gateway/ocr-client.service';
-import { CreateReceiptDto } from './dto/create-receipt.dto';
+import { CreateReceiptDto, ImportReceiptItemDto } from './dto/create-receipt.dto';
 import { OCRScanDto } from './dto/ocr-scan.dto';
 
 @Injectable()
@@ -60,9 +58,7 @@ export class ImportReceiptsService {
   /** Tạo phiếu nhập thủ công (không OCR) */
   async createManual(dto: CreateReceiptDto, userId: string) {
     const receiptNumber = await this.nextReceiptNumber();
-    const totalAmount = dto.items.reduce(
-      (sum, it) => sum + Number(it.unitPrice) * it.quantity, 0,
-    );
+    const totalAmount = dto.items.reduce((sum, it) => sum + Number(it.unitPrice) * it.quantity, 0);
 
     return this.prisma.importReceipt.create({
       data: {
@@ -124,7 +120,7 @@ export class ImportReceiptsService {
     return receipt;
   }
 
-  async updateItems(id: string, items: any[]) {
+  async updateItems(id: string, items: ImportReceiptItemDto[]) {
     await this.findOne(id);
     await this.prisma.$transaction(async (tx) => {
       await tx.importReceiptItem.deleteMany({ where: { importReceiptId: id } });
@@ -164,11 +160,23 @@ export class ImportReceiptsService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      // Guard nguyên tử chống double-confirm: chỉ "chiếm" phiếu nếu CHƯA CONFIRMED (SEC-019).
+      // Nếu một request khác đã xác nhận, count=0 → ném lỗi → rollback toàn bộ (không nhập kho gấp đôi).
+      const claim = await tx.importReceipt.updateMany({
+        where: { id, status: { not: ImportReceiptStatus.CONFIRMED } },
+        data: {
+          status: ImportReceiptStatus.CONFIRMED,
+          confirmedAt: new Date(),
+          reviewedById: userId,
+        },
+      });
+      if (claim.count === 0) {
+        throw new BadRequestException('Phiếu đã xác nhận trước đó');
+      }
+
       for (const it of receipt.items) {
         if (!it.productId) {
-          throw new BadRequestException(
-            `Dòng "${it.productName}" chưa được gán mã sản phẩm`,
-          );
+          throw new BadRequestException(`Dòng "${it.productName}" chưa được gán mã sản phẩm`);
         }
         const product = await tx.product.findUnique({ where: { id: it.productId } });
         if (!product) continue;
@@ -197,13 +205,8 @@ export class ImportReceiptsService {
         });
       }
 
-      const updated = await tx.importReceipt.update({
+      const updated = await tx.importReceipt.findUnique({
         where: { id },
-        data: {
-          status: ImportReceiptStatus.CONFIRMED,
-          confirmedAt: new Date(),
-          reviewedById: userId,
-        },
         include: { items: true },
       });
       this.logger.log(`Phiếu ${receipt.receiptNumber} đã xác nhận nhập kho`);

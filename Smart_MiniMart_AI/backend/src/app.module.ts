@@ -25,9 +25,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, cache: true }),
-    ThrottlerModule.forRoot([
-      { ttl: 60_000, limit: 100 },
-    ]),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     PrismaModule,
     AuthModule,
     UsersModule,

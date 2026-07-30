@@ -1,11 +1,9 @@
-import {
-  Body, Controller, Get, Param, Patch, Post, Query, UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ImportReceiptStatus, Role } from '@prisma/client';
 
 import { ImportReceiptsService } from './import-receipts.service';
-import { CreateReceiptDto } from './dto/create-receipt.dto';
+import { CreateReceiptDto, UpdateReceiptItemsDto } from './dto/create-receipt.dto';
 import { OCRScanDto } from './dto/ocr-scan.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
@@ -52,8 +50,8 @@ export class ImportReceiptsController {
 
   @Patch(':id/items')
   @ApiOperation({ summary: 'Cập nhật danh sách items sau khi review OCR' })
-  updateItems(@Param('id') id: string, @Body('items') items: any[]) {
-    return this.receipts.updateItems(id, items);
+  updateItems(@Param('id') id: string, @Body() dto: UpdateReceiptItemsDto) {
+    return this.receipts.updateItems(id, dto.items);
   }
 
   @Post(':id/confirm')

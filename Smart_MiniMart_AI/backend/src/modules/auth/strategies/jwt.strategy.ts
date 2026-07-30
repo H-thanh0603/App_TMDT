@@ -12,11 +12,19 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(cfg: ConfigService, private prisma: PrismaService) {
+  constructor(
+    cfg: ConfigService,
+    private prisma: PrismaService,
+  ) {
+    const secret = cfg.get<string>('JWT_ACCESS_SECRET');
+    if (!secret) {
+      // Fail-closed: không cho phép chạy với secret mặc định yếu
+      throw new Error('JWT_ACCESS_SECRET là bắt buộc (không có giá trị mặc định).');
+    }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: cfg.get<string>('JWT_ACCESS_SECRET') ?? 'dev-secret',
+      secretOrKey: secret,
     });
   }
 

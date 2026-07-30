@@ -40,6 +40,56 @@ export function createImageUploadOptions(maxFileSizeMb = 10): MulterOptions {
   };
 }
 
+/**
+ * Sniff định dạng ảnh THẬT từ magic bytes — KHÔNG tin Content-Type/đuôi file do client gửi.
+ * Trả về họ ảnh nhận diện được hoặc null nếu nội dung không phải ảnh hợp lệ.
+ */
+export function sniffImageType(buf: Buffer): 'jpeg' | 'png' | 'webp' | 'heic' | null {
+  if (!buf || buf.length < 12) return null;
+
+  // JPEG: FF D8 FF
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpeg';
+
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    buf[0] === 0x89 &&
+    buf[1] === 0x50 &&
+    buf[2] === 0x4e &&
+    buf[3] === 0x47 &&
+    buf[4] === 0x0d &&
+    buf[5] === 0x0a &&
+    buf[6] === 0x1a &&
+    buf[7] === 0x0a
+  ) {
+    return 'png';
+  }
+
+  // WEBP: "RIFF"...."WEBP"
+  if (buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') {
+    return 'webp';
+  }
+
+  // HEIC/HEIF: box "ftyp" tại offset 4, brand tại offset 8
+  if (buf.toString('ascii', 4, 8) === 'ftyp') {
+    const brand = buf.toString('ascii', 8, 12).toLowerCase();
+    const heifBrands = [
+      'heic',
+      'heix',
+      'hevc',
+      'heim',
+      'heis',
+      'hevm',
+      'hevs',
+      'mif1',
+      'msf1',
+      'heif',
+    ];
+    if (heifBrands.includes(brand)) return 'heic';
+  }
+
+  return null;
+}
+
 export function assertImageBuffer(file?: Express.Multer.File, maxFileSizeMb = 10) {
   if (!file) {
     throw new BadRequestException('Thiếu file upload (field: file)');
@@ -50,6 +100,11 @@ export function assertImageBuffer(file?: Express.Multer.File, maxFileSizeMb = 10
   const maxBytes = maxFileSizeMb * 1024 * 1024;
   if (file.size > maxBytes) {
     throw new BadRequestException(`File vượt quá ${maxFileSizeMb}MB`);
+  }
+  // Xác thực nội dung THẬT bằng magic bytes (chống file độc hại đội lốt ảnh)
+  const detected = sniffImageType(file.buffer);
+  if (!detected) {
+    throw new BadRequestException('Nội dung file không phải ảnh hợp lệ (JPEG/PNG/WEBP/HEIC)');
   }
   return file;
 }
