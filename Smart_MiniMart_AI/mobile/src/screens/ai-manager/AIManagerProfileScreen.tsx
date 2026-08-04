@@ -4,9 +4,11 @@ import { useAuthStore } from '@/store/auth.store';
 import { Button } from '@/components/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { colors, radius, spacing, typography } from '@/theme';
+import { useNavigation } from '@react-navigation/native';
 
 export function AIManagerProfileScreen() {
   const { user, logout } = useAuthStore();
+  const nav = useNavigation<any>();
 
   const handleLogout = () => {
     Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất?', [
@@ -16,12 +18,12 @@ export function AIManagerProfileScreen() {
   };
 
   const menus = [
-    { icon: '🎯', title: 'Task Model Mapping', sub: 'Chọn model cho từng tác vụ AI' },
-    { icon: '📷', title: 'OCR Engine Settings', sub: 'PaddleOCR / EasyOCR / Mock' },
-    { icon: '📝', title: 'Prompt Templates', sub: 'Quản lý system prompt' },
-    { icon: '🔄', title: 'Fallback Settings', sub: 'Provider/engine dự phòng' },
-    { icon: '🧪', title: 'Test Playground', sub: 'Test prompt + model' },
-    { icon: '💰', title: 'Usage & Cost Limit', sub: 'Giới hạn request/token/chi phí' },
+    { icon: '🎯', title: 'Task Model Mapping', sub: 'Chọn model cho từng tác vụ AI', section: 'tasks' },
+    { icon: '📷', title: 'OCR Engine Settings', sub: 'PaddleOCR / EasyOCR / Mock', section: 'ocr' },
+    { icon: '📝', title: 'Prompt Templates', sub: 'Quản lý system prompt', section: 'prompts' },
+    { icon: '🔄', title: 'Fallback Settings', sub: 'Provider/engine dự phòng', section: 'tasks' },
+    { icon: '🧪', title: 'Test Playground', sub: 'Test prompt + model', section: 'playground' },
+    { icon: '💰', title: 'Usage & Cost Limit', sub: 'Giới hạn request/token/chi phí', section: 'usage' },
   ];
 
   return (
@@ -49,7 +51,7 @@ export function AIManagerProfileScreen() {
         <View style={styles.menu}>
           {menus.map((m) => (
             <TouchableOpacity key={m.title} style={styles.menuItem}
-              onPress={() => Alert.alert(m.title, 'Tính năng sẽ có ở MVP 5 (đang scaffold)')}>
+              onPress={() => nav.navigate('AISettings', { section: m.section })}>
               <Text style={styles.menuIcon}>{m.icon}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={styles.menuText}>{m.title}</Text>

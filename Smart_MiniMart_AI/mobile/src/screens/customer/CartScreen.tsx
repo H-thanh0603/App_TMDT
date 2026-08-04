@@ -7,14 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import {
   useCart, useUpdateCartItem, useRemoveCartItem, useCreateOrder, useAddresses,
-  useCreateVnpay, useCreateVietQr,
+  useCreateVnpay, useCreateVietQr, useStoreConfig,
 } from '@/services/queries';
 import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
 import { colors } from '@/theme/colors';
-import { formatAddress, formatVnd, estimateShippingFee } from '@/utils/format';
+import { formatAddress, formatVnd } from '@/utils/format';
 import type { Address, PaymentMethod } from '@/types';
 
 type PayOption = Extract<PaymentMethod, 'COD' | 'VNPAY_SANDBOX' | 'VIETQR'>;
@@ -30,6 +30,7 @@ export function CartScreen() {
   const createOrder = useCreateOrder();
   const createVnpay = useCreateVnpay();
   const createVietQr = useCreateVietQr();
+  const { data: storeConfig } = useStoreConfig();
   const [paymentMethod, setPaymentMethod] = useState<PayOption>('COD');
   const [submitting, setSubmitting] = useState(false);
 
@@ -37,7 +38,8 @@ export function CartScreen() {
   const addressText = useMemo(() => formatAddress(defaultAddress), [defaultAddress]);
   const items = cart?.items ?? [];
   const subtotal = Number(cart?.subtotal ?? 0);
-  const shippingFee = estimateShippingFee(subtotal);
+  const policies = storeConfig?.policies;
+  const shippingFee = subtotal >= Number(policies?.freeShipThreshold ?? 200000) ? 0 : Number(policies?.shippingFee ?? 15000);
   const total = subtotal + shippingFee;
   const busy = submitting || createOrder.isPending || createVnpay.isPending || createVietQr.isPending;
 
@@ -50,11 +52,10 @@ export function CartScreen() {
     setSubmitting(true);
     try {
       // VIETQR maps to BANK on backend enum
-      const apiPayment =
-        paymentMethod === 'VIETQR' ? 'BANK' : paymentMethod;
+      const apiPayment: 'COD' | 'VNPAY_SANDBOX' | 'BANK' = paymentMethod === 'VIETQR' ? 'BANK' : paymentMethod;
 
       const order = await createOrder.mutateAsync({
-        paymentMethod: apiPayment as any,
+        paymentMethod: apiPayment,
         addressId: defaultAddress.id,
       });
       const orderId = (order as any).id as string;
@@ -256,27 +257,27 @@ export function CartScreen() {
       <View style={styles.bottomSheet}>
         <Text style={styles.payLabel}>Phương thức thanh toán</Text>
         <View style={styles.payRow}>
-          <Pressable
+          {storeConfig?.payment?.cod?.enabled !== false && <Pressable
             style={[styles.payOption, paymentMethod === 'COD' && styles.payOptionActive]}
             onPress={() => setPaymentMethod('COD')}
           >
             <Text style={styles.payEmoji}>💵</Text>
             <Text style={[styles.payText, paymentMethod === 'COD' && { color: 'white' }]}>COD</Text>
-          </Pressable>
-          <Pressable
+          </Pressable>}
+          {storeConfig?.payment?.vnpay?.enabled !== false && <Pressable
             style={[styles.payOption, paymentMethod === 'VNPAY_SANDBOX' && styles.payOptionActive]}
             onPress={() => setPaymentMethod('VNPAY_SANDBOX')}
           >
             <Text style={styles.payEmoji}>🏦</Text>
             <Text style={[styles.payText, paymentMethod === 'VNPAY_SANDBOX' && { color: 'white' }]}>VNPay</Text>
-          </Pressable>
-          <Pressable
+          </Pressable>}
+          {storeConfig?.payment?.bank?.enabled !== false && <Pressable
             style={[styles.payOption, paymentMethod === 'VIETQR' && styles.payOptionActive]}
             onPress={() => setPaymentMethod('VIETQR')}
           >
             <Text style={styles.payEmoji}>📱</Text>
             <Text style={[styles.payText, paymentMethod === 'VIETQR' && { color: 'white' }]}>VietQR</Text>
-          </Pressable>
+          </Pressable>}
         </View>
 
         <View style={styles.summaryRow}>

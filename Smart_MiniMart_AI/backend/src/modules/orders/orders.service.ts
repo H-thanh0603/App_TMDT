@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
-import { OrderStatus, Prisma, PromotionType, Role } from '@prisma/client';
+import { OrderStatus, PaymentMethod, Prisma, PromotionType, Role } from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
 import { ORDER_REPOSITORY, IOrderRepository } from './repositories/order.repository';
+import { SettingsService } from '../settings/settings.service';
 
 const VIP_THRESHOLD = 1_000;
 
@@ -11,9 +12,24 @@ const VIP_THRESHOLD = 1_000;
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
 
-  constructor(@Inject(ORDER_REPOSITORY) private readonly repo: IOrderRepository) {}
+  constructor(
+    @Inject(ORDER_REPOSITORY) private readonly repo: IOrderRepository,
+    private readonly settings: SettingsService,
+  ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto) {
+    const [policies, paymentMethods] = await Promise.all([
+      this.settings.getStorePolicies(),
+      this.settings.getPaymentMethods(),
+    ]);
+    const paymentEnabled: Partial<Record<PaymentMethod, boolean>> = {
+      [PaymentMethod.COD]: paymentMethods.cod.enabled,
+      [PaymentMethod.VNPAY_SANDBOX]: paymentMethods.vnpay.enabled,
+      [PaymentMethod.BANK]: paymentMethods.bank.enabled,
+    };
+    if (paymentEnabled[dto.paymentMethod] === false) {
+      throw new BadRequestException('Phương thức thanh toán hiện không khả dụng');
+    }
     // Pre-check (UX/validation nhanh) — nguồn xác thực THẬT nằm trong transaction bên dưới
     const cart = await this.repo.findCartWithItems(userId);
     if (!cart || cart.items.length === 0) {
@@ -75,7 +91,10 @@ export class OrdersService {
           }
 
           const { itemsData, subtotal } = this.assembleItems(freshItems);
-          const shippingFee = subtotal >= 200_000 ? 0 : 15_000;
+          if (subtotal < policies.minOrderValue) {
+            throw new BadRequestException(`Đơn tối thiểu ${policies.minOrderValue.toLocaleString('vi-VN')}đ`);
+          }
+          const shippingFee = subtotal >= policies.freeShipThreshold ? 0 : policies.shippingFee;
           const discount = Math.min(discountAmount, subtotal);
           const totalAmount = Math.max(0, subtotal - discount + shippingFee);
           const orderNumber = await this.nextOrderNumberTx(tx);
@@ -219,6 +238,16 @@ export class OrdersService {
       { where },
     );
     return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+  }
+
+  async getSummary(from?: string, to?: string) {
+    const start = from ? new Date(from) : undefined;
+    const end = to ? new Date(to) : undefined;
+    if ((start && Number.isNaN(start.getTime())) || (end && Number.isNaN(end.getTime()))) {
+      throw new BadRequestException('Khoảng thời gian không hợp lệ');
+    }
+    if (start && end && start > end) throw new BadRequestException('Khoảng thời gian không hợp lệ');
+    return this.repo.getSummary(start, end);
   }
 
   async updateStatus(orderId: string, dto: UpdateOrderStatusDto, staffId: string) {

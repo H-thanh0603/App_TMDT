@@ -2,10 +2,12 @@ import { BadRequestException } from '@nestjs/common';
 import { PaymentMethod } from '@prisma/client';
 import { OrdersService } from './orders.service';
 import { IOrderRepository } from './repositories/order.repository';
+import { SettingsService } from '../settings/settings.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
   let repo: jest.Mocked<IOrderRepository>;
+  let settings: jest.Mocked<Pick<SettingsService, 'getStorePolicies' | 'getPaymentMethods'>>;
 
   const product = {
     id: 'prod-1',
@@ -57,9 +59,18 @@ describe('OrdersService', () => {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       transactionList: jest.fn(),
+      getSummary: jest.fn(),
       runInTransaction: jest.fn(),
     };
-    service = new OrdersService(repo);
+    settings = {
+      getStorePolicies: jest.fn().mockResolvedValue({ minOrderValue: 0, shippingFee: 15000, freeShipThreshold: 200000, loyaltyPerVnd: 10000, vipThreshold: 1000 }),
+      getPaymentMethods: jest.fn().mockResolvedValue({
+        cod: { enabled: true, label: 'COD' },
+        vnpay: { enabled: true, label: 'VNPay' },
+        bank: { enabled: true, label: 'Bank' },
+      }),
+    };
+    service = new OrdersService(repo, settings as unknown as SettingsService);
   });
 
   describe('createOrder', () => {

@@ -4,9 +4,11 @@ import { useAuthStore } from '@/store/auth.store';
 import { Button } from '@/components/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { colors, radius, spacing, typography } from '@/theme';
+import { useNavigation } from '@react-navigation/native';
 
 export function AdminProfileScreen() {
   const { user, logout } = useAuthStore();
+  const nav = useNavigation<any>();
 
   const handleLogout = () => {
     Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất?', [
@@ -20,7 +22,8 @@ export function AdminProfileScreen() {
     { icon: '📊', title: 'Báo cáo doanh thu', sub: 'Theo ngày/tuần/tháng' },
     { icon: '🏷️', title: 'Danh mục sản phẩm', sub: 'Quản lý category cây' },
     { icon: '👥', title: 'Quản lý nhân viên', sub: 'Phân quyền staff' },
-    { icon: '⚙️', title: 'Cài đặt cửa hàng', sub: 'Thông tin, giờ làm việc' },
+    { icon: '📣', title: 'Gửi thông báo', sub: 'Broadcast tới khách hàng', route: 'Broadcast' },
+    { icon: '⚙️', title: 'Cài đặt cửa hàng', sub: 'Thông tin, giờ làm việc, giao hàng', route: 'StoreSettings' },
   ];
 
   return (
@@ -40,7 +43,7 @@ export function AdminProfileScreen() {
         <View style={styles.menu}>
           {menus.map((m) => (
             <TouchableOpacity key={m.title} style={styles.menuItem}
-              onPress={() => Alert.alert(m.title, 'Tính năng sắp ra mắt (MVP nâng cao)')}>
+              onPress={() => m.route ? nav.navigate(m.route) : Alert.alert(m.title, 'Tính năng này chưa có màn quản lý riêng.')}>
               <Text style={styles.menuIcon}>{m.icon}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={styles.menuText}>{m.title}</Text>

@@ -2,6 +2,7 @@ import { AITaskType, AIProviderType, AIMode, OCREngine } from '@prisma/client';
 
 export interface AIRequest {
   taskType: AITaskType;
+  providerId?: string;
   systemPrompt?: string;
   userPrompt: string;
   context?: Record<string, unknown>;

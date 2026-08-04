@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Ip, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Ip, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -8,6 +8,10 @@ import { PaymentsService } from './payments.service';
 import { VietQrService } from './vietqr.service';
 import { CreateVnpayDto } from './dto/create-vnpay.dto';
 import { CreateVietQrDto } from './dto/create-vietqr.dto';
+import { ConfirmVietQrDto } from './dto/confirm-vietqr.dto';
+import { RolesGuard } from '@/common/guards/roles.guard';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { Role } from '@prisma/client';
 import { SkipTransform } from '@/common/decorators/skip-transform.decorator';
 
 @ApiTags('Payments')
@@ -50,5 +54,18 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Tạo VietQR tĩnh cho đơn (thanh toán chuyển khoản)' })
   createVietQr(@CurrentUser('sub') userId: string, @Body() dto: CreateVietQrDto) {
     return this.vietqr.generate(userId, dto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @Roles(Role.STAFF, Role.STORE_ADMIN)
+  @Post('vietqr/:orderId/confirm')
+  @ApiOperation({ summary: 'Xác nhận thủ công giao dịch VietQR' })
+  confirmVietQr(
+    @Param('orderId') orderId: string,
+    @CurrentUser('sub') userId: string,
+    @Body() dto: ConfirmVietQrDto,
+  ) {
+    return this.vietqr.confirm(orderId, userId, dto);
   }
 }

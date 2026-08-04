@@ -1,6 +1,7 @@
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAIProviders } from '@/services/queries';
+import { useAIProviders, useTestAIProvider } from '@/services/queries';
+import { useNavigation } from '@react-navigation/native';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
@@ -24,6 +25,9 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function AIProvidersScreen() {
   const { data: providers = [], isLoading, isError, refetch, isFetching } = useAIProviders();
+  const test = useTestAIProvider();
+  const nav = useNavigation<any>();
+  const testProvider = async (id: string) => { try { const result = await test.mutateAsync(id); Alert.alert(result.success ? 'Kết nối thành công' : 'Kết nối thất bại', result.message); } catch (error: any) { Alert.alert('Không thể test', error?.response?.data?.message ?? 'Vui lòng thử lại.'); } };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -71,10 +75,10 @@ export function AIProvidersScreen() {
               )}
 
               <View style={styles.actionRow}>
-                <TouchableOpacity style={styles.actionBtn}>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => void testProvider(item.id)}>
                   <Text style={styles.actionText}>Test connection</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn}>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => nav.navigate('AISettings', { section: 'provider', provider: item })}>
                   <Text style={styles.actionText}>Sửa</Text>
                 </TouchableOpacity>
               </View>

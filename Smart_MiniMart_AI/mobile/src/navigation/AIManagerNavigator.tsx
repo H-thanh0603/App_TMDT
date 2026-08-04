@@ -7,6 +7,7 @@ import { AIControlCenterScreen } from '@/screens/ai-manager/AIControlCenterScree
 import { AIProvidersScreen } from '@/screens/ai-manager/AIProvidersScreen';
 import { AILogsScreen } from '@/screens/ai-manager/AILogsScreen';
 import { AIManagerProfileScreen } from '@/screens/ai-manager/AIManagerProfileScreen';
+import { AISettingsScreen } from '@/screens/ai-manager/AISettingsScreen';
 import { useTheme } from '@/theme';
 
 const Stack = createNativeStackNavigator();
@@ -44,6 +45,7 @@ export function AIManagerNavigator() {
     <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator screenOptions={{ contentStyle: { backgroundColor: colors.bg } }}>
         <Stack.Screen name="Tabs" component={AITabs} options={{ headerShown: false }} />
+        <Stack.Screen name="AISettings" component={AISettingsScreen} options={{ title: 'AI Settings' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

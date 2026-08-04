@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   FlatList, StyleSheet, Text, View, Pressable, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAllOrders, useUpdateOrderStatus } from '@/services/queries';
+import { useAllOrders, useOrderSummary, useUpdateOrderStatus } from '@/services/queries';
+import { VietQrConfirmationModal } from '@/components/VietQrConfirmationModal';
 import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -33,23 +34,16 @@ export function AdminOrdersScreen() {
       filter ? { status: filter, limit: 100 } : { limit: 100 },
     );
   const update = useUpdateOrderStatus();
+  const { data: summary } = useOrderSummary();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const { data: todaySummary } = useOrderSummary({ from: today.toISOString() });
+  const [confirming, setConfirming] = useState<any>(null);
   const items = data?.items ?? [];
-
-  // Quick stats
-  const { data: allData } = useAllOrders({ limit: 100 });
-  const stats = useMemo(() => {
-    const all = allData?.items ?? [];
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const todayOrders = all.filter((o: any) =>
-      new Date(o.createdAt).getTime() >= today.getTime());
-    return {
-      total: all.length,
-      pending: all.filter((o: any) => o.status === 'PENDING').length,
-      todayRevenue: todayOrders
-        .filter((o: any) => o.status !== 'CANCELED')
-        .reduce((s: number, o: any) => s + Number(o.totalAmount), 0),
-    };
-  }, [allData]);
+  const stats = {
+    total: summary?.totalOrders ?? 0,
+    pending: summary?.pendingOrders ?? 0,
+    todayRevenue: todaySummary?.periodRevenue ?? 0,
+  };
 
   const cancel = (id: string) => {
     Alert.alert('Hủy đơn?', 'Bạn có chắc muốn hủy đơn này?', [
@@ -166,6 +160,12 @@ export function AdminOrdersScreen() {
                         <Text style={styles.total}>{formatVnd(Number(item.totalAmount))}</Text>
                       </View>
 
+                      {item.paymentMethod === 'BANK' && item.paymentStatus !== 'PAID' && item.status === 'PENDING' && (
+                        <Pressable style={styles.confirmBtn} onPress={() => setConfirming(item)}>
+                          <Text style={styles.confirmText}>Xác nhận VietQR</Text>
+                        </Pressable>
+                      )}
+
                       {canCancel && (
                         <Pressable
                           style={styles.cancelBtn}
@@ -191,6 +191,7 @@ export function AdminOrdersScreen() {
                 }
               />
             )}
+      <VietQrConfirmationModal order={confirming} onClose={() => setConfirming(null)} />
     </SafeAreaView>
   );
 }
@@ -247,6 +248,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEE2E2', borderRadius: 8, alignItems: 'center',
   },
   cancelText: { color: colors.danger, fontWeight: '700', fontSize: 13 },
+  confirmBtn: { marginTop: 10, paddingVertical: 8, backgroundColor: colors.primary, borderRadius: 8, alignItems: 'center' },
+  confirmText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   empty: { alignItems: 'center', paddingTop: 60 },
   emptyText: { color: colors.textMuted, marginTop: 12, fontSize: 14 },
 });

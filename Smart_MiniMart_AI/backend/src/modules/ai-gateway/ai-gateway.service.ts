@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AIMode, AITaskType, AIProviderType } from '@prisma/client';
+import { ServiceUnavailableException } from '@nestjs/common';
 
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { DeepSeekProvider } from './providers/deepseek.provider';
@@ -39,8 +40,10 @@ export class AIGatewayService {
     }
 
     // ONLINE / HYBRID -> thử primary provider
-    const primaryType = this.resolveProviderType(taskConfig?.primaryProviderId);
+    const providerId = req.providerId ?? taskConfig?.primaryProviderId;
+    const primaryType = await this.resolveProviderType(providerId);
     try {
+      if (providerId) await this.assertUsageAllowed(providerId);
       const provider = this.getProvider(primaryType);
       const chatReq: ChatRequest = {
         messages: this.buildMessages(req, taskConfig?.systemPrompt),
@@ -52,12 +55,12 @@ export class AIGatewayService {
       };
       const result = await provider.chat(chatReq);
       const response = this.toAIResponse(req, result, provider, mode, start);
-      await this.logAI(req, response);
+      await this.logAI(req, response, providerId);
       return response;
     } catch (err: any) {
       this.logger.warn(`Primary provider failed, fallback to mock: ${err.message}`);
       const fallback = await this.executeMock(req, start, AIMode.MOCK, err.message);
-      await this.logAI(req, fallback);
+      await this.logAI(req, fallback, providerId);
       return fallback;
     }
   }
@@ -151,10 +154,13 @@ export class AIGatewayService {
     }
   }
 
-  private resolveProviderType(providerId?: string | null): AIProviderType {
-    // MVP: providerId chưa có thì dùng SYSTEM_DEFAULT
+  private async resolveProviderType(providerId?: string | null): Promise<AIProviderType> {
     if (!providerId) return AIProviderType.SYSTEM_DEFAULT;
-    return AIProviderType.SYSTEM_DEFAULT;
+    const provider = await this.prisma.aIProvider.findUnique({
+      where: { id: providerId },
+      select: { type: true, status: true },
+    });
+    return provider?.status === 'ACTIVE' ? provider.type : AIProviderType.SYSTEM_DEFAULT;
   }
 
   private shouldUseJsonMode(taskType: AITaskType): boolean {
@@ -213,11 +219,12 @@ export class AIGatewayService {
     return prompts[taskType] ?? 'Bạn là trợ lý AI thông minh, trả lời ngắn gọn và hữu ích.';
   }
 
-  private async logAI(req: AIRequest, res: AIResponse): Promise<void> {
+  private async logAI(req: AIRequest, res: AIResponse, providerId?: string | null): Promise<void> {
     try {
       await this.prisma.aILog.create({
         data: {
           taskType: req.taskType,
+          providerId: providerId ?? undefined,
           providerName: res.provider,
           model: res.model,
           mode: res.mode,
@@ -236,8 +243,32 @@ export class AIGatewayService {
           refId: req.refId,
         },
       });
+      if (providerId) {
+        await this.prisma.aIUsageLimit.updateMany({
+          where: { scope: `provider:${providerId}` },
+          data: {
+            currentMonthCount: { increment: 1 },
+            currentMonthCost: { increment: res.costUsd ?? 0 },
+          },
+        });
+      }
     } catch (err) {
       this.logger.error('Failed to log AI request', err);
+    }
+  }
+
+  private async assertUsageAllowed(providerId: string): Promise<void> {
+    const limit = await this.prisma.aIUsageLimit.findUnique({ where: { scope: `provider:${providerId}` } });
+    if (!limit?.isEnforced) return;
+    const now = new Date();
+    const reset = limit.resetMonthAt;
+    if (!reset || reset.getUTCFullYear() !== now.getUTCFullYear() || reset.getUTCMonth() !== now.getUTCMonth()) {
+      await this.prisma.aIUsageLimit.update({ where: { id: limit.id }, data: { currentMonthCount: 0, currentMonthCost: 0, resetMonthAt: now } });
+      return;
+    }
+    if ((limit.monthlyRequestLimit != null && limit.monthlyRequestLimit > 0 && limit.currentMonthCount >= limit.monthlyRequestLimit)
+      || (Number(limit.monthlyCostLimitUsd ?? 0) > 0 && Number(limit.currentMonthCost) >= Number(limit.monthlyCostLimitUsd))) {
+      throw new ServiceUnavailableException('Provider đã đạt hạn mức tháng');
     }
   }
 }

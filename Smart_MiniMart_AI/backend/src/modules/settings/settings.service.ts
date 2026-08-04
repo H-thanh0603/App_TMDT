@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/common/prisma/prisma.service';
 
-const STORE_DEFAULTS = {
+export const STORE_DEFAULTS = {
   STORE_INFO: {
     name: 'Smart MiniMart AI',
     address: '123 Nguyễn Trãi, Quận 1, TP.HCM',
@@ -24,15 +24,16 @@ const STORE_DEFAULTS = {
   },
 };
 
+export type StorePolicies = typeof STORE_DEFAULTS.STORE_POLICIES;
+export type PaymentMethods = typeof STORE_DEFAULTS.PAYMENT_METHODS;
+
 @Injectable()
 export class SettingsService {
   constructor(private prisma: PrismaService) {}
 
   async list() {
-    const items = await this.prisma.systemSetting.findMany({
-      orderBy: { key: 'asc' },
-    });
-    return items;
+    await Promise.all(Object.keys(STORE_DEFAULTS).map((key) => this.get(key)));
+    return this.prisma.systemSetting.findMany({ orderBy: { key: 'asc' } });
   }
 
   async get(key: string) {
@@ -72,5 +73,15 @@ export class SettingsService {
       policies: policies.value,
       payment: payment.value,
     };
+  }
+
+  async getStorePolicies(): Promise<StorePolicies> {
+    const setting = await this.get('STORE_POLICIES');
+    return setting.value as StorePolicies;
+  }
+
+  async getPaymentMethods(): Promise<PaymentMethods> {
+    const setting = await this.get('PAYMENT_METHODS');
+    return setting.value as PaymentMethods;
   }
 }

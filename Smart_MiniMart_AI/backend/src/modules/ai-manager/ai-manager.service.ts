@@ -5,6 +5,9 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AIGatewayService } from '@/modules/ai-gateway/ai-gateway.service';
+import { UpsertPromptTemplateDto } from './dto/prompt-template.dto';
+import { UpdateUsageLimitDto } from './dto/usage-limit.dto';
 import * as crypto from 'crypto';
 import { AITaskType } from '@prisma/client';
 
@@ -19,6 +22,7 @@ export class AIManagerService {
   constructor(
     private prisma: PrismaService,
     private cfg: ConfigService,
+    private gateway?: AIGatewayService,
   ) {}
 
   // ========== Providers ==========
@@ -238,6 +242,46 @@ export class AIManagerService {
       where: { id: settings.id },
       data: dto,
     });
+  }
+
+  listPromptTemplates() {
+    return this.prisma.aIPromptTemplate.findMany({ orderBy: [{ taskType: 'asc' }, { updatedAt: 'desc' }] });
+  }
+
+  async upsertPromptTemplate(dto: UpsertPromptTemplateDto) {
+    const existing = await this.prisma.aIPromptTemplate.findFirst({ where: { taskType: dto.taskType, name: dto.name } });
+    if (dto.isDefault) {
+      await this.prisma.aIPromptTemplate.updateMany({ where: { taskType: dto.taskType }, data: { isDefault: false } });
+    }
+    return existing
+      ? this.prisma.aIPromptTemplate.update({ where: { id: existing.id }, data: dto })
+      : this.prisma.aIPromptTemplate.create({ data: { ...dto, userTemplate: dto.userTemplate ?? '{{input}}' } });
+  }
+
+  async deletePromptTemplate(id: string) {
+    await this.prisma.aIPromptTemplate.delete({ where: { id } });
+    return { message: 'Đã xóa prompt template' };
+  }
+
+  listUsageLimits() {
+    return this.prisma.aIUsageLimit.findMany({ where: { scope: { startsWith: 'provider:' } }, orderBy: { scope: 'asc' } });
+  }
+
+  async updateUsageLimit(dto: UpdateUsageLimitDto) {
+    const provider = await this.prisma.aIProvider.findUnique({ where: { id: dto.providerId }, select: { id: true } });
+    if (!provider) throw new NotFoundException('Provider không tồn tại');
+    const scope = `provider:${dto.providerId}`;
+    const { providerId: _providerId, ...data } = dto;
+    return this.prisma.aIUsageLimit.upsert({
+      where: { scope },
+      create: { scope, ...data },
+      update: data,
+    });
+  }
+
+  playground(dto: { taskType: AITaskType; prompt: string; providerId?: string }) {
+    if (!this.gateway) throw new ServiceUnavailableException('AI gateway chưa sẵn sàng');
+    return this.gateway.execute({ taskType: dto.taskType, userPrompt: dto.prompt, providerId: dto.providerId });
   }
 
   // ========== Logs & Stats ==========

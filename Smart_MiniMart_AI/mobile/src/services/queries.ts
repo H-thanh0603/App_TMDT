@@ -37,6 +37,31 @@ export function useProduct(idOrSlug: string) {
   });
 }
 
+export function useProductReviews(productId: string) {
+  return useQuery({
+    queryKey: ['reviews', productId],
+    queryFn: async () => unwrap<any[]>(await api.get(`/reviews/product/${productId}`)),
+    enabled: !!productId,
+  });
+}
+
+export function useReviewStats(productId: string) {
+  return useQuery({
+    queryKey: ['reviews', productId, 'stats'],
+    queryFn: async () => unwrap<{ count: number; average: number }>(await api.get(`/reviews/product/${productId}/stats`)),
+    enabled: !!productId,
+  });
+}
+
+export function useCreateReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: { productId: string; orderId?: string; rating: number; comment?: string }) =>
+      unwrap<any>(await api.post('/reviews', dto)),
+    onSuccess: (_data, dto) => qc.invalidateQueries({ queryKey: ['reviews', dto.productId] }),
+  });
+}
+
 // ===== AI Search =====
 export function useAISearch() {
   return useMutation({
@@ -101,7 +126,7 @@ export function useCreateOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (params: {
-      paymentMethod: 'COD' | 'VNPAY_SANDBOX' | 'QR_DEMO' | 'WALLET_DEMO';
+      paymentMethod: 'COD' | 'VNPAY_SANDBOX' | 'QR_DEMO' | 'WALLET_DEMO' | 'BANK';
       addressId?: string;
       note?: string;
       promotionCode?: string;
@@ -129,6 +154,13 @@ export function useUpdateOrderStatus() {
     mutationFn: async ({ id, status, reason }: { id: string; status: string; reason?: string }) =>
       unwrap(await api.patch(`/orders/${id}/status`, { status, reason })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-orders'] }),
+  });
+}
+
+export function useOrderSummary(params: { from?: string; to?: string } = {}) {
+  return useQuery({
+    queryKey: ['admin-orders', 'summary', params],
+    queryFn: async () => unwrap<any>(await api.get('/orders/summary', { params })),
   });
 }
 
@@ -232,6 +264,75 @@ export function useAILogs(params: Record<string, any> = {}) {
     queryFn: async () => unwrap<{ items: any[]; total: number }>(
       await api.get('/ai-manager/logs', { params }),
     ),
+  });
+}
+
+export function useSaveAIProvider() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, dto }: { id?: string; dto: Record<string, any> }) =>
+      unwrap<any>(id ? await api.patch(`/ai-manager/providers/${id}`, dto) : await api.post('/ai-manager/providers', dto)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ai-manager', 'providers'] }),
+  });
+}
+
+export function useTestAIProvider() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => unwrap<any>(await api.post(`/ai-manager/providers/${id}/test`)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ai-manager', 'providers'] }),
+  });
+}
+
+export function useSaveAITaskConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: Record<string, any>) => unwrap<any>(await api.patch('/ai-manager/task-configs', dto)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ai-manager', 'task-configs'] }),
+  });
+}
+
+export function useOCRSettings() {
+  return useQuery({ queryKey: ['ai-manager', 'ocr-settings'], queryFn: async () => unwrap<any>(await api.get('/ai-manager/ocr-settings')) });
+}
+
+export function useSaveOCRSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: Record<string, any>) => unwrap<any>(await api.patch('/ai-manager/ocr-settings', dto)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ai-manager', 'ocr-settings'] }),
+  });
+}
+
+export function usePromptTemplates() {
+  return useQuery({ queryKey: ['ai-manager', 'prompt-templates'], queryFn: async () => unwrap<any[]>(await api.get('/ai-manager/prompt-templates')) });
+}
+
+export function useSavePromptTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: Record<string, any>) => unwrap<any>(await api.post('/ai-manager/prompt-templates', dto)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ai-manager', 'prompt-templates'] }),
+  });
+}
+
+export function useUsageLimits() {
+  return useQuery({ queryKey: ['ai-manager', 'usage-limits'], queryFn: async () => unwrap<any[]>(await api.get('/ai-manager/usage-limits')) });
+}
+
+export function useSaveUsageLimit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: Record<string, any>) => unwrap<any>(await api.patch('/ai-manager/usage-limits', dto)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ai-manager', 'usage-limits'] }),
+  });
+}
+
+export function useAIPlayground() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: { taskType: string; prompt: string; providerId?: string }) => unwrap<any>(await api.post('/ai-manager/playground', dto)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ai-manager', 'logs'] }),
   });
 }
 
@@ -345,6 +446,20 @@ export function useStoreConfig() {
   });
 }
 
+export function useAdminSettings() {
+  return useQuery({ queryKey: ['settings', 'admin'], queryFn: async () => unwrap<any[]>(await api.get('/settings')) });
+}
+
+export function useUpdateSetting() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ key, value }: { key: string; value: unknown }) => unwrap<any>(await api.patch(`/settings/${key}`, { value })),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings'] });
+    },
+  });
+}
+
 // ===== Admin: User management =====
 export function useAdminUsers(params: { role?: string; status?: string; q?: string; page?: number } = {}) {
   return useQuery({
@@ -405,6 +520,18 @@ export function useCreateVietQr() {
         amount: number;
         addInfo: string;
       }>(await api.post('/payments/vietqr/create', dto)),
+  });
+}
+
+export function useConfirmVietQr() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ orderId, bankTransactionRef, note }: { orderId: string; bankTransactionRef: string; note?: string }) =>
+      unwrap<any>(await api.post(`/payments/vietqr/${orderId}/confirm`, { bankTransactionRef, note })),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-orders'] });
+      qc.invalidateQueries({ queryKey: ['orders'] });
+    },
   });
 }
 

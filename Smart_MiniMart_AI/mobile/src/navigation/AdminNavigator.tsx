@@ -12,6 +12,8 @@ import { AdminPromotionsScreen } from '@/screens/admin/AdminPromotionsScreen';
 import { AdminCategoriesScreen } from '@/screens/admin/AdminCategoriesScreen';
 import { AdminProfileScreen } from '@/screens/admin/AdminProfileScreen';
 import { NotificationsScreen } from '@/screens/NotificationsScreen';
+import { StoreSettingsScreen } from '@/screens/admin/StoreSettingsScreen';
+import { BroadcastScreen } from '@/screens/admin/BroadcastScreen';
 import { useTheme } from '@/theme';
 
 const Stack = createNativeStackNavigator();
@@ -60,6 +62,8 @@ export function AdminNavigator() {
         <Stack.Screen name="Categories" component={AdminCategoriesScreen} options={{ title: 'Danh mục' }} />
         <Stack.Screen name="Promotions" component={AdminPromotionsScreen} options={{ title: 'Khuyến mãi' }} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Thông báo' }} />
+        <Stack.Screen name="StoreSettings" component={StoreSettingsScreen} options={{ title: 'Cài đặt cửa hàng' }} />
+        <Stack.Screen name="Broadcast" component={BroadcastScreen} options={{ title: 'Gửi thông báo' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

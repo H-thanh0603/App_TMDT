@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { OrderStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/common/prisma/prisma.service';
 
@@ -120,5 +121,50 @@ export class VietQrService {
       amount,
       addInfo,
     };
+  }
+
+  async confirm(
+    orderId: string,
+    confirmedById: string,
+    dto: { bankTransactionRef: string; note?: string },
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) throw new NotFoundException('Đơn hàng không tồn tại');
+      if (order.paymentMethod !== PaymentMethod.BANK) {
+        throw new BadRequestException('Đơn hàng không dùng VietQR/chuyển khoản');
+      }
+      if (order.paymentStatus === PaymentStatus.PAID) {
+        throw new BadRequestException('Đơn hàng đã được thanh toán');
+      }
+      if (order.status === OrderStatus.CANCELED) {
+        throw new BadRequestException('Không thể xác nhận đơn đã hủy');
+      }
+
+      const existing = await tx.paymentConfirmation.findUnique({ where: { orderId } });
+      if (existing) throw new BadRequestException('Giao dịch đã được xác nhận');
+
+      const paymentRef = `VIETQR:${dto.bankTransactionRef.trim()}`;
+      const updated = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          paymentStatus: PaymentStatus.PAID,
+          paymentRef,
+          ...(order.status === OrderStatus.PENDING && {
+            status: OrderStatus.CONFIRMED,
+            confirmedAt: new Date(),
+          }),
+        },
+      });
+      await tx.paymentConfirmation.create({
+        data: {
+          orderId,
+          bankTransactionRef: dto.bankTransactionRef.trim(),
+          note: dto.note?.trim() || null,
+          confirmedById,
+        },
+      });
+      return updated;
+    });
   }
 }

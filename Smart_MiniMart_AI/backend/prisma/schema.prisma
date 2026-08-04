@@ -144,6 +144,7 @@ model User {
 
   addresses      Address[]
   orders         Order[]
+  paymentConfirmations PaymentConfirmation[]
   reviews        Review[]
   cart           Cart?
   refreshTokens  RefreshToken[]
@@ -332,10 +333,26 @@ model Order {
   user    User        @relation(fields: [userId], references: [id])
   address Address?    @relation(fields: [addressId], references: [id])
   items   OrderItem[]
+  paymentConfirmation PaymentConfirmation?
 
   @@index([userId, status])
   @@index([status, createdAt])
   @@map("orders")
+}
+
+model PaymentConfirmation {
+  id                 String   @id @default(uuid())
+  orderId            String   @unique
+  bankTransactionRef String
+  note               String?
+  confirmedById      String
+  confirmedAt        DateTime @default(now())
+
+  order       Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  confirmedBy User  @relation(fields: [confirmedById], references: [id])
+
+  @@index([confirmedById])
+  @@map("payment_confirmations")
 }
 
 model OrderItem {

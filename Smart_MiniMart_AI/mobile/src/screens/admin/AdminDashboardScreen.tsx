@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import {
-  useExpiringProducts, useSlowMoving, useRestockSuggestions, useAllOrders,
+  useExpiringProducts, useSlowMoving, useRestockSuggestions, useOrderSummary,
 } from '@/services/queries';
 import { useAuthStore } from '@/store/auth.store';
 import { Card } from '@/components/Card';
@@ -15,22 +15,16 @@ import { formatVnd } from '@/utils/format';
 export function AdminDashboardScreen() {
   const nav = useNavigation<any>();
   const { user } = useAuthStore();
-  const { data: orders } = useAllOrders({ limit: 100 });
+  const { data: summary } = useOrderSummary();
   const { data: expiring = [] } = useExpiringProducts(30);
   const { data: slow = [] } = useSlowMoving();
   const { data: restock = [] } = useRestockSuggestions();
 
-  const orderItems = orders?.items ?? [];
   const today = new Date(); today.setHours(0, 0, 0, 0);
-
-  const todayOrders = orderItems.filter((o: any) =>
-    new Date(o.createdAt).getTime() >= today.getTime());
-  const completedOrders = orderItems.filter((o: any) => o.status === 'COMPLETED');
-  const todayRevenue = todayOrders
-    .filter((o: any) => o.status !== 'CANCELED')
-    .reduce((s: number, o: any) => s + Number(o.totalAmount), 0);
-  const totalRevenue = completedOrders.reduce((s: number, o: any) => s + Number(o.totalAmount), 0);
-  const pendingOrders = orderItems.filter((o: any) => o.status === 'PENDING').length;
+  const { data: todaySummary } = useOrderSummary({ from: today.toISOString() });
+  const todayRevenue = Number(todaySummary?.periodRevenue ?? 0);
+  const totalRevenue = Number(summary?.completedRevenue ?? 0);
+  const pendingOrders = Number(summary?.pendingOrders ?? 0);
 
   const critical = expiring.filter((p: any) => p.alertTier === 'CRITICAL').length;
   const urgentRestock = restock.filter((p: any) => p.urgency === 'HIGH').length;
@@ -68,7 +62,7 @@ export function AdminDashboardScreen() {
             />
             <StatCard
               label="Đơn hôm nay"
-              value={todayOrders.length}
+              value={todaySummary?.periodOrders ?? 0}
               icon="🛒"
               variant="info"
               style={{ marginLeft: 6 }}
@@ -84,7 +78,7 @@ export function AdminDashboardScreen() {
             />
             <StatCard
               label="Tổng đơn"
-              value={orderItems.length}
+              value={summary?.totalOrders ?? 0}
               icon="📦"
               variant="gold"
               style={{ marginLeft: 6 }}

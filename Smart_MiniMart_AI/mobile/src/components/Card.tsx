@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ViewProps, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme';
 
 interface CardProps extends ViewProps {
   variant?: 'elevated' | 'outlined' | 'gradient';
@@ -10,12 +10,14 @@ interface CardProps extends ViewProps {
 export const Card: React.FC<CardProps> = ({
   children, variant = 'elevated', padding = 16, style, ...rest
 }) => {
+  const { colors } = useTheme();
   return (
     <View
       style={[
         styles.base,
-        variant === 'elevated' && styles.elevated,
-        variant === 'outlined' && styles.outlined,
+        { backgroundColor: colors.card },
+        variant === 'elevated' && { shadowColor: colors.shadow },
+        variant === 'outlined' && { borderWidth: 1, borderColor: colors.border },
         { padding },
         style,
       ]}
@@ -27,13 +29,11 @@ export const Card: React.FC<CardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  base: { backgroundColor: colors.card, borderRadius: 16 },
+  base: { borderRadius: 16 },
   elevated: {
-    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 12,
     elevation: 4,
   },
-  outlined: { borderWidth: 1, borderColor: colors.border },
 });

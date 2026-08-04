@@ -16,6 +16,8 @@ import { AIManagerService } from './ai-manager.service';
 import { CreateProviderDto, UpdateProviderDto } from './dto/provider.dto';
 import { UpdateTaskConfigDto } from './dto/task-config.dto';
 import { UpdateOCRSettingsDto } from './dto/ocr-settings.dto';
+import { UpsertPromptTemplateDto } from './dto/prompt-template.dto';
+import { UpdateUsageLimitDto } from './dto/usage-limit.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
@@ -80,6 +82,36 @@ export class AIManagerController {
   @Patch('ocr-settings')
   updateOCRSettings(@Body() dto: UpdateOCRSettingsDto) {
     return this.aiManager.updateOCRSettings(dto);
+  }
+
+  @Get('prompt-templates')
+  listPromptTemplates() {
+    return this.aiManager.listPromptTemplates();
+  }
+
+  @Post('prompt-templates')
+  upsertPromptTemplate(@Body() dto: UpsertPromptTemplateDto) {
+    return this.aiManager.upsertPromptTemplate(dto);
+  }
+
+  @Delete('prompt-templates/:id')
+  deletePromptTemplate(@Param('id') id: string) {
+    return this.aiManager.deletePromptTemplate(id);
+  }
+
+  @Get('usage-limits')
+  listUsageLimits() {
+    return this.aiManager.listUsageLimits();
+  }
+
+  @Patch('usage-limits')
+  updateUsageLimit(@Body() dto: UpdateUsageLimitDto) {
+    return this.aiManager.updateUsageLimit(dto);
+  }
+
+  @Post('playground')
+  playground(@Body() dto: { taskType: AITaskType; prompt: string; providerId?: string }) {
+    return this.aiManager.playground(dto);
   }
 
   // -------- Logs --------

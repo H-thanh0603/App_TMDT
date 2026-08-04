@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   FlatList, StyleSheet, Text, View, Pressable, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAllOrders, useUpdateOrderStatus } from '@/services/queries';
+import { useAllOrders, useOrderSummary, useUpdateOrderStatus } from '@/services/queries';
+import { VietQrConfirmationModal } from '@/components/VietQrConfirmationModal';
 import { useAuthStore } from '@/store/auth.store';
 import { Badge } from '@/components/Badge';
 import { StatCard } from '@/components/StatCard';
@@ -42,22 +43,17 @@ export function StaffOrdersScreen() {
   const [filter, setFilter] = useState<OrderStatus | undefined>('PENDING');
   const { data, isLoading, isError, refetch, isFetching } = useAllOrders(filter ? { status: filter, limit: 100 } : { limit: 100 });
   const update = useUpdateOrderStatus();
+  const [confirming, setConfirming] = useState<any>(null);
   const items = data?.items ?? [];
 
-  // Stats from all data
-  const { data: allData } = useAllOrders({ limit: 100 });
-  const stats = useMemo(() => {
-    const all = allData?.items ?? [];
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const todayOrders = all.filter((o: any) =>
-      new Date(o.createdAt).getTime() >= today.getTime());
-    return {
-      pending: all.filter((o: any) => o.status === 'PENDING').length,
-      processing: all.filter((o: any) =>
-        ['CONFIRMED', 'PREPARING', 'DELIVERING'].includes(o.status)).length,
-      todayCount: todayOrders.length,
-    };
-  }, [allData]);
+  const { data: summary } = useOrderSummary();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const { data: todaySummary } = useOrderSummary({ from: today.toISOString() });
+  const stats = {
+    pending: summary?.pendingOrders ?? 0,
+    processing: Math.max(0, Number(summary?.totalOrders ?? 0) - Number(summary?.pendingOrders ?? 0) - Number(summary?.completedOrders ?? 0)),
+    todayCount: todaySummary?.periodOrders ?? 0,
+  };
 
   const advance = (orderId: string, currentStatus: OrderStatus) => {
     const next = NEXT_STATUS[currentStatus];
@@ -192,6 +188,12 @@ export function StaffOrdersScreen() {
                         <Text style={styles.total}>{formatVnd(Number(item.totalAmount))}</Text>
                       </View>
 
+                      {item.paymentMethod === 'BANK' && item.paymentStatus !== 'PAID' && item.status === 'PENDING' && (
+                        <Pressable style={styles.actionBtn} onPress={() => setConfirming(item)}>
+                          <Text style={styles.actionText}>Xác nhận VietQR</Text>
+                        </Pressable>
+                      )}
+
                       {next && (
                         <Pressable
                           style={styles.actionBtn}
@@ -219,6 +221,7 @@ export function StaffOrdersScreen() {
                 }
               />
             )}
+      <VietQrConfirmationModal order={confirming} onClose={() => setConfirming(null)} />
     </SafeAreaView>
   );
 }

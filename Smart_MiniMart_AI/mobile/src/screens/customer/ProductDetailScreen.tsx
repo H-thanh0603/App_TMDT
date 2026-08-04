@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { useProduct, useAddToCart } from '@/services/queries';
+import { useProduct, useAddToCart, useCreateReview, useProductReviews, useReviewStats } from '@/services/queries';
 import { Button } from '@/components/Button';
 import { colors, radius, spacing, typography } from '@/theme';
 import { formatVnd } from '@/utils/format';
@@ -14,7 +14,12 @@ export function ProductDetailScreen() {
 
   const { data: product, isLoading } = useProduct(idOrSlug);
   const addToCart = useAddToCart();
+  const createReview = useCreateReview();
+  const reviewsQ = useProductReviews(idOrSlug);
+  const statsQ = useReviewStats(idOrSlug);
   const [qty, setQty] = useState(1);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
 
   if (isLoading || !product) {
     return <SafeAreaView style={[styles.container, styles.center]}><Text>Đang tải...</Text></SafeAreaView>;
@@ -74,6 +79,23 @@ export function ProductDetailScreen() {
           )}
 
           <View style={{ marginTop: spacing.lg }}>
+            <Text style={styles.sectionTitle}>Đánh giá {statsQ.data?.count ? `(${statsQ.data.count})` : ''}</Text>
+            <Text style={styles.rating}>{statsQ.data?.count ? `★ ${statsQ.data.average}/5` : 'Chưa có đánh giá'}</Text>
+            {(reviewsQ.data ?? []).slice(0, 3).map((review: any) => (
+              <View key={review.id} style={styles.review}>
+                <Text style={styles.reviewName}>{review.user?.fullName ?? 'Khách hàng'} · {'★'.repeat(review.rating)}</Text>
+                {!!review.comment && <Text style={styles.reviewText}>{review.comment}</Text>}
+              </View>
+            ))}
+            <View style={styles.reviewForm}>
+              <Text style={styles.reviewName}>Đánh giá của bạn</Text>
+              <View style={styles.stars}>{[1, 2, 3, 4, 5].map((star) => <Text key={star} onPress={() => setRating(star)} style={[styles.star, star <= rating && styles.starOn]}>★</Text>)}</View>
+              <TextInput value={comment} onChangeText={setComment} placeholder="Chia sẻ trải nghiệm (không bắt buộc)" style={styles.commentInput} multiline />
+              <Button title="Gửi đánh giá" size="sm" loading={createReview.isPending} onPress={async () => { try { await createReview.mutateAsync({ productId: product.id, rating, comment: comment.trim() || undefined }); setComment(''); Alert.alert('Cảm ơn bạn', 'Đánh giá đã được gửi.'); } catch (error: any) { Alert.alert('Không thể gửi', error?.response?.data?.message ?? 'Bạn cần có đơn hoàn tất cho sản phẩm này.'); } }} />
+            </View>
+          </View>
+
+          <View style={{ marginTop: spacing.lg }}>
             <Text style={styles.sectionTitle}>Số lượng</Text>
             <View style={styles.qtyRow}>
               <Button title="−" variant="outline" size="sm"
@@ -112,6 +134,12 @@ const styles = StyleSheet.create({
   outStock: { backgroundColor: '#FEE2E2', color: colors.danger },
   sectionTitle: { fontSize: typography.size.base, fontWeight: typography.weight.semibold, color: colors.text, marginBottom: spacing.sm },
   description: { fontSize: typography.size.sm, color: colors.textSecondary, lineHeight: 22 },
+  rating: { color: colors.warning, fontWeight: '700' },
+  review: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  reviewName: { fontSize: typography.size.sm, fontWeight: '700', color: colors.text },
+  reviewText: { marginTop: 3, fontSize: typography.size.sm, color: colors.textSecondary },
+  reviewForm: { marginTop: spacing.md, gap: spacing.sm }, stars: { flexDirection: 'row', gap: 5 }, star: { fontSize: 25, color: colors.border }, starOn: { color: colors.warning },
+  commentInput: { minHeight: 65, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.sm, color: colors.text, textAlignVertical: 'top' },
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   qtyText: { fontSize: typography.size.lg, fontWeight: typography.weight.semibold, color: colors.text, minWidth: 30, textAlign: 'center' },
   bottomBar: {

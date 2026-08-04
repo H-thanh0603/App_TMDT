@@ -14,6 +14,14 @@ export interface IOrderRepository {
     findManyArgs: Prisma.OrderFindManyArgs,
     countArgs: Prisma.OrderCountArgs,
   ): Promise<[any[], number]>;
+  getSummary(from?: Date, to?: Date): Promise<{
+    totalOrders: number;
+    pendingOrders: number;
+    completedOrders: number;
+    completedRevenue: number;
+    periodOrders: number;
+    periodRevenue: number;
+  }>;
   /** Full create-order unit of work */
   runInTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T>;
 }
@@ -48,6 +56,27 @@ export class PrismaOrderRepository implements IOrderRepository {
       this.prisma.order.findMany(findManyArgs),
       this.prisma.order.count(countArgs),
     ]) as Promise<[any[], number]>;
+  }
+
+  async getSummary(from?: Date, to?: Date) {
+    const completed = { status: 'COMPLETED' as const };
+    const period = from || to
+      ? { ...completed, createdAt: { ...(from && { gte: from }), ...(to && { lte: to }) } }
+      : completed;
+    const [totalOrders, pendingOrders, allCompleted, periodCompleted] = await Promise.all([
+      this.prisma.order.count(),
+      this.prisma.order.count({ where: { status: 'PENDING' } }),
+      this.prisma.order.aggregate({ where: completed, _count: true, _sum: { totalAmount: true } }),
+      this.prisma.order.aggregate({ where: period, _count: true, _sum: { totalAmount: true } }),
+    ]);
+    return {
+      totalOrders,
+      pendingOrders,
+      completedOrders: allCompleted._count,
+      completedRevenue: Number(allCompleted._sum.totalAmount ?? 0),
+      periodOrders: periodCompleted._count,
+      periodRevenue: Number(periodCompleted._sum.totalAmount ?? 0),
+    };
   }
 
   runInTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) {

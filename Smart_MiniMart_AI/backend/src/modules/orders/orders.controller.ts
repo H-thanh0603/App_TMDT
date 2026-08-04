@@ -30,6 +30,14 @@ export class OrdersController {
     return this.orders.listMyOrders(userId, q);
   }
 
+  @UseGuards(RolesGuard)
+  @Roles(Role.STORE_ADMIN, Role.STAFF)
+  @Get('summary')
+  @ApiOperation({ summary: 'KPI đơn hàng tổng hợp, không giới hạn phân trang' })
+  summary(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.orders.getSummary(from, to);
+  }
+
   @Get(':id')
   findOne(
     @Param('id') id: string,

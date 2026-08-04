@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme';
 
 type Variant = 'success' | 'warning' | 'danger' | 'info' | 'ai' | 'gold' | 'neutral';
 
@@ -10,17 +10,12 @@ interface BadgeProps {
   size?: 'sm' | 'md';
 }
 
-const map: Record<Variant, { bg: string; fg: string }> = {
-  success: { bg: colors.primarySoft, fg: colors.primaryDark },
-  warning: { bg: colors.goldSoft, fg: '#92400E' },
-  danger: { bg: '#FEE2E2', fg: '#991B1B' },
-  info: { bg: '#DBEAFE', fg: '#1E40AF' },
-  ai: { bg: colors.aiSoft, fg: colors.aiDark },
-  gold: { bg: colors.goldSoft, fg: colors.gold },
-  neutral: { bg: colors.bgAlt, fg: colors.textSecondary },
-};
-
 export const Badge: React.FC<BadgeProps> = ({ label, variant = 'neutral', size = 'sm' }) => {
+  const { colors } = useTheme();
+  const map: Record<Variant, { bg: string; fg: string }> = {
+    success: { bg: colors.primarySoft, fg: colors.primaryDark }, warning: { bg: colors.goldSoft, fg: colors.gold }, danger: { bg: colors.dangerSoft, fg: colors.danger },
+    info: { bg: '#DBEAFE', fg: '#1E40AF' }, ai: { bg: colors.aiSoft, fg: colors.aiDark }, gold: { bg: colors.goldSoft, fg: colors.gold }, neutral: { bg: colors.bgAlt, fg: colors.textSecondary },
+  };
   const c = map[variant];
   return (
     <View style={[styles.base, { backgroundColor: c.bg }, size === 'md' && styles.md]}>
