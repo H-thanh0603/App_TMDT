@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import * as path from 'path';
 
 import { PrismaModule } from './common/prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -26,6 +28,13 @@ import { UploadsModule } from './modules/uploads/uploads.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true, cache: true }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+    // Serve file upload (ảnh sản phẩm / review / OCR). ServeStaticModule set prefix
+    // NEST_STATIC_PREFIX, mặc định /uploads, serve từ UPLOAD_DIR (mặc định ./uploads).
+    ServeStaticModule.forRoot({
+      rootPath: path.resolve(process.cwd(), process.env.UPLOAD_DIR || './uploads'),
+      serveRoot: process.env.NEST_STATIC_PREFIX || '/uploads',
+      exclude: ['/api/(.*)'],
+    }),
     PrismaModule,
     AuthModule,
     UsersModule,

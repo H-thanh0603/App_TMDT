@@ -1,16 +1,23 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { AITaskType, Prisma } from '@prisma/client';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { AIGatewayService } from '@/modules/ai-gateway/ai-gateway.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 
 @Injectable()
 export class ReviewsService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(ReviewsService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private aiGateway: AIGatewayService,
+  ) {}
 
   async listByProduct(productId: string, limit = 20) {
     return this.prisma.review.findMany({
@@ -66,22 +73,53 @@ export class ReviewsService {
     }
     const orderId = dto.orderId ?? purchased.id;
 
+    // 1 đánh giá / 1 sản phẩm / 1 user (kể cả mua ở nhiều đơn COMPLETED).
+    // Dedup theo productId — không theo orderId để tránh review rác nhiều lần.
     const dup = await this.prisma.review.findFirst({
-      where: { userId, productId: dto.productId, orderId },
+      where: { userId, productId: dto.productId },
     });
     if (dup) throw new ConflictException('Bạn đã đánh giá sản phẩm này rồi');
 
-    return this.prisma.review.create({
+    const review = await this.prisma.review.create({
       data: {
         userId,
         productId: dto.productId,
         orderId,
-        rating: dto.rating,
+        rating: Math.min(5, Math.max(1, dto.rating)), // clamp defense-in-depth
         comment: dto.comment,
         imageUrls: dto.imageUrls ?? [],
       },
       include: { user: { select: { id: true, fullName: true, avatarUrl: true } } },
     });
+
+    // Tóm tắt AI bất đồng bộ (không chặn user) — fail mềm: provider lỗi không hỏng review.
+    if (dto.comment?.trim()) {
+      const reviewId = review.id;
+      const comment = dto.comment.trim();
+      void this.aiGateway
+        .execute({
+          taskType: AITaskType.REVIEW_SUMMARY,
+          userPrompt: comment,
+          userId,
+          refType: 'REVIEW',
+          refId: reviewId,
+          maxTokens: 200,
+          temperature: 0.4,
+        })
+        .then((resp) => {
+          const summary = resp?.text?.trim();
+          if (!summary) return;
+          return this.prisma.review.update({
+            where: { id: reviewId },
+            data: { aiSummary: summary.slice(0, 500) },
+          });
+        })
+        .catch((err) => {
+          this.logger.warn(`AI summary for review ${reviewId} failed: ${err}`);
+        });
+    }
+
+    return review;
   }
 
   async hide(id: string) {

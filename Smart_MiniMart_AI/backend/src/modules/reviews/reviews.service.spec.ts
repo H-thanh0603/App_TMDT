@@ -1,9 +1,11 @@
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
+import { AITaskType } from '@prisma/client';
 
 describe('ReviewsService.create (SEC-007 verified purchase)', () => {
   let service: ReviewsService;
   let prisma: any;
+  let gateway: any;
 
   beforeEach(() => {
     prisma = {
@@ -14,9 +16,11 @@ describe('ReviewsService.create (SEC-007 verified purchase)', () => {
         create: jest
           .fn()
           .mockImplementation(({ data }: any) => Promise.resolve({ id: 'rev-1', ...data })),
+        update: jest.fn().mockResolvedValue({ id: 'rev-1' }),
       },
     };
-    service = new ReviewsService(prisma);
+    gateway = { execute: jest.fn().mockResolvedValue({ text: 'Tóm tắt hay.' }) };
+    service = new ReviewsService(prisma, gateway);
   });
 
   it('rejects when product does not exist', async () => {
@@ -65,12 +69,47 @@ describe('ReviewsService.create (SEC-007 verified purchase)', () => {
     expect(prisma.review.create).toHaveBeenCalled();
   });
 
-  it('blocks duplicate review for the same verified order', async () => {
+  it('blocks duplicate review for the same product (any order)', async () => {
     prisma.order.findFirst.mockResolvedValue({ id: 'order-9' });
     prisma.review.findFirst.mockResolvedValue({ id: 'existing' });
+    // Bất kể orderId khác — vẫn chặn vì dedup theo productId
     await expect(
-      service.create('user-1', { productId: 'prod-1', rating: 4 } as any),
+      service.create('user-1', { productId: 'prod-1', orderId: 'order-2', rating: 4 } as any),
     ).rejects.toBeInstanceOf(ConflictException);
+
+    // Kiểm tra where của findFirst là theo (userId, productId), không có orderId
+    const dupWhere = prisma.review.findFirst.mock.calls[0][0].where;
+    expect(dupWhere).toEqual({ userId: 'user-1', productId: 'prod-1' });
+  });
+
+  it('clamps rating to 1..5 even if DTO is bypassed', async () => {
+    prisma.order.findFirst.mockResolvedValue({ id: 'order-9' });
+    const res = await service.create('user-1', {
+      productId: 'prod-1',
+      rating: 99,
+      comment: 'ok',
+    } as any);
+    expect(res.rating).toBe(5);
+  });
+
+  it('fires an async AI summary (REVIEW_SUMMARY) when comment is present', async () => {
+    prisma.order.findFirst.mockResolvedValue({ id: 'order-9' });
+    await service.create('user-1', { productId: 'prod-1', rating: 5, comment: 'Ngon rẻ' } as any);
+
+    expect(gateway.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskType: AITaskType.REVIEW_SUMMARY,
+        refType: 'REVIEW',
+        refId: 'rev-1',
+        userPrompt: 'Ngon rẻ',
+      }),
+    );
+  });
+
+  it('skips AI summary when comment empty', async () => {
+    prisma.order.findFirst.mockResolvedValue({ id: 'order-9' });
+    await service.create('user-1', { productId: 'prod-1', rating: 5 } as any);
+    expect(gateway.execute).not.toHaveBeenCalled();
   });
 });
 
@@ -85,7 +124,7 @@ describe('ReviewsService.hide (LOW-09)', () => {
         update: jest.fn().mockResolvedValue({ id: 'rev-1', isHidden: true }),
       },
     };
-    service = new ReviewsService(prisma);
+    service = new ReviewsService(prisma, { execute: jest.fn() } as any);
   });
 
   it('throws NotFound when the review does not exist', async () => {

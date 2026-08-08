@@ -9,6 +9,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { Role } from '@prisma/client';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -25,6 +26,7 @@ import {
 
 @ApiTags('Uploads')
 @ApiBearerAuth()
+@Throttle({ default: { limit: 20, ttl: 60_000 } })
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.STORE_ADMIN, Role.STAFF)
 @Controller('uploads')
