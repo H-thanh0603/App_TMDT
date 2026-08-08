@@ -60,6 +60,7 @@ describe('OrdersService', () => {
       findMany: jest.fn(),
       transactionList: jest.fn(),
       getSummary: jest.fn(),
+      getReport: jest.fn(),
       runInTransaction: jest.fn(),
     };
     settings = {
@@ -272,6 +273,49 @@ describe('OrdersService', () => {
       await expect(
         service.updateStatus('order-1', { status: 'PENDING' } as any, 'staff-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
+  describe('getReport + exportReportCsv (ADM-09)', () => {
+    it('returns repo report and rejects invalid date', async () => {
+      repo.getReport.mockResolvedValue({
+        from: undefined,
+        to: undefined,
+        totalRevenue: 100000,
+        totalOrders: 2,
+        avgOrderValue: 50000,
+        statusBreakdown: {},
+        daily: [],
+        topProducts: [],
+      });
+      const r = await service.getReport('2026-01-01', '2026-01-31');
+      expect(r.totalRevenue).toBe(100000);
+      expect(repo.getReport).toHaveBeenCalledWith(
+        new Date('2026-01-01'),
+        new Date('2026-01-31'),
+      );
+      await expect(service.getReport('not-a-date')).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('builds CSV with BOM + header + top product row', async () => {
+      repo.getReport.mockResolvedValue({
+        from: undefined,
+        to: undefined,
+        daily: [
+          { date: '2026-08-01', revenue: 100000, orders: 2 },
+          { date: '2026-08-02', revenue: 50000, orders: 1 },
+        ],
+        topProducts: [{ productId: 'p1', name: 'Mì "Hảo Hảo"', quantity: 5, revenue: 16000 }],
+        totalRevenue: 150000,
+        totalOrders: 3,
+        avgOrderValue: 50000,
+        statusBreakdown: { COMPLETED: 3 },
+      });
+
+      const csv = await service.exportReportCsv('2026-08-01', '2026-08-31');
+      expect(csv.charCodeAt(0)).toBe(0xfeff); // BOM
+      expect(csv).toContain('Ngày,Doanh thu (VND),Số đơn');
+      expect(csv).toContain(`"Mì ""Hảo Hảo""",5,16000`);
     });
   });
 });

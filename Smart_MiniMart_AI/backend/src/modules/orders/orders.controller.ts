@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
 import { Role } from '@prisma/client';
 
 import { OrdersService } from './orders.service';
@@ -10,6 +11,7 @@ import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { Roles } from '@/common/decorators/roles.decorator';
+import { SkipTransform } from '@/common/decorators/skip-transform.decorator';
 
 @ApiTags('Orders')
 @ApiBearerAuth()
@@ -36,6 +38,30 @@ export class OrdersController {
   @ApiOperation({ summary: 'KPI đơn hàng tổng hợp, không giới hạn phân trang' })
   summary(@Query('from') from?: string, @Query('to') to?: string) {
     return this.orders.getSummary(from, to);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles(Role.STORE_ADMIN, Role.STAFF)
+  @Get('report')
+  @ApiOperation({ summary: 'Báo cáo doanh thu theo ngày + top sản phẩm (Staff/Admin)' })
+  report(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.orders.getReport(from, to);
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles(Role.STORE_ADMIN, Role.STAFF)
+  @Get('report/export')
+  @SkipTransform()
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @ApiOperation({ summary: 'Xuất báo cáo CSV (Staff/Admin)' })
+  async exportReport(
+    @Res({ passthrough: true }) res: Response,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    const csv = await this.orders.exportReportCsv(from, to);
+    res.attachment(`minimart-report-${new Date().toISOString().slice(0, 10)}.csv`);
+    return csv;
   }
 
   @Get(':id')

@@ -164,6 +164,24 @@ export function useOrderSummary(params: { from?: string; to?: string } = {}) {
   });
 }
 
+export interface RevenueReport {
+  from?: string;
+  to?: string;
+  totalRevenue: number;
+  totalOrders: number;
+  avgOrderValue: number;
+  statusBreakdown: Record<string, number>;
+  daily: { date: string; revenue: number; orders: number }[];
+  topProducts: { productId: string; name: string; quantity: number; revenue: number }[];
+}
+
+export function useRevenueReport(params: { from?: string; to?: string } = {}) {
+  return useQuery({
+    queryKey: ['admin-orders', 'report', params],
+    queryFn: async () => unwrap<RevenueReport>(await api.get('/orders/report', { params })),
+  });
+}
+
 // ===== Staff: Import receipts =====
 export function useImportReceipts(params: Record<string, any> = {}) {
   return useQuery({

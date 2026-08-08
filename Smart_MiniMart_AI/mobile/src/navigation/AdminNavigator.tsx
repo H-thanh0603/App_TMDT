@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 
 import { AdminDashboardScreen } from '@/screens/admin/AdminDashboardScreen';
+import { AdminReportsScreen } from '@/screens/admin/AdminReportsScreen';
 import { AdminProductsScreen } from '@/screens/admin/AdminProductsScreen';
 import { AdminInventoryScreen } from '@/screens/admin/AdminInventoryScreen';
 import { AdminOrdersScreen } from '@/screens/admin/AdminOrdersScreen';
@@ -64,6 +65,7 @@ export function AdminNavigator() {
         <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Thông báo' }} />
         <Stack.Screen name="StoreSettings" component={StoreSettingsScreen} options={{ title: 'Cài đặt cửa hàng' }} />
         <Stack.Screen name="Broadcast" component={BroadcastScreen} options={{ title: 'Gửi thông báo' }} />
+        <Stack.Screen name="Reports" component={AdminReportsScreen} options={{ title: 'Báo cáo' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

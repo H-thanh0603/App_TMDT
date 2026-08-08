@@ -250,6 +250,33 @@ export class OrdersService {
     return this.repo.getSummary(start, end);
   }
 
+  async getReport(from?: string, to?: string) {
+    const start = from ? new Date(from) : undefined;
+    const end = to ? new Date(to) : undefined;
+    if ((start && Number.isNaN(start.getTime())) || (end && Number.isNaN(end.getTime()))) {
+      throw new BadRequestException('Khoảng thời gian không hợp lệ');
+    }
+    if (start && end && start > end) throw new BadRequestException('Khoảng thời gian không hợp lệ');
+    return this.repo.getReport(start, end);
+  }
+
+  /** Xuất báo cáo CSV (BOM để mở đúng tiếng Việt trong Excel). */
+  async exportReportCsv(from?: string, to?: string): Promise<string> {
+    const report = await this.getReport(from, to);
+    const lines: string[] = [];
+    lines.push('Ngày,Doanh thu (VND),Số đơn');
+    for (const d of report.daily) {
+      lines.push(`${d.date},${d.revenue},${d.orders}`);
+    }
+    lines.push('');
+    lines.push('Sản phẩm bán chạy');
+    lines.push('Tên sản phẩm,Số lượng,Doanh thu (VND)');
+    for (const p of report.topProducts) {
+      lines.push(`"${p.name.replace(/"/g, '""')}",${p.quantity},${p.revenue}`);
+    }
+    return '﻿' + lines.join('\r\n');
+  }
+
   async updateStatus(orderId: string, dto: UpdateOrderStatusDto, staffId: string) {
     const order = await this.repo.findUnique({
       where: { id: orderId },

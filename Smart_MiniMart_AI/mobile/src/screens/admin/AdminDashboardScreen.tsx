@@ -95,6 +95,15 @@ export function AdminDashboardScreen() {
           <QuickAction icon="👥" label="Nhân viên" color={colors.info} onPress={() => nav.navigate('Users')} />
         </View>
 
+        {/* Báo cáo */}
+        <Pressable
+          style={[styles.pendingCard, { marginHorizontal: 16, marginBottom: 8 }]}
+          onPress={() => nav.navigate('Reports')}
+        >
+          <Text style={styles.pendingTitle}>📈 Báo cáo doanh thu</Text>
+          <Text style={styles.pendingSub}>Xem doanh thu theo ngày, top sản phẩm, xuất CSV →</Text>
+        </Pressable>
+
         {/* Alerts */}
         <View style={styles.alertHeader}>
           <Text style={styles.sectionTitle}>Cảnh báo cần xử lý</Text>
