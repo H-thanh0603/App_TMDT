@@ -15,7 +15,7 @@ interface Props {
   index?: number;
 }
 
-const EMOJI_RULES: Array<[RegExp, string]> = [
+const EMOJI_RULES: [RegExp, string][] = [
   [/coffee|cà phê|caphe/, '☕'],
   [/tea|trà|tra xanh/, '🍵'],
   [/milk|sữa|yogurt|honey|mật/, '🥛'],
@@ -130,10 +130,11 @@ export function ProductCard({ product, onPress, variant = 'grid', index = 0 }: P
     </AnimatedPressableScale>
   );
 
-  return <AnimatedListItem index={index}>{body}</AnimatedListItem>;
+  return <AnimatedListItem index={index} style={variant === 'grid' ? styles.gridItem : undefined}>{body}</AnimatedListItem>;
 }
 
 const styles = StyleSheet.create({
+  gridItem: { flex: 1 },
   grid: {
     flex: 1,
     borderRadius: radius.base,

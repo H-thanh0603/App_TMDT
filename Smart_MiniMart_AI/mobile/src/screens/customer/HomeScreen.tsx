@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  FlatList, Pressable, ScrollView, StyleSheet, Text, View,
+  FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -49,12 +49,14 @@ export function HomeScreen() {
   const topPromo = promos[0];
 
   const isBootLoading =
-    (categoriesQ.isLoading && !categoriesQ.data) ||
-    (bestSellingQ.isLoading && !bestSellingQ.data);
+    categoriesQ.isLoading && !categoriesQ.data;
 
   const isBootError =
-    (!categoriesQ.data && categoriesQ.isError) ||
-    (!bestSellingQ.data && bestSellingQ.isError);
+    !categoriesQ.data && categoriesQ.isError;
+
+  const isRefreshing = [categoriesQ, saleQ, bestSellingQ, newestQ, promosQ, notifQ]
+    .some((query) => query.isRefetching);
+  const isDiscoveryLoading = saleQ.isLoading || bestSellingQ.isLoading || newestQ.isLoading;
 
   const retryHome = () => {
     categoriesQ.refetch();
@@ -70,6 +72,9 @@ export function HomeScreen() {
       <ScrollView
         contentContainerStyle={{ paddingBottom: 80 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={(
+          <RefreshControl refreshing={isRefreshing} onRefresh={retryHome} colors={[colors.primary]} />
+        )}
       >
         {/* Header gradient */}
         <View style={styles.header}>
@@ -122,7 +127,7 @@ export function HomeScreen() {
         ) : (
           <>
             {/* Promo Banner */}
-            {topPromo && (
+            {topPromo ? (
               <Pressable
                 style={styles.promoBanner}
                 onPress={() => nav.navigate('ProductList', { title: 'Khuyến mãi' })}
@@ -140,6 +145,19 @@ export function HomeScreen() {
                   </Text>
                 </View>
                 <Text style={styles.promoEmoji}>🎁</Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={styles.promoBanner}
+                onPress={() => nav.navigate('ProductList', { title: 'Ưu đãi hôm nay', onSale: true })}
+              >
+                <View style={styles.promoLeft}>
+                  <View style={styles.promoBadge}><Text style={styles.promoBadgeText}>SALE</Text></View>
+                  <Text style={styles.promoTitle}>Ưu đãi mỗi ngày</Text>
+                  <Text style={styles.promoCode}>Khám phá giá tốt hôm nay</Text>
+                  <Text style={styles.promoDiscount}>Xem sản phẩm giảm giá</Text>
+                </View>
+                <Text style={styles.promoEmoji}>🛍️</Text>
               </Pressable>
             )}
 
@@ -200,7 +218,21 @@ export function HomeScreen() {
               </ScrollView>
             )}
 
-            {isBootLoading ? <ProductGridSkeleton count={4} /> : (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Mua theo mức giá</Text>
+            </View>
+            <View style={styles.quickRow}>
+              <QuickLink icon="💸" label="Dưới 30k" color={colors.primarySoft} textColor={colors.primaryDark}
+                onPress={() => nav.navigate('ProductList', { title: 'Dưới 30k', maxPrice: 30000 })} />
+              <QuickLink icon="✨" label="30–50k" color={colors.goldSoft} textColor="#92400E"
+                onPress={() => nav.navigate('ProductList', { title: '30–50k', minPrice: 30000, maxPrice: 50000 })} />
+              <QuickLink icon="🎁" label="50–100k" color={colors.aiSoft} textColor={colors.aiDark}
+                onPress={() => nav.navigate('ProductList', { title: '50–100k', minPrice: 50000, maxPrice: 100000 })} />
+              <QuickLink icon="🌟" label="Trên 100k" color="#FCE7F3" textColor="#BE185D"
+                onPress={() => nav.navigate('ProductList', { title: 'Trên 100k', minPrice: 100000 })} />
+            </View>
+
+            {isDiscoveryLoading ? <ProductGridSkeleton count={4} /> : (
               <>
                 <DiscoverySection title="Ưu đãi hôm nay" subtitle="Giá tốt đang chờ bạn" products={sale}
                   onSeeAll={() => nav.navigate('ProductList', { title: 'Ưu đãi hôm nay', onSale: true })}

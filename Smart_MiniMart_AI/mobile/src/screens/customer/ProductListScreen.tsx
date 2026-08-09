@@ -10,7 +10,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ProductGridSkeleton } from '@/components/Skeleton';
-import { colors, spacing, typography } from '@/theme';
+import { colors } from '@/theme';
 import type { Product } from '@/types';
 
 const SORT_OPTIONS = [
@@ -32,7 +32,6 @@ export function ProductListScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
   const initialCategoryId = route.params?.categoryId;
-  const initialTitle = route.params?.title;
   const initialPricePreset = PRICE_PRESETS.findIndex(
     (preset) => preset.min === route.params?.minPrice && preset.max === route.params?.maxPrice,
   );

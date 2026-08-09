@@ -33,7 +33,7 @@ const KEYWORDS: Record<string, string> = {
   'du-207': 'mineral water bottle',
   'du-208': 'beer can',
   // ===== SỮA =====
-  'su-201': 'milk bottle',
+  'su-201': 'Milk carton.jpg',
   'su-202': 'milk carton',
   'su-203': 'condensed milk can',
   'su-204': 'chocolate milk drink',
@@ -52,7 +52,7 @@ const KEYWORDS: Record<string, string> = {
   'bk-203': 'butter biscuits',
   'bk-204': 'waffle cone',
   'bk-205': 'fruit gummy candy',
-  'bk-206': 'mint candy',
+  'bk-206': 'Mentos.jpg',
   // ===== ĐỒ ĂN NHANH =====
   'an-201': 'potato chips',
   'an-202': 'sausage',
@@ -80,8 +80,8 @@ const KEYWORDS: Record<string, string> = {
   // ===== CÀ PHÊ & TRÀ =====
   'cp-201': 'coffee jar',
   'cp-202': 'instant coffee',
-  'cp-203': 'black tea bags',
-  'cp-204': 'matcha powder',
+  'cp-203': 'Tea bags.jpg',
+  'cp-204': 'Matcha tea in bowl.jpg',
 };
 
 const UA = 'MiniMartSeed/1.0 (dev seed; contact admin@localhost)';
@@ -89,7 +89,7 @@ const UA = 'MiniMartSeed/1.0 (dev seed; contact admin@localhost)';
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Commons API: tìm 1 ảnh real theo keyword. Retry khi 429 (rate-limit ngắn). */
-async function findOnCommons(keyword: string): Promise<string | null> {
+async function findOnCommons(keyword: string): Promise<string[]> {
   const params = new URLSearchParams({
     action: 'query', format: 'json',
     generator: 'search', gsrnamespace: '6',
@@ -106,12 +106,9 @@ async function findOnCommons(keyword: string): Promise<string | null> {
     }
     if (!res.ok) throw new Error(`Commons API HTTP ${res.status}`);
     const d = await res.json();
-    for (const p of Object.values(d?.query?.pages ?? {})) {
-      const ii = (p as any)?.imageinfo?.[0];
-      // Dùng URL gốc (orig) — thumb 500px có thể chưa tạo (404), orig luôn tồn tại
-      if (ii?.url) return ii.url;
-    }
-    return null;
+    return Object.values(d?.query?.pages ?? {})
+      .map((p) => (p as any)?.imageinfo?.[0]?.url)
+      .filter((url): url is string => Boolean(url));
   }
   throw new Error('Commons API 429 sau retry');
 }
@@ -145,9 +142,19 @@ async function main() {
     const dest = path.join(imgDir, `${sku}.jpg`);
     if (fs.existsSync(dest)) { real++; continue; } // đã có
     try {
-      const found = await findOnCommons(keyword);
-      if (!found) throw new Error('không tìm thấy ảnh');
-      await downloadViaWeserv(found, dest);
+      const candidates = await findOnCommons(keyword);
+      if (!candidates.length) throw new Error('không tìm thấy ảnh');
+      let lastError: unknown;
+      for (const candidate of candidates) {
+        try {
+          await downloadViaWeserv(candidate, dest);
+          lastError = undefined;
+          break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      if (lastError) throw lastError;
       real++;
       console.log(`  ✓ ${sku} (${keyword})`);
     } catch (e: any) {

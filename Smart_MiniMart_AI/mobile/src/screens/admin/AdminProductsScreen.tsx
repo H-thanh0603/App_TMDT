@@ -264,12 +264,13 @@ export function AdminProductsScreen() {
                   const outOfStock = item.stock === 0;
                   const lowStock = item.stock > 0 && item.stock < minStock;
                   const inactive = (item as any).isActive === false;
+                  const imageUrl = resolveImage(item.imageUrl);
 
                   return (
                     <Pressable style={[styles.productCard, inactive && { opacity: 0.55 }]} onPress={() => openEdit(item)}>
                       <View style={styles.imgWrap}>
-                        {resolveImage(item.imageUrl) ? (
-                          <Image source={{ uri: resolveImage(item.imageUrl) }!} style={styles.img} />
+                        {imageUrl ? (
+                          <Image source={{ uri: imageUrl }} style={styles.img} />
                         ) : (
                           <Text style={styles.imgPlaceholder}>📦</Text>
                         )}
