@@ -229,9 +229,10 @@ async function main() {
     const categoryId = catBySlug.get(p.categorySlug);
     if (!categoryId) { skipped++; continue; }
 
-    const slug = slugify(p.name);
+    const slug = `${slugify(p.name)}-${p.sku.toLowerCase()}`;
     const imageUrl = `/uploads/products/${p.sku.toLowerCase()}.jpg`;
     const data = {
+      sku: p.sku,
       name: p.name, slug, categoryId, brand: p.brand, unit: p.unit,
       price: p.price, importPrice: p.importPrice,
       salePrice: p.salePrice ?? null,
