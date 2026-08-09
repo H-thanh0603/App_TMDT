@@ -93,14 +93,16 @@ async function seedProducts() {
     d.setDate(d.getDate() + days);
     return d;
   };
+  // Ảnh mẫu màu nền + tên sản phẩm (CDN tiki/shopee không ổn định).
+  const pimg = (text: string, color = '2E86AB') =>
+    `https://placehold.co/300x300/${color}/FFFFFF.png?text=${encodeURIComponent(text)}`;
 
   const products: any[] = [
     // Đồ uống
     { sku: 'DU-001', name: 'Coca Cola lon 330ml', slug: 'coca-cola-lon-330ml',
       categoryId: cat('do-uong'), brand: 'Coca-Cola', unit: 'lon',
       price: 10_000, importPrice: 7_500, salePrice: 9_000, stock: 120, expiryDate: tomorrow(180),
-      tags: ['nước ngọt', 'có ga'], isFeatured: true,
-      imageUrl: 'https://salt.tikicdn.com/cache/280x280/ts/product/86/41/06/9be2bbc9efe28b7e3ab4cdf6a4b4ed8a.jpg' },
+      tags: ['nước ngọt', 'có ga'], isFeatured: true },
     { sku: 'DU-002', name: 'Pepsi lon 330ml', slug: 'pepsi-lon-330ml',
       categoryId: cat('do-uong'), brand: 'Pepsi', unit: 'lon',
       price: 10_000, importPrice: 7_500, stock: 100, expiryDate: tomorrow(180),
@@ -238,11 +240,19 @@ async function seedProducts() {
       tags: ['cà phê', 'phin'] },
   ];
 
-  for (const p of products) {
+  // Bảng màu cho ảnh placeholder đa dạng, tránh tiki/shopee CDN chết.
+  const PALETTE = ['C0392B','1B4F72','1E8449','2874A6','E74C3C','16A085','2C3E50','884EA0',
+    '6E2C00','D35400','A04000','CA6F1E','4A235A','7D6608','B03A2E','CB4335','D68910','78281F',
+    'B9770E','148F77','27AE60','2E86C1','3E2723','5D4037','E91E63','935116','7F6000','21618C'];
+  const short = (name: string) => name.replace(/\s+/g, ' ').split(' ').slice(0, 3).join(' ');
+
+  for (let i = 0; i < products.length; i++) {
+    const p = products[i];
+    const imgUrl = pimg(short(p.name), PALETTE[i % PALETTE.length]);
     await prisma.product.upsert({
       where: { sku: p.sku },
-      update: {},
-      create: p,
+      update: { imageUrl: imgUrl }, // luôn đồng bộ ảnh mới
+      create: { ...p, imageUrl: imgUrl },
     });
   }
   console.log(`  → ${products.length} products seeded`);

@@ -20,7 +20,10 @@
     "prisma:reset": "prisma migrate reset --force",
     "db:seed": "ts-node -r tsconfig-paths/register prisma/seed.ts",
     "db:seed:demo": "ts-node -r tsconfig-paths/register prisma/seed-demo-scenarios.ts",
-    "db:purge-inactive": "ts-node -r tsconfig-paths/register prisma/purge-inactive-products.ts"
+    "db:purge-inactive": "ts-node -r tsconfig-paths/register prisma/purge-inactive-products.ts",
+    "db:purge-crawled": "ts-node -r tsconfig-paths/register prisma/purge-crawled.ts",
+    "db:download-images": "ts-node -r tsconfig-paths/register prisma/download-product-images.ts",
+    "db:seed-real": "ts-node -r tsconfig-paths/register prisma/seed-real-products.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",

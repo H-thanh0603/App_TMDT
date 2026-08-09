@@ -15,6 +15,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
 import { colors } from '@/theme/colors';
 import { formatAddress, formatVnd } from '@/utils/format';
+import { resolveImage } from '@/services/api';
 import type { Address, PaymentMethod } from '@/types';
 
 type PayOption = Extract<PaymentMethod, 'COD' | 'VNPAY_SANDBOX' | 'VIETQR'>;
@@ -217,7 +218,7 @@ export function CartScreen() {
         }
         renderItem={({ item }) => {
           const price = Number(item.product?.salePrice ?? item.product?.price ?? (item as any).unitPrice ?? 0);
-          const img = item.product?.imageUrl || PLACEHOLDER;
+          const img = resolveImage(item.product?.imageUrl) || PLACEHOLDER;
           return (
             <View style={styles.itemCard}>
               <Image source={{ uri: img }} style={styles.itemImage} />

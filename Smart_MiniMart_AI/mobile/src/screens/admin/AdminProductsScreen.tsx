@@ -13,6 +13,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
 import { colors } from '@/theme/colors';
 import { formatVnd } from '@/utils/format';
+import { resolveImage } from '@/services/api';
 
 type ProductForm = {
   name: string;
@@ -267,8 +268,8 @@ export function AdminProductsScreen() {
                   return (
                     <Pressable style={[styles.productCard, inactive && { opacity: 0.55 }]} onPress={() => openEdit(item)}>
                       <View style={styles.imgWrap}>
-                        {item.imageUrl ? (
-                          <Image source={{ uri: item.imageUrl }} style={styles.img} />
+                        {resolveImage(item.imageUrl) ? (
+                          <Image source={{ uri: resolveImage(item.imageUrl) }!} style={styles.img} />
                         ) : (
                           <Text style={styles.imgPlaceholder}>📦</Text>
                         )}

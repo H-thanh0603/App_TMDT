@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { CategoryRowSkeleton, ProductGridSkeleton } from '@/components/Skeleton';
 import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/typography';
 
 const CAT_EMOJI: Record<string, string> = {
   'Đồ ăn nhanh': '🍜', 'Đồ uống': '🥤', 'Bánh kẹo': '🍪', 'Sữa': '🥛',
@@ -220,8 +221,8 @@ export function HomeScreen() {
                 keyExtractor={(p: any) => p.id}
                 numColumns={2}
                 scrollEnabled={false}
-                contentContainerStyle={{ paddingHorizontal: 12 }}
-                columnWrapperStyle={{ justifyContent: 'space-between' }}
+                contentContainerStyle={{ paddingHorizontal: 12, gap: spacing.md }}
+                columnWrapperStyle={{ gap: spacing.md }}
                 renderItem={({ item }) => (
                   <ProductCard
                     product={item}

@@ -6,6 +6,7 @@ import { useProduct, useAddToCart, useCreateReview, useProductReviews, useReview
 import { Button } from '@/components/Button';
 import { colors, radius, spacing, typography } from '@/theme';
 import { formatVnd } from '@/utils/format';
+import { resolveImage } from '@/services/api';
 
 export function ProductDetailScreen() {
   const route = useRoute<any>();
@@ -44,7 +45,7 @@ export function ProductDetailScreen() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView>
         <Image
-          source={{ uri: product.imageUrl || `https://placehold.co/600x600/png?text=${encodeURIComponent((product.name || 'SP').slice(0, 20))}` }}
+          source={{ uri: resolveImage(product.imageUrl) || `https://placehold.co/600x600/png?text=${encodeURIComponent((product.name || 'SP').slice(0, 20))}` }}
           style={styles.image}
           resizeMode="cover"
         />

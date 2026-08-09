@@ -149,7 +149,7 @@ export function ProductListScreen() {
                 keyExtractor={(p: Product) => p.id}
                 numColumns={2}
                 contentContainerStyle={styles.list}
-                columnWrapperStyle={items.length > 0 ? { justifyContent: 'space-between' } : undefined}
+                columnWrapperStyle={items.length > 0 ? { gap: 8 } : undefined}
                 onRefresh={refetch}
                 refreshing={isFetching && !isLoading}
                 renderItem={({ item }) => (

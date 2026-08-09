@@ -60,3 +60,19 @@ async function refreshAccessToken(): Promise<string | null> {
 export function unwrap<T>(res: any): T {
   return res?.data?.data ?? res?.data ?? res;
 }
+
+/** Origin của backend (http://host:port) — dùng để ghép ảnh relative "/uploads/..." */
+export function apiOrigin(): string {
+  return API_URL.replace(/\/+$/, '').replace(/\/api\/v\d*/i, '');
+}
+
+/**
+ * Biến ảnh tương đối từ backend ("/uploads/x.jpg") thành URL đầy đủ.
+ * URL tuyệt đối (http/https) giữ nguyên. Trả null nếu không hợp lệ — để UI fallback placeholder.
+ */
+export function resolveImage(path?: string | null): string | null {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  if (path.startsWith('/')) return `${apiOrigin()}${path}`;
+  return path;
+}
