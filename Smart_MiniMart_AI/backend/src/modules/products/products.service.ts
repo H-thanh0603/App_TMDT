@@ -34,6 +34,7 @@ export class ProductsService {
     }
     if (query.inStock === 'true') where.stock = { gt: 0 };
     if (query.isFeatured === 'true') where.isFeatured = true;
+    if (query.onSale === 'true') where.salePrice = { not: null };
     if (query.tag) where.tags = { has: query.tag };
 
     const orderBy = this.buildSort(query.sortBy);

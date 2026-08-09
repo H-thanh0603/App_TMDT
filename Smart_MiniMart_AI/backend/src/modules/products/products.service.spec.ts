@@ -75,5 +75,14 @@ describe('ProductsService', () => {
       expect(findManyArg.where.categoryId).toBe('cat-1');
       expect(findManyArg.where.stock).toEqual({ gt: 0 });
     });
+
+    it('filters active products with a sale price when onSale=true', async () => {
+      repo.transactionList.mockResolvedValue([[], 0]);
+
+      await service.list({ onSale: 'true' } as any);
+
+      const findManyArg = (repo.transactionList.mock.calls[0] as any)[0];
+      expect(findManyArg.where).toEqual({ isActive: true, salePrice: { not: null } });
+    });
   });
 });

@@ -33,13 +33,17 @@ export function ProductListScreen() {
   const route = useRoute<any>();
   const initialCategoryId = route.params?.categoryId;
   const initialTitle = route.params?.title;
+  const initialPricePreset = PRICE_PRESETS.findIndex(
+    (preset) => preset.min === route.params?.minPrice && preset.max === route.params?.maxPrice,
+  );
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [categoryId, setCategoryId] = useState<string | undefined>(initialCategoryId);
-  const [sortBy, setSortBy] = useState('newest');
-  const [pricePreset, setPricePreset] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState(route.params?.sortBy ?? 'newest');
+  const [pricePreset, setPricePreset] = useState<number | null>(initialPricePreset >= 0 ? initialPricePreset : null);
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [onSaleOnly, setOnSaleOnly] = useState(route.params?.onSale === true);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
 
   const { data: categories = [] } = useCategories();
@@ -49,13 +53,14 @@ export function ProductListScreen() {
     if (search) p.search = search;
     if (categoryId) p.categoryId = categoryId;
     if (inStockOnly) p.inStock = 'true';
+    if (onSaleOnly) p.onSale = 'true';
     if (pricePreset !== null) {
       const preset = PRICE_PRESETS[pricePreset];
       if (preset.min !== undefined) p.minPrice = preset.min;
       if (preset.max !== undefined) p.maxPrice = preset.max;
     }
     return p;
-  }, [page, search, categoryId, sortBy, pricePreset, inStockOnly]);
+  }, [page, search, categoryId, sortBy, pricePreset, inStockOnly, onSaleOnly]);
 
   const { data, isLoading, isFetching, isError, refetch } = useProducts(queryParams);
     const items = data?.items ?? [];
@@ -65,12 +70,14 @@ export function ProductListScreen() {
   const activeFilters =
     (categoryId ? 1 : 0) +
     (pricePreset !== null ? 1 : 0) +
-    (inStockOnly ? 1 : 0);
+    (inStockOnly ? 1 : 0) +
+    (onSaleOnly ? 1 : 0);
 
   const resetFilters = () => {
     setCategoryId(undefined);
     setPricePreset(null);
     setInStockOnly(false);
+    setOnSaleOnly(false);
     setSortBy('newest');
     setPage(1);
   };

@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import {
-  useCategories, useFeaturedProducts, useActivePromos, useNotifications,
+  useCategories, useProducts, useActivePromos, useNotifications,
 } from '@/services/queries';
 import { useAuthStore } from '@/store/auth.store';
 import { ProductCard } from '@/components/ProductCard';
@@ -31,12 +31,16 @@ export function HomeScreen() {
   const nav = useNavigation<any>();
   const { user } = useAuthStore();
   const categoriesQ = useCategories();
-  const featuredQ = useFeaturedProducts();
+  const saleQ = useProducts({ onSale: 'true', limit: 4 });
+  const bestSellingQ = useProducts({ sortBy: 'best_selling', limit: 6 });
+  const newestQ = useProducts({ sortBy: 'newest', limit: 4 });
   const promosQ = useActivePromos();
   const notifQ = useNotifications();
 
   const categories = categoriesQ.data ?? [];
-  const featured = featuredQ.data ?? [];
+  const sale = saleQ.data?.items ?? [];
+  const bestSelling = bestSellingQ.data?.items ?? [];
+  const newest = newestQ.data?.items ?? [];
   const promos = promosQ.data ?? [];
   const notifData = notifQ.data;
 
@@ -46,15 +50,17 @@ export function HomeScreen() {
 
   const isBootLoading =
     (categoriesQ.isLoading && !categoriesQ.data) ||
-    (featuredQ.isLoading && !featuredQ.data);
+    (bestSellingQ.isLoading && !bestSellingQ.data);
 
   const isBootError =
     (!categoriesQ.data && categoriesQ.isError) ||
-    (!featuredQ.data && featuredQ.isError);
+    (!bestSellingQ.data && bestSellingQ.isError);
 
   const retryHome = () => {
     categoriesQ.refetch();
-    featuredQ.refetch();
+    saleQ.refetch();
+    bestSellingQ.refetch();
+    newestQ.refetch();
     promosQ.refetch();
     notifQ.refetch();
   };
@@ -194,42 +200,18 @@ export function HomeScreen() {
               </ScrollView>
             )}
 
-            {/* Featured */}
-            <View style={styles.sectionHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sectionTitle}>Nổi bật</Text>
-                <Text style={styles.sectionSub}>Sản phẩm bán chạy nhất</Text>
-              </View>
-              <Pressable onPress={() => nav.navigate('ProductList')}>
-                <Text style={styles.seeAll}>Xem tất cả ›</Text>
-              </Pressable>
-            </View>
-
-            {isBootLoading ? (
-              <ProductGridSkeleton count={4} />
-            ) : featured.length === 0 ? (
-              <EmptyState
-                icon="⭐"
-                title="Chưa có sản phẩm nổi bật"
-                description="Hãy khám phá toàn bộ danh mục cửa hàng."
-                actionLabel="Xem sản phẩm"
-                onAction={() => nav.navigate('ProductList')}
-              />
-            ) : (
-              <FlatList
-                data={featured.slice(0, 6)}
-                keyExtractor={(p: any) => p.id}
-                numColumns={2}
-                scrollEnabled={false}
-                contentContainerStyle={{ paddingHorizontal: 12, gap: spacing.md }}
-                columnWrapperStyle={{ gap: spacing.md }}
-                renderItem={({ item }) => (
-                  <ProductCard
-                    product={item}
-                    onPress={() => nav.navigate('ProductDetail', { idOrSlug: item.slug })}
-                  />
-                )}
-              />
+            {isBootLoading ? <ProductGridSkeleton count={4} /> : (
+              <>
+                <DiscoverySection title="Ưu đãi hôm nay" subtitle="Giá tốt đang chờ bạn" products={sale}
+                  onSeeAll={() => nav.navigate('ProductList', { title: 'Ưu đãi hôm nay', onSale: true })}
+                  onPressProduct={(item: any) => nav.navigate('ProductDetail', { idOrSlug: item.slug })} />
+                <DiscoverySection title="Được mua nhiều" subtitle="Sản phẩm bán chạy" products={bestSelling}
+                  onSeeAll={() => nav.navigate('ProductList', { title: 'Được mua nhiều', sortBy: 'best_selling' })}
+                  onPressProduct={(item: any) => nav.navigate('ProductDetail', { idOrSlug: item.slug })} />
+                <DiscoverySection title="Mới về" subtitle="Vừa có mặt tại cửa hàng" products={newest}
+                  onSeeAll={() => nav.navigate('ProductList', { title: 'Mới về', sortBy: 'newest' })}
+                  onPressProduct={(item: any) => nav.navigate('ProductDetail', { idOrSlug: item.slug })} />
+              </>
             )}
           </>
         )}
@@ -246,6 +228,30 @@ function QuickLink({ icon, label, color, textColor, onPress }: any) {
       </View>
       <Text style={[styles.quickLabel, { color: textColor }]}>{label}</Text>
     </Pressable>
+  );
+}
+
+function DiscoverySection({ title, subtitle, products, onSeeAll, onPressProduct }: any) {
+  if (!products.length) return null;
+  return (
+    <>
+      <View style={styles.sectionHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={styles.sectionSub}>{subtitle}</Text>
+        </View>
+        <Pressable onPress={onSeeAll}><Text style={styles.seeAll}>Xem tất cả ›</Text></Pressable>
+      </View>
+      <FlatList
+        data={products}
+        keyExtractor={(p: any) => p.id}
+        numColumns={2}
+        scrollEnabled={false}
+        contentContainerStyle={{ paddingHorizontal: 12, gap: spacing.md }}
+        columnWrapperStyle={{ gap: spacing.md }}
+        renderItem={({ item }) => <ProductCard product={item} onPress={() => onPressProduct(item)} />}
+      />
+    </>
   );
 }
 
