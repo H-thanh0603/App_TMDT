@@ -4,7 +4,9 @@ import { useAIOverview, useAITaskConfigs } from '@/services/queries';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
+import { radius, spacing, typography } from '@/theme/typography';
 
 const TASK_LABELS: Record<string, string> = {
   AI_SEARCH: 'AI Search',
@@ -18,6 +20,8 @@ const TASK_LABELS: Record<string, string> = {
 };
 
 export function AIControlCenterScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const overviewQ = useAIOverview();
   const tasksQ = useAITaskConfigs();
   const overview = overviewQ.data;
@@ -49,7 +53,7 @@ export function AIControlCenterScreen() {
     return (
       <SafeAreaView style={[styles.container, styles.center]} edges={['top']}>
         <EmptyState
-          icon="🎛️"
+          icon={<AppIcon name="robot" size={40} color={colors.roleAiManager} />}
           title="Chưa có dữ liệu AI"
           description="Seed provider/task config rồi thử lại."
           actionLabel="Tải lại"
@@ -63,7 +67,7 @@ export function AIControlCenterScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing['2xl'] }}>
         <View style={styles.header}>
-          <Text style={styles.title}>AI Control Center 🎛️</Text>
+          <Text style={styles.title}>AI Control Center</Text>
           <Text style={styles.subtitle}>Tổng quan hệ thống AI/OCR</Text>
         </View>
 
@@ -89,7 +93,7 @@ export function AIControlCenterScreen() {
         <Text style={styles.sectionTitle}>Cấu hình tác vụ AI</Text>
         {tasks.length === 0 ? (
           <EmptyState
-            icon="⚙️"
+            icon={<AppIcon name="cog" size={40} color={colors.roleAiManager} />}
             title="Chưa có task config"
             description="Seed AI task mapping để hiển thị tại đây."
             actionLabel="Tải lại"
@@ -128,7 +132,7 @@ export function AIControlCenterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   center: { alignItems: 'center', justifyContent: 'center' },
   header: { padding: spacing.lg, paddingBottom: spacing.sm },

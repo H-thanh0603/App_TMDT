@@ -3,9 +3,11 @@ import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { useAdminSettings, useUpdateSetting } from '@/services/queries';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
 
 export function StoreSettingsScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const settings = useAdminSettings();
   const save = useUpdateSetting();
   const [info, setInfo] = useState<any>({});
@@ -37,4 +39,4 @@ export function StoreSettingsScreen() {
     <Button title="Lưu thay đổi" fullWidth loading={save.isPending} onPress={() => void submit()} />
   </ScrollView></SafeAreaView>;
 }
-const styles = StyleSheet.create({ container: { flex: 1, backgroundColor: colors.bgSecondary }, content: { padding: 16, gap: 10 }, title: { fontSize: 22, fontWeight: '800', color: colors.text }, section: { marginTop: 12, fontSize: 15, fontWeight: '800', color: colors.primary }, field: { gap: 5 }, label: { fontSize: 12, color: colors.textSecondary }, input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 11, color: colors.text }, toggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, backgroundColor: colors.surface, borderRadius: 10 } });
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({ container: { flex: 1, backgroundColor: colors.bgSecondary }, content: { padding: 16, gap: 10 }, title: { fontSize: 22, fontWeight: '800', color: colors.text }, section: { marginTop: 12, fontSize: 15, fontWeight: '800', color: colors.primary }, field: { gap: 5 }, label: { fontSize: 12, color: colors.textSecondary }, input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 11, color: colors.text }, toggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, backgroundColor: colors.surface, borderRadius: 10 } });

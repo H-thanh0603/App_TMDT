@@ -4,7 +4,8 @@ import {
   Modal, TextInput, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 import {
   useAdminUsers, useCreateStaff, useUpdateUser, useAdjustLoyalty,
 } from '@/services/queries';
@@ -21,12 +22,14 @@ const ROLE_LABELS: Record<string, string> = {
 };
 const ROLE_COLORS: Record<string, { bg: string; fg: string }> = {
   CUSTOMER: { bg: '#DBEAFE', fg: '#1E40AF' },
-  STAFF: { bg: colors.primarySoft, fg: colors.primaryDark },
-  STORE_ADMIN: { bg: colors.aiSoft, fg: colors.aiDark },
-  AI_MANAGER: { bg: colors.goldSoft, fg: '#92400E' },
+  STAFF: { bg: '#FEE4D9', fg: '#D73211' },
+  STORE_ADMIN: { bg: '#EDE9FE', fg: '#5B21B6' },
+  AI_MANAGER: { bg: '#FEF3C7', fg: '#92400E' },
 };
 
 export function AdminUsersScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const [filterRole, setFilterRole] = useState<string>('STAFF');
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -68,7 +71,7 @@ export function AdminUsersScreen() {
       <TextInput
         value={search}
         onChangeText={setSearch}
-        placeholder="🔍 Tìm theo tên, email, SĐT..."
+        placeholder="Tìm theo tên, email, SĐT..."
         placeholderTextColor={colors.textMuted}
         style={styles.searchInput}
       />
@@ -103,7 +106,7 @@ export function AdminUsersScreen() {
                           </View>
                           {item.isVip && (
                             <View style={[styles.tag, { backgroundColor: colors.goldSoft }]}>
-                              <Text style={[styles.tagText, { color: colors.gold }]}>⭐ VIP</Text>
+                              <Text style={[styles.tagText, { color: colors.gold }]}>VIP</Text>
                             </View>
                           )}
                           <Text style={styles.points}>{item.loyaltyPoints} điểm</Text>
@@ -120,7 +123,7 @@ export function AdminUsersScreen() {
                 }}
                 ListEmptyComponent={
                   <EmptyState
-                    icon="👥"
+                    icon={<AppIcon name="users" size={40} color={colors.roleAdmin} />}
                     title="Không tìm thấy người dùng"
                     description={filterRole === 'ALL' ? 'Chưa có user trong hệ thống.' : 'Thử đổi bộ lọc vai trò hoặc tìm kiếm.'}
                     actionLabel={filterRole === 'STAFF' ? 'Tạo nhân viên' : 'Tải lại'}
@@ -139,7 +142,10 @@ export function AdminUsersScreen() {
   );
 }
 
-function CreateStaffModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function CreateStaffModal({
+open, onClose }: { open: boolean; onClose: () => void }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const create = useCreateStaff();
   const [form, setForm] = useState<any>({
     email: '', password: '', fullName: '', phone: '', role: 'STAFF',
@@ -200,7 +206,10 @@ function CreateStaffModal({ open, onClose }: { open: boolean; onClose: () => voi
   );
 }
 
-function AdjustPointsModal({ user, onClose }: { user: any; onClose: () => void }) {
+function AdjustPointsModal({
+user, onClose }: { user: any; onClose: () => void }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const adjust = useAdjustLoyalty();
   const [delta, setDelta] = useState('');
   const [reason, setReason] = useState('');
@@ -255,7 +264,10 @@ function AdjustPointsModal({ user, onClose }: { user: any; onClose: () => void }
   );
 }
 
-function Field({ label, value, onChange, keyboardType, secure, placeholder }: any) {
+function Field({
+label, value, onChange, keyboardType, secure, placeholder }: any) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={{ marginBottom: 14 }}>
       <Text style={styles.label}>{label}</Text>
@@ -272,11 +284,11 @@ function Field({ label, value, onChange, keyboardType, secure, placeholder }: an
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 16, backgroundColor: 'white',
+    padding: 16, backgroundColor: colors.surface,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   title: { fontSize: 20, fontWeight: '800', color: colors.text },
@@ -291,14 +303,14 @@ const styles = StyleSheet.create({
   chipText: { color: colors.text, fontWeight: '600' },
   chipTextActive: { color: 'white' },
   searchInput: {
-    margin: 12, marginTop: 0, padding: 12, backgroundColor: 'white',
+    margin: 12, marginTop: 0, padding: 12, backgroundColor: colors.surface,
     borderRadius: 10, fontSize: 14, color: colors.text,
     borderWidth: 1, borderColor: colors.border,
   },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyText: { color: colors.textSecondary },
   userCard: {
-    flexDirection: 'row', backgroundColor: 'white', padding: 12,
+    flexDirection: 'row', backgroundColor: colors.surface, padding: 12,
     marginBottom: 8, borderRadius: 12, gap: 10, alignItems: 'center',
     shadowColor: colors.shadow, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
   },
@@ -322,12 +334,12 @@ const styles = StyleSheet.create({
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
   },
   modalTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
   label: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 6 },
   input: {
-    backgroundColor: 'white', borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: 10, padding: 12, fontSize: 15, color: colors.text,
   },
   roleGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -338,7 +350,7 @@ const styles = StyleSheet.create({
   roleChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   roleChipText: { fontSize: 14, fontWeight: '700', color: colors.text },
   userInfo: {
-    backgroundColor: 'white', padding: 14, borderRadius: 12, marginBottom: 16,
+    backgroundColor: colors.surface, padding: 14, borderRadius: 12, marginBottom: 16,
     borderWidth: 1, borderColor: colors.border,
   },
   userInfoName: { fontSize: 15, fontWeight: '800', color: colors.text },

@@ -11,16 +11,17 @@ import { StatCard } from '@/components/StatCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { formatDateTime, formatVnd, statusLabel } from '@/utils/format';
 import type { OrderStatus } from '@/types';
 
-const FILTERS: Array<{ label: string; value?: OrderStatus; emoji: string }> = [
-  { label: 'Tất cả', emoji: '📋' },
-  { label: 'Chờ', value: 'PENDING', emoji: '⏳' },
-  { label: 'Xác nhận', value: 'CONFIRMED', emoji: '✓' },
-  { label: 'Chuẩn bị', value: 'PREPARING', emoji: '📦' },
-  { label: 'Đang giao', value: 'DELIVERING', emoji: '🚚' },
+const FILTERS: Array<{ label: string; value?: OrderStatus; icon: AppIconName }> = [
+  { label: 'Tất cả', icon: 'grid' },
+  { label: 'Chờ', value: 'PENDING', icon: 'clock' },
+  { label: 'Xác nhận', value: 'CONFIRMED', icon: 'check' },
+  { label: 'Chuẩn bị', value: 'PREPARING', icon: 'box' },
+  { label: 'Đang giao', value: 'DELIVERING', icon: 'truck' },
 ];
 
 const NEXT_STATUS: Record<OrderStatus, OrderStatus | null> = {
@@ -39,6 +40,8 @@ const NEXT_LABEL: Record<string, string> = {
 };
 
 export function StaffOrdersScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { user } = useAuthStore();
   const [filter, setFilter] = useState<OrderStatus | undefined>('PENDING');
   const { data, isLoading, isError, refetch, isFetching } = useAllOrders(filter ? { status: filter, limit: 100 } : { limit: 100 });
@@ -92,21 +95,21 @@ export function StaffOrdersScreen() {
         <StatCard
           label="Chờ xử lý"
           value={stats.pending}
-          icon="⏳"
+          icon={<AppIcon name="clock" size={40} color={colors.roleStaff} />}
           variant="primary"
           style={{ marginRight: 4 }}
         />
         <StatCard
           label="Đang xử lý"
           value={stats.processing}
-          icon="📦"
+          icon={<AppIcon name="box" size={40} color={colors.roleStaff} />}
           variant="info"
           style={{ marginHorizontal: 4 }}
         />
         <StatCard
           label="Hôm nay"
           value={stats.todayCount}
-          icon="📅"
+          icon={<AppIcon name="clock" size={40} color={colors.roleStaff} />}
           variant="ai"
           style={{ marginLeft: 4 }}
         />
@@ -125,7 +128,7 @@ export function StaffOrdersScreen() {
               onPress={() => setFilter(item.value)}
               style={[styles.chip, active && styles.chipActive]}
             >
-              <Text style={[styles.chipEmoji, active && { color: 'white' }]}>{item.emoji}</Text>
+              <AppIcon name={item.icon} size={14} color={active ? '#fff' : colors.textSecondary} />
               <Text style={[styles.chipText, active && styles.chipTextActive]}>{item.label}</Text>
             </Pressable>
           );
@@ -165,7 +168,7 @@ export function StaffOrdersScreen() {
 
                       <View style={styles.customerRow}>
                         <View style={styles.customerIcon}>
-                          <Text style={{ fontSize: 16 }}>👤</Text>
+                          <AppIcon name="user" size={16} color={colors.textMuted} />
                         </View>
                         <View style={{ flex: 1 }}>
                           <Text style={styles.customerName}>
@@ -179,7 +182,7 @@ export function StaffOrdersScreen() {
 
                       {item.shippingAddress && (
                         <Text style={styles.address} numberOfLines={2}>
-                          📍 {item.shippingAddress}
+                          {item.shippingAddress}
                         </Text>
                       )}
 
@@ -209,7 +212,7 @@ export function StaffOrdersScreen() {
                 }}
                 ListEmptyComponent={
                   <EmptyState
-                    icon="📭"
+                    icon={<AppIcon name="box" size={40} color={colors.roleStaff} />}
                     title="Không có đơn nào"
                     description={filter ? 'Thử đổi bộ lọc trạng thái.' : 'Chưa có đơn cần xử lý.'}
                     actionLabel={filter ? 'Xem tất cả' : 'Tải lại'}
@@ -226,7 +229,7 @@ export function StaffOrdersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
@@ -246,11 +249,10 @@ const styles = StyleSheet.create({
     borderRadius: 18, backgroundColor: colors.bgAlt, height: 36,
   },
   chipActive: { backgroundColor: colors.primary },
-  chipEmoji: { fontSize: 14 },
   chipText: { color: colors.text, fontWeight: '700', fontSize: 12 },
   chipTextActive: { color: 'white' },
   orderCard: {
-    backgroundColor: 'white', borderRadius: 14, padding: 14,
+    backgroundColor: colors.surface, borderRadius: 14, padding: 14,
     marginBottom: 10,
     shadowColor: colors.shadow, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
   },

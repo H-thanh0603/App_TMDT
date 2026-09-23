@@ -6,10 +6,12 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button } from '@/components/Button';
 import { useAuthStore } from '@/store/auth.store';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
 import type { AuthStackParamList } from '@/navigation/AuthNavigator';
 
 export function RegisterScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const nav = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const { register, loading } = useAuthStore();
   const [form, setForm] = useState({
@@ -81,7 +83,7 @@ export function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: 20, paddingTop: 32 },
   title: { fontSize: 24, fontWeight: '800', color: colors.text },

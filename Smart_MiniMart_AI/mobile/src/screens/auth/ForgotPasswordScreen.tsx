@@ -4,13 +4,16 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { api, unwrap } from '@/services/api';
-import { colors, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { spacing, typography } from '@/theme/typography';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/AuthNavigator';
 import { useNavigation } from '@react-navigation/native';
 
 /** Q23: quên mật khẩu — xin link reset (server luôn trả OK để không lộ email). */
 export function ForgotPasswordScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const nav = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
@@ -80,7 +83,7 @@ export function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: spacing.lg },
   title: { fontSize: typography.size.xl, fontWeight: '800', color: colors.text, marginBottom: spacing.md },

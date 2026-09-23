@@ -3,10 +3,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/auth.store';
 import { Button } from '@/components/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { AppIcon, type AppIconName } from '@/components/AppIcon';
+import { radius, spacing, typography } from '@/theme/typography';
 import { useNavigation } from '@react-navigation/native';
 
 export function AdminProfileScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { user, logout } = useAuthStore();
   const nav = useNavigation<any>();
 
@@ -18,12 +22,12 @@ export function AdminProfileScreen() {
   };
 
   const menus = [
-    { icon: '🎁', title: 'Khuyến mãi & Voucher', sub: 'Quản lý mã giảm giá, flash sale' },
-    { icon: '📊', title: 'Báo cáo doanh thu', sub: 'Theo ngày/tuần/tháng' },
-    { icon: '🏷️', title: 'Danh mục sản phẩm', sub: 'Quản lý category cây' },
-    { icon: '👥', title: 'Quản lý nhân viên', sub: 'Phân quyền staff' },
-    { icon: '📣', title: 'Gửi thông báo', sub: 'Broadcast tới khách hàng', route: 'Broadcast' },
-    { icon: '⚙️', title: 'Cài đặt cửa hàng', sub: 'Thông tin, giờ làm việc, giao hàng', route: 'StoreSettings' },
+    { icon: 'gift', title: 'Khuyến mãi & Voucher', sub: 'Quản lý mã giảm giá, flash sale' },
+    { icon: 'chart', title: 'Báo cáo doanh thu', sub: 'Theo ngày/tuần/tháng' },
+    { icon: 'tag', title: 'Danh mục sản phẩm', sub: 'Quản lý category cây' },
+    { icon: 'users', title: 'Quản lý nhân viên', sub: 'Phân quyền staff' },
+    { icon: 'bell', title: 'Gửi thông báo', sub: 'Broadcast tới khách hàng', route: 'Broadcast' },
+    { icon: 'cog', title: 'Cài đặt cửa hàng', sub: 'Thông tin, giờ làm việc, giao hàng', route: 'StoreSettings' },
   ];
 
   return (
@@ -44,7 +48,7 @@ export function AdminProfileScreen() {
           {menus.map((m) => (
             <TouchableOpacity key={m.title} style={styles.menuItem}
               onPress={() => m.route ? nav.navigate(m.route) : Alert.alert(m.title, 'Tính năng này chưa có màn quản lý riêng.')}>
-              <Text style={styles.menuIcon}>{m.icon}</Text>
+              <AppIcon name={m.icon as AppIconName} size={22} color={colors.roleAdmin} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.menuText}>{m.title}</Text>
                 <Text style={styles.menuSub}>{m.sub}</Text>
@@ -66,7 +70,7 @@ export function AdminProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   header: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 12, backgroundColor: colors.surface },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.roleAdmin, alignItems: 'center', justifyContent: 'center' },

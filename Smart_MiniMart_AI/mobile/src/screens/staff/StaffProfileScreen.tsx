@@ -5,9 +5,12 @@ import { useAuthStore } from '@/store/auth.store';
 import { useExpiringProducts, useSlowMoving } from '@/services/queries';
 import { Button } from '@/components/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { radius, spacing, typography } from '@/theme/typography';
 
 export function StaffProfileScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { user, logout } = useAuthStore();
   const { data: expiring = [] } = useExpiringProducts(30);
   const { data: slow = [] } = useSlowMoving();
@@ -73,7 +76,7 @@ export function StaffProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   header: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 12, backgroundColor: colors.surface },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.roleStaff, alignItems: 'center', justifyContent: 'center' },

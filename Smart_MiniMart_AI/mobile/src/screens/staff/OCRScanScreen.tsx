@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useScanReceipt } from '@/services/queries';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
 
 // Q110: mẫu OCR chỉ dùng ảnh mẫu bundle local (ocr-service/samples) — không gọi placehold.co.
 // Staff chọn ảnh từ thư viện/camera; danh sách mẫu do backend cung cấp khi cần.
@@ -24,6 +24,8 @@ function isLocalUri(uri: string): boolean {
 }
 
 export function OCRScanScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const nav = useNavigation<any>();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [engine, setEngine] = useState<string>('MOCK');
@@ -143,7 +145,7 @@ export function OCRScanScreen() {
         >
           {scan.isPending
             ? <ActivityIndicator color="white" />
-            : <Text style={styles.scanBtnText}>🔍 Quét OCR</Text>}
+            : <Text style={styles.scanBtnText}>Quét OCR</Text>}
         </Pressable>
 
         <View style={styles.divider} />
@@ -153,7 +155,7 @@ export function OCRScanScreen() {
             <Text style={styles.label}>Hoặc dùng ảnh mẫu (demo)</Text>
             {SAMPLE_IMAGES.map((s) => (
               <Pressable key={s.url} style={styles.sampleItem} onPress={() => handleScan(s.url)}>
-                <Text style={styles.sampleLabel}>📋 {s.label}</Text>
+                <Text style={styles.sampleLabel}>{s.label}</Text>
                 <Text style={styles.sampleArrow}>→</Text>
               </Pressable>
             ))}
@@ -164,7 +166,7 @@ export function OCRScanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   label: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 8, marginTop: 12 },
   hint: { fontSize: 11, color: '#92400E', backgroundColor: '#FEF3C7', padding: 10, borderRadius: 8, marginTop: 8, lineHeight: 16 },
@@ -193,7 +195,7 @@ const styles = StyleSheet.create({
   sampleArrow: { fontSize: 20, color: colors.primary, fontWeight: 'bold' },
   outlineBtn: {
     paddingVertical: 12, alignItems: 'center', borderRadius: 10,
-    backgroundColor: 'white', borderWidth: 1.5, borderColor: colors.primary,
+    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary,
   },
   outlineBtnText: { color: colors.primary, fontWeight: '700', fontSize: 14 },
   scanBtn: {

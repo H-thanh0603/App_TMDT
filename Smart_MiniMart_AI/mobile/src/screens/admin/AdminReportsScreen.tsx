@@ -3,6 +3,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 import { radius, spacing, typography } from '@/theme/typography';
 import { api } from '@/services/api';
 import { useRevenueReport } from '@/services/queries';
@@ -31,6 +32,7 @@ function dateToIso(d: Date): string {
 
 export function AdminReportsScreen() {
   const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const [period, setPeriod] = useState<Period>(30);
   const [exporting, setExporting] = useState(false);
   const params = useMemo(() => {
@@ -96,16 +98,16 @@ export function AdminReportsScreen() {
         {isLoading ? (
           <ListRowSkeleton count={4} />
         ) : isError ? (
-          <EmptyState icon="⚠️" title="Không tải được báo cáo" description="Kiểm tra kết nối và thử lại" />
+          <EmptyState icon={<AppIcon name="alert" size={40} color={colors.danger} />} title="Không tải được báo cáo" description="Kiểm tra kết nối và thử lại" />
         ) : (
           <>
             <View style={styles.kpiGrid}>
               <StatCard label="Doanh thu" value={formatVnd(data?.totalRevenue ?? 0)} icon="₫" variant="primary" style={{ marginRight: 6 }} />
-              <StatCard label="Số đơn" value={data?.totalOrders ?? 0} icon="🛒" variant="info" style={{ marginLeft: 6 }} />
+              <StatCard label="Số đơn" value={data?.totalOrders ?? 0} icon={<AppIcon name="cart" size={18} color={colors.info} />} variant="info" style={{ marginLeft: 6 }} />
             </View>
             <View style={styles.kpiGrid}>
-              <StatCard label="TB mỗi đơn" value={formatVnd(data?.avgOrderValue ?? 0)} icon="📊" variant="ai" style={{ marginRight: 6 }} />
-              <StatCard label="Chưa hoàn tất" value={Object.values(data?.statusBreakdown ?? {}).reduce((s, n) => s + n, 0) - (data?.totalOrders ?? 0)} icon="⏳" variant="gold" style={{ marginLeft: 6 }} />
+              <StatCard label="TB mỗi đơn" value={formatVnd(data?.avgOrderValue ?? 0)} icon={<AppIcon name="chart" size={18} color={colors.ai} />} variant="ai" style={{ marginRight: 6 }} />
+              <StatCard label="Chưa hoàn tất" value={Object.values(data?.statusBreakdown ?? {}).reduce((s, n) => s + n, 0) - (data?.totalOrders ?? 0)} icon={<AppIcon name="clock" size={18} color={colors.gold} />} variant="gold" style={{ marginLeft: 6 }} />
             </View>
 
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Doanh thu theo ngày</Text>
@@ -144,7 +146,7 @@ export function AdminReportsScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Top sản phẩm bán chạy</Text>
             <Card variant="elevated" padding={6}>
               {(data?.topProducts ?? []).length === 0 ? (
-                <EmptyState icon="🏷️" title="Chưa có dữ liệu sản phẩm" />
+                <EmptyState icon={<AppIcon name="tag" size={40} color={colors.roleAdmin} />} title="Chưa có dữ liệu sản phẩm" />
               ) : (
                 (data?.topProducts ?? []).map((p, i) => (
                   <View key={p.productId} style={styles.productRow}>
@@ -181,7 +183,7 @@ export function AdminReportsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1 },
   periodRow: {
     flexDirection: 'row',

@@ -4,17 +4,22 @@ import { useAILogs } from '@/services/queries';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
+import { radius, spacing, typography } from '@/theme/typography';
 import { formatRelativeTime } from '@/utils/format';
 
+// Màu trạng thái cố định (đủ tương phản cả 2 theme).
 const STATUS_COLORS: Record<string, string> = {
-  success: colors.success,
-  fallback: colors.warning,
-  error: colors.danger,
-  timeout: colors.danger,
+  success: '#16A34A',
+  fallback: '#F59E0B',
+  error: '#EF4444',
+  timeout: '#EF4444',
 };
 
 export function AILogsScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { data, isLoading, isError, refetch, isFetching } = useAILogs({ limit: 50 });
   const items = data?.items ?? [];
 
@@ -47,7 +52,7 @@ export function AILogsScreen() {
                 {item.providerName ?? 'Unknown'} • {item.mode} • {item.model ?? '-'}
               </Text>
               {item.inputSummary && (
-                <Text style={styles.summary} numberOfLines={1}>📥 {item.inputSummary}</Text>
+                <Text style={styles.summary} numberOfLines={1}>{item.inputSummary}</Text>
               )}
               {item.outputSummary && (
                 <Text style={styles.summary} numberOfLines={2}>📤 {item.outputSummary}</Text>
@@ -70,7 +75,7 @@ export function AILogsScreen() {
           )}
           ListEmptyComponent={
             <EmptyState
-              icon="📜"
+              icon={<AppIcon name="clock" size={40} color={colors.roleAiManager} />}
               title="Chưa có log nào"
               description="Chạy AI Search / Chat để sinh log mới."
               actionLabel="Tải lại"
@@ -84,7 +89,7 @@ export function AILogsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   header: { padding: spacing.lg, paddingBottom: spacing.sm },
   title: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.text },

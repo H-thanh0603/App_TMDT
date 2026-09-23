@@ -8,16 +8,17 @@ import { useImportReceipts } from '@/services/queries';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 import { formatDateTime, formatVnd } from '@/utils/format';
 
 const STATUS_COLOR: Record<string, string> = {
-  DRAFT: colors.textTertiary,
-  OCR_PROCESSING: colors.info,
-  OCR_DONE: colors.warning,
-  REVIEWED: colors.accent,
-  CONFIRMED: colors.success,
-  REJECTED: colors.danger,
+  DRAFT: '#A8A29E',
+  OCR_PROCESSING: '#3B82F6',
+  OCR_DONE: '#F59E0B',
+  REVIEWED: '#8B5CF6',
+  CONFIRMED: '#16A34A',
+  REJECTED: '#EF4444',
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -30,6 +31,8 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export function ImportReceiptsScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const nav = useNavigation<any>();
   const { data, isLoading, isError, refetch, isFetching } = useImportReceipts();
   const items = data?.items ?? [];
@@ -78,7 +81,7 @@ export function ImportReceiptsScreen() {
           )}
           ListEmptyComponent={
             <EmptyState
-              icon="📄"
+              icon={<AppIcon name="box" size={40} color={colors.roleStaff} />}
               title="Chưa có phiếu nhập nào"
               description='Bấm "Quét phiếu" để bắt đầu OCR nhập hàng.'
               actionLabel="Quét phiếu"
@@ -91,7 +94,7 @@ export function ImportReceiptsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20 },
   title: { fontSize: 20, fontWeight: '800', color: colors.text },

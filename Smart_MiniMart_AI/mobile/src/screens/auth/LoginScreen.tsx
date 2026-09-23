@@ -4,19 +4,23 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { useAuthStore } from '@/store/auth.store';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { spacing } from '@/theme/typography';
+import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/AuthNavigator';
 import { useNavigation } from '@react-navigation/native';
 
-const DEMO_ACCOUNTS = [
-  { label: 'Khách', email: 'customer@minimart.vn', emoji: '👤', color: '#10B981' },
-  { label: 'Nhân viên', email: 'staff@minimart.vn', emoji: '👨‍💼', color: '#3B82F6' },
-  { label: 'Quản lý', email: 'admin@minimart.vn', emoji: '👔', color: '#F59E0B' },
-  { label: 'AI Manager', email: 'ai@minimart.vn', emoji: '🤖', color: '#8B5CF6' },
+const DEMO_ACCOUNTS: Array<{ label: string; email: string; icon: AppIconName; color: string }> = [
+  { label: 'Khách', email: 'customer@minimart.vn', icon: 'user', color: '#EE4D2D' },
+  { label: 'Nhân viên', email: 'staff@minimart.vn', icon: 'box', color: '#1677FF' },
+  { label: 'Quản lý', email: 'admin@minimart.vn', icon: 'chart', color: '#8B5CF6' },
+  { label: 'AI Manager', email: 'ai@minimart.vn', icon: 'robot', color: '#F59E0B' },
 ];
 
 export function LoginScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const nav = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const { login, loginMfa, loading } = useAuthStore();
   const [email, setEmail] = useState('customer@minimart.vn');
@@ -61,8 +65,10 @@ export function LoginScreen() {
           {/* Brand header */}
           <View style={styles.brandHeader}>
             <View style={styles.logoCircle}>
-              <Text style={styles.logoEmoji}>🛒</Text>
-              <View style={styles.sparkle}><Text style={styles.sparkleText}>✨</Text></View>
+              <AppIcon name="cart" size={56} color={colors.primary} />
+              <View style={styles.sparkle}>
+                <AppIcon name="flash" size={16} color="#fff" />
+              </View>
             </View>
             <Text style={styles.title}>Smart MiniMart AI</Text>
             <Text style={styles.subtitle}>Mua sắm thông minh - Trợ lý AI</Text>
@@ -74,7 +80,7 @@ export function LoginScreen() {
 
             <Text style={styles.label}>Email</Text>
             <View style={styles.inputWrap}>
-              <Text style={styles.inputIcon}>📧</Text>
+              <AppIcon name="user" size={16} color={colors.textMuted} />
               <TextInput value={email} onChangeText={setEmail} style={styles.input}
                 autoCapitalize="none" keyboardType="email-address"
                 placeholder="email@example.com" placeholderTextColor={colors.textMuted} />
@@ -82,7 +88,7 @@ export function LoginScreen() {
 
             <Text style={styles.label}>Mật khẩu</Text>
             <View style={styles.inputWrap}>
-              <Text style={styles.inputIcon}>🔒</Text>
+              <AppIcon name="cog" size={16} color={colors.textMuted} />
               <TextInput value={password} onChangeText={setPassword} style={styles.input}
                 secureTextEntry placeholder="••••••••" placeholderTextColor={colors.textMuted} />
             </View>
@@ -94,7 +100,7 @@ export function LoginScreen() {
               <View style={{ marginTop: spacing.base }}>
                 <Text style={styles.label}>Mã MFA 6 số (Authenticator / recovery code)</Text>
                 <View style={styles.inputWrap}>
-                  <Text style={styles.inputIcon}>🔑</Text>
+                  <AppIcon name="qr" size={16} color={colors.textMuted} />
                   <TextInput value={mfaCode} onChangeText={setMfaCode} style={styles.input}
                     keyboardType="number-pad" maxLength={64}
                     placeholder="123456" placeholderTextColor={colors.textMuted} />
@@ -115,7 +121,7 @@ export function LoginScreen() {
           {/* Demo accounts */}
           <View style={styles.demoSection}>
             <View style={styles.demoHeader}>
-              <Text style={styles.demoTitle}>🎬 Tài khoản demo</Text>
+              <Text style={styles.demoTitle}>Tài khoản demo</Text>
               <Text style={styles.demoHint}>Mật khẩu: 123456</Text>
             </View>
             <View style={styles.demoRow}>
@@ -127,7 +133,7 @@ export function LoginScreen() {
                   activeOpacity={0.8}
                 >
                   <View style={[styles.demoEmojiWrap, { backgroundColor: a.color + '20' }]}>
-                    <Text style={styles.demoEmoji}>{a.emoji}</Text>
+                    <AppIcon name={a.icon} size={20} color={a.color} />
                   </View>
                   <Text style={styles.demoLabel}>{a.label}</Text>
                 </TouchableOpacity>
@@ -140,7 +146,7 @@ export function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.primary },
   scroll: { flexGrow: 1, paddingBottom: spacing.lg, justifyContent: 'flex-start' },
   brandHeader: {
@@ -151,19 +157,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   logoCircle: {
-    width: 110, height: 110, borderRadius: 32, backgroundColor: 'white',
+    width: 110, height: 110, borderRadius: 32, backgroundColor: '#fff', // logo tren nen cam
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2, shadowRadius: 16, elevation: 8,
   },
-  logoEmoji: { fontSize: 56 },
   sparkle: {
     position: 'absolute', top: -4, right: -4,
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: colors.gold, alignItems: 'center', justifyContent: 'center',
     borderWidth: 3, borderColor: colors.primary,
   },
-  sparkleText: { fontSize: 16 },
   title: { fontSize: 28, fontWeight: '900', color: 'white', marginTop: spacing.base },
   subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.9)', marginTop: 4 },
 
@@ -180,7 +184,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgAlt, borderRadius: 12, paddingHorizontal: 12,
     borderWidth: 1, borderColor: colors.border,
   },
-  inputIcon: { fontSize: 16 },
   input: { flex: 1, height: 48, color: colors.text, fontSize: 14 },
   linkBtn: { marginTop: spacing.lg, alignItems: 'center' },
   linkText: { fontSize: 14, color: colors.textMuted },
@@ -203,6 +206,5 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center', marginBottom: 6,
   },
-  demoEmoji: { fontSize: 20 },
   demoLabel: { fontSize: 11, fontWeight: '700', color: colors.text, textAlign: 'center' },
 });

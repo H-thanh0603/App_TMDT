@@ -5,7 +5,9 @@ import { useNavigation } from '@react-navigation/native';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
+import { radius, spacing, typography } from '@/theme/typography';
 
 const TYPE_LABELS: Record<string, string> = {
   SYSTEM_DEFAULT: 'Mặc định hệ thống',
@@ -18,12 +20,14 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: colors.success,
-  DISABLED: colors.textTertiary,
-  ERROR: colors.danger,
+  ACTIVE: '#16A34A',
+  DISABLED: '#A8A29E',
+  ERROR: '#EF4444',
 };
 
 export function AIProvidersScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { data: providers = [], isLoading, isError, refetch, isFetching } = useAIProviders();
   const test = useTestAIProvider();
   const nav = useNavigation<any>();
@@ -68,7 +72,7 @@ export function AIProvidersScreen() {
                 <Text style={styles.url} numberOfLines={1}>🔗 {item.baseUrl}</Text>
               )}
               {item.defaultModel && (
-                <Text style={styles.model}>🤖 Model: {item.defaultModel}</Text>
+                <Text style={styles.model}>Model: {item.defaultModel}</Text>
               )}
               {item.apiKeyMasked && (
                 <Text style={styles.apiKey}>🔑 {item.apiKeyMasked}</Text>
@@ -86,7 +90,7 @@ export function AIProvidersScreen() {
           )}
           ListEmptyComponent={
             <EmptyState
-              icon="🔌"
+              icon={<AppIcon name="cog" size={40} color={colors.roleAiManager} />}
               title="Chưa có provider"
               description="Cấu hình provider AI trong backend/seed để bắt đầu."
               actionLabel="Tải lại"
@@ -100,7 +104,7 @@ export function AIProvidersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   header: { padding: spacing.lg, paddingBottom: spacing.sm },
   title: { fontSize: typography.size.xl, fontWeight: typography.weight.bold, color: colors.text },

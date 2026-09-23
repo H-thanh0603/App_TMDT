@@ -9,18 +9,19 @@ import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { formatDateTime, formatVnd, statusLabel } from '@/utils/format';
 import type { OrderStatus } from '@/types';
 
-const STATUSES: Array<{ label: string; value?: OrderStatus; emoji: string }> = [
-  { label: 'Tất cả', emoji: '📋' },
-  { label: 'Chờ', value: 'PENDING', emoji: '⏳' },
-  { label: 'Xác nhận', value: 'CONFIRMED', emoji: '✓' },
-  { label: 'Chuẩn bị', value: 'PREPARING', emoji: '📦' },
-  { label: 'Giao', value: 'DELIVERING', emoji: '🚚' },
-  { label: 'Xong', value: 'COMPLETED', emoji: '✅' },
-  { label: 'Hủy', value: 'CANCELED', emoji: '❌' },
+const STATUSES: Array<{ label: string; value?: OrderStatus; icon: AppIconName }> = [
+  { label: 'Tất cả', icon: 'grid' },
+  { label: 'Chờ', value: 'PENDING', icon: 'clock' },
+  { label: 'Xác nhận', value: 'CONFIRMED', icon: 'check' },
+  { label: 'Chuẩn bị', value: 'PREPARING', icon: 'box' },
+  { label: 'Giao', value: 'DELIVERING', icon: 'truck' },
+  { label: 'Xong', value: 'COMPLETED', icon: 'check' },
+  { label: 'Hủy', value: 'CANCELED', icon: 'close' },
 ];
 
 const STATUS_VARIANT: Record<string, any> = {
@@ -29,6 +30,8 @@ const STATUS_VARIANT: Record<string, any> = {
 };
 
 export function AdminOrdersScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const [filter, setFilter] = useState<OrderStatus | undefined>(undefined);
   const { data, isLoading, isError, refetch, isFetching } = useAllOrders(
       filter ? { status: filter, limit: 100 } : { limit: 100 },
@@ -99,7 +102,7 @@ export function AdminOrdersScreen() {
               onPress={() => setFilter(item.value)}
               style={[styles.chip, active && styles.chipActive]}
             >
-              <Text style={styles.chipEmoji}>{item.emoji}</Text>
+              <AppIcon name={item.icon} size={14} color={colors.textSecondary} />
               <Text style={[styles.chipText, active && { color: 'white' }]}>{item.label}</Text>
             </Pressable>
           );
@@ -141,7 +144,7 @@ export function AdminOrdersScreen() {
                       <View style={styles.divider} />
 
                       <View style={styles.customerRow}>
-                        <Text style={{ fontSize: 16 }}>👤</Text>
+                        <AppIcon name="user" size={16} color={colors.textMuted} />
                         <View style={{ flex: 1 }}>
                           <Text style={styles.customerName}>
                             {item.customer?.fullName ?? item.shippingName ?? 'Khách'}
@@ -151,7 +154,7 @@ export function AdminOrdersScreen() {
                           </Text>
                         </View>
                         <Text style={styles.payment}>
-                          {item.paymentMethod === 'COD' ? '💵 COD' : '🏦 ' + item.paymentMethod}
+                          {item.paymentMethod === 'COD' ? 'COD' : item.paymentMethod}
                         </Text>
                       </View>
 
@@ -179,7 +182,7 @@ export function AdminOrdersScreen() {
                 }}
                 ListEmptyComponent={
                   <EmptyState
-                    icon="📭"
+                    icon={<AppIcon name="box" size={40} color={colors.roleAdmin} />}
                     title="Không có đơn nào"
                     description={filter ? 'Thử đổi bộ lọc trạng thái.' : 'Chưa có đơn hàng trong hệ thống.'}
                     actionLabel={filter ? 'Xem tất cả' : 'Tải lại'}
@@ -196,18 +199,18 @@ export function AdminOrdersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row', padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   title: { fontSize: 22, fontWeight: '800', color: colors.text },
   subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   statsBanner: {
-    flexDirection: 'row', backgroundColor: 'white',
+    flexDirection: 'row', backgroundColor: colors.surface,
     marginHorizontal: 12, marginVertical: 10,
     paddingVertical: 14, borderRadius: 12,
     shadowColor: colors.shadow, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
@@ -225,7 +228,7 @@ const styles = StyleSheet.create({
   chipEmoji: { fontSize: 13 },
   chipText: { color: colors.text, fontWeight: '700', fontSize: 12 },
   orderCard: {
-    backgroundColor: 'white', borderRadius: 12, padding: 14,
+    backgroundColor: colors.surface, borderRadius: 12, padding: 14,
     marginBottom: 8,
     shadowColor: colors.shadow, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
   },
