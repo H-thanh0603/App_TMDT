@@ -110,12 +110,16 @@ cd ocr-service
 python -m venv .venv
 source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn main:app --port 5001
+# Đặt OCR_API_KEY (cùng giá trị với backend OCR_API_KEY) rồi chạy:
+uvicorn app.main:app --port 5001
+python -m pytest tests -q     # kiểm tra guard SSRF/xác thực
 ```
 
 ## Demo accounts
 
-Tất cả password: `123456`
+> Tài khoản seed dùng mật khẩu từ `SEED_DEFAULT_PASSWORD` (local dev tự sinh ngẫu nhiên).
+> Tài khoản demo cũ `123456` chỉ còn dùng để **đăng nhập** (login giữ min 6); mật khẩu
+> **đăng ký mới** yêu cầu tối thiểu 8 ký tự, có chữ và số (xem `docs/SECURITY_REVIEW_2026-09.md`).
 
 | Email | Role | Tính năng demo |
 |-------|------|----------------|
@@ -197,10 +201,18 @@ Postman: `postman/Smart_MiniMart_AI.postman_collection.json` + env local.
 
 ## API Endpoints (chính)
 
+> Cập nhật bảo mật đợt 2 (22/09/2026 — chi tiết: `docs/SECURITY_REVIEW_2026-09.md`):
+> `POST /auth/logout-all`, giới hạn `includeInactive` cho admin/staff ở
+> `GET /products` + `GET /categories`, VietQR override chỉ cho STORE_ADMIN,
+> hạn mức AI trả 429 khi vượt (`global` / `provider:<id>` / `user:<id>`),
+> OCR service yêu cầu header `X-OCR-Key`.
+
 ### Auth
-- `POST /auth/register` - Đăng ký
+- `POST /auth/register` - Đăng ký (mật khẩu ≥ 8 ký tự, có chữ + số)
 - `POST /auth/login` - Đăng nhập
-- `POST /auth/refresh` - Refresh token
+- `POST /auth/refresh` - Refresh token (rotate nguyên tử, phát hiện dùng lại)
+- `POST /auth/logout` - Đăng xuất 1 thiết bị
+- `POST /auth/logout-all` - Đăng xuất mọi thiết bị
 
 ### Products & Categories
 - `GET /products?search&page&limit&sortBy&minPrice&maxPrice&categoryId&inStock`

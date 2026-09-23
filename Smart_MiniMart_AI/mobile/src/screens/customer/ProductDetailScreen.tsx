@@ -45,7 +45,7 @@ export function ProductDetailScreen() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView>
         <Image
-          source={{ uri: resolveImage(product.imageUrl) || `https://placehold.co/600x600/png?text=${encodeURIComponent((product.name || 'SP').slice(0, 20))}` }}
+          source={resolveImage(product.imageUrl) ? { uri: resolveImage(product.imageUrl)! } : require('../../assets/icon.png')}
           style={styles.image}
           resizeMode="cover"
         />

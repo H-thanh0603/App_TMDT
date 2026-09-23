@@ -20,7 +20,8 @@ import type { Address, PaymentMethod } from '@/types';
 
 type PayOption = Extract<PaymentMethod, 'COD' | 'VNPAY_SANDBOX' | 'VIETQR'>;
 
-const PLACEHOLDER = 'https://placehold.co/120x120/png?text=SP';
+// Q110: placeholder offline (không phụ thuộc placehold.co trên prod).
+const PLACEHOLDER: string | null = null;
 
 export function CartScreen() {
   const nav = useNavigation<any>();
@@ -218,10 +219,16 @@ export function CartScreen() {
         }
         renderItem={({ item }) => {
           const price = Number(item.product?.salePrice ?? item.product?.price ?? (item as any).unitPrice ?? 0);
-          const img = resolveImage(item.product?.imageUrl) || PLACEHOLDER;
+          const img = resolveImage(item.product?.imageUrl) ?? PLACEHOLDER;
           return (
             <View style={styles.itemCard}>
-              <Image source={{ uri: img }} style={styles.itemImage} />
+              {img ? (
+                <Image source={{ uri: img }} style={styles.itemImage} />
+              ) : (
+                <View style={[styles.itemImage, { alignItems: 'center', justifyContent: 'center' }]}>
+                  <Text>🛒</Text>
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemName} numberOfLines={2}>{item.product?.name ?? 'Sản phẩm'}</Text>
                 <Text style={styles.itemPrice}>{formatVnd(price)}</Text>

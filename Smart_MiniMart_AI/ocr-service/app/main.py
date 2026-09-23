@@ -1,9 +1,10 @@
 """FastAPI entry — POST /ocr/parse trả raw text + parsed structured data."""
+import hmac
 import logging
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from .config import settings
@@ -11,6 +12,7 @@ from .engines.base import BaseOCREngine
 from .engines.mock import MockOCREngine
 from .engines.paddle import PaddleOCREngine
 from .parsers.receipt_parser import parse_receipt_text
+from .security import is_public_http_url
 
 
 logging.basicConfig(level=settings.log_level)
@@ -54,11 +56,26 @@ app = FastAPI(
 )
 
 
+def require_api_key(x_ocr_key: Optional[str] = Header(default=None, alias="X-OCR-Key")) -> None:
+    """SEC-OCR-1: xác thực backend bằng khóa chia sẻ (so sánh timing-safe).
+
+    Fail-closed trên production (ENV=production): thiếu key = 503, không bao giờ
+    mở /ocr/parse không xác thực. Dev giữ fail-open để khỏi vỡ môi trường local.
+    """
+    if not settings.api_key:
+        if settings.env == "production":
+            raise HTTPException(503, "OCR service chưa cấu hình khóa (OCR_API_KEY)")
+        logger.warning("OCR_API_KEY chưa đặt — /ocr/parse đang mở không xác thực (chỉ dùng cho dev)")
+        return
+    if not x_ocr_key or not hmac.compare_digest(x_ocr_key, settings.api_key):
+        raise HTTPException(401, "Thiếu hoặc sai khóa OCR (X-OCR-Key)")
+
+
 # ========== Schemas ==========
 
 class ParseRequest(BaseModel):
-    image_url: str = Field(..., description="URL ảnh phiếu nhập hàng")
-    engine: str = Field("mock", description="Engine: mock|paddle_ocr|easy_ocr|tesseract")
+    image_url: str = Field(..., max_length=2048, description="URL ảnh phiếu nhập hàng")
+    engine: str = Field("mock", max_length=32, description="Engine: mock|paddle_ocr|easy_ocr|tesseract")
 
 
 class ParseResponse(BaseModel):
@@ -89,14 +106,20 @@ async def list_engines():
 
 
 @app.post("/ocr/parse", response_model=ParseResponse)
-async def parse(req: ParseRequest):
+async def parse(req: ParseRequest, _auth: None = Depends(require_api_key)):
+    # SEC-OCR-2: kiểm tra URL TRƯỚC khi chọn engine — chặn SSRF ngay tại cổng vào,
+    # kể cả khi attacker gửi engine không tồn tại để dò service.
+    if not is_public_http_url(req.image_url):
+        raise HTTPException(400, "image_url phải là URL http/https công khai")
     engine = get_engine(req.engine)
-    logger.info(f"OCR parse with {engine.name}: {req.image_url[:80]}")
+    # Q64: không log URL/token/PII — chỉ log engine + độ dài URL để debug.
+    logger.info(f"OCR parse engine={engine.name} url_len={len(req.image_url)}")
     try:
         result = await engine.parse(req.image_url)
-    except Exception as e:
+    except Exception:
+        # SEC-OCR-3: không lộ chi tiết nội bộ (đường dẫn, traceback, URL) ra client.
         logger.exception("OCR engine error")
-        raise HTTPException(500, f"OCR engine '{engine.name}' lỗi: {e}")
+        raise HTTPException(500, f"OCR engine '{engine.name}' lỗi. Xem log phía server.")
 
     parsed = parse_receipt_text(result.raw_text)
     return ParseResponse(
@@ -109,4 +132,5 @@ async def parse(req: ParseRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=settings.port, reload=True)
+    # reload chỉ dùng cho dev local; KHÔNG bật trong container/production (xem Dockerfile)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=settings.port, reload=False)

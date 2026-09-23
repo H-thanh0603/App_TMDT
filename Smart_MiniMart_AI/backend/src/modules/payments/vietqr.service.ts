@@ -4,6 +4,14 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/common/prisma/prisma.service';
 
 const VIETQR_API = 'https://api.vietqr.io/v2/generate';
+const VIETQR_TIMEOUT_MS = 8_000;
+
+/** Bank BIN (NAPAS) = 6-11 chữ số. */
+const BANK_BIN_RE = /^\d{6,11}$/;
+/** Số tài khoản: chữ/số, cho phép . _ - (một số ngân hàng dùng). */
+const ACCOUNT_NO_RE = /^[0-9A-Za-z._-]{4,32}$/;
+/** Tên chủ tài khoản: chữ (kể cả tiếng Việt), số, khoảng trắng và . , _ - */
+const ACCOUNT_NAME_RE = /^[\p{L}\p{N} .,_'-]{2,60}$/u;
 
 interface VietQrConfig {
   bankBin: string;
@@ -21,13 +29,33 @@ export class VietQrService {
     private cfg: ConfigService,
   ) {}
 
-  private getConfig(dto: Partial<VietQrConfig>): VietQrConfig {
+  /**
+   * Cấu hình VietQR (env) + ghi đè do client gửi.
+   *
+   * SEC-023: ghi đè STK/ngân hàng chỉ được phép khi `allowOverrides = true`
+   * (STORE_ADMIN). Với khách hàng, mọi giá trị client gửi bị BỎ QUA — nếu không,
+   * kẻ xấu có thể khiến QR của đơn hàng trỏ về tài khoản của mình (lừa đảo) hoặc
+   * chèn tham số vào URL ảnh của img.vietqr.io.
+   */
+  private getConfig(
+    dto: Partial<VietQrConfig> = {},
+    allowOverrides = false,
+  ): VietQrConfig {
+    const envBankBin = this.cfg.get<string>('VIETQR_BANK_BIN', '970422'); // MB default
+    const envAccountNo = this.cfg.get<string>('VIETQR_ACCOUNT_NO', '0123456789'); // demo, đổi trên Render
+    const envAccountName = this.cfg.get<string>('VIETQR_ACCOUNT_NAME', 'SMART MINIMART');
+
+    const pick = (candidate: string | undefined, fallback: string, re: RegExp): string => {
+      if (allowOverrides && candidate && re.test(candidate.trim())) return candidate.trim();
+      return fallback;
+    };
+
     return {
-      bankBin: dto.bankBin || this.cfg.get<string>('VIETQR_BANK_BIN', '970422'), // MB default
-      accountNo: dto.accountNo || this.cfg.get<string>('VIETQR_ACCOUNT_NO', '0123456789'), // demo STK, đổi trên Render
-      accountName: dto.accountName || this.cfg.get<string>('VIETQR_ACCOUNT_NAME', 'SMART MINIMART'),
+      bankBin: pick(dto.bankBin, envBankBin, BANK_BIN_RE),
+      accountNo: pick(dto.accountNo, envAccountNo, ACCOUNT_NO_RE),
+      accountName: pick(dto.accountName, envAccountName, ACCOUNT_NAME_RE),
       template:
-        dto.template || this.cfg.get<'compact' | 'qr_only' | 'print'>('VIETQR_TEMPLATE', 'compact'),
+        dto.template ?? this.cfg.get<'compact' | 'qr_only' | 'print'>('VIETQR_TEMPLATE', 'compact'),
     };
   }
 
@@ -45,6 +73,7 @@ export class VietQrService {
       accountName?: string;
       template?: 'compact' | 'qr_only' | 'print';
     },
+    opts: { allowOverrides?: boolean } = {},
   ) {
     const order = await this.prisma.order.findFirst({
       where: { id: dto.orderId, userId },
@@ -54,7 +83,7 @@ export class VietQrService {
       throw new BadRequestException('Đơn hàng đã thanh toán');
     }
 
-    const cfg = this.getConfig(dto);
+    const cfg = this.getConfig(dto, opts.allowOverrides === true);
     const amount = Math.round(Number(order.totalAmount));
     const addInfo = `TT ${order.orderNumber ?? order.id.slice(0, 8)}`;
 
@@ -79,10 +108,14 @@ export class VietQrService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        // Timeout bắt buộc: nếu VietQR treo, request của khách không được treo theo.
+        signal: AbortSignal.timeout(VIETQR_TIMEOUT_MS),
       });
       if (resp.ok) {
         const data = (await resp.json()) as any;
-        if (data?.data?.qrDataURL) {
+        const qrDataURL: unknown = data?.data?.qrDataURL;
+        // Chỉ nhận data URL ảnh — chống việc upstream trả về URL lạ bị nhúng vào app.
+        if (typeof qrDataURL === 'string' && /^data:image\/[a-z+]+;base64,/i.test(qrDataURL)) {
           // lưu ref để đối soát thủ công
           await this.prisma.order.update({
             where: { id: order.id },
@@ -90,7 +123,7 @@ export class VietQrService {
           });
           return {
             method: 'VIETQR',
-            qrDataUrl: data.data.qrDataURL,
+            qrDataUrl: qrDataURL,
             bankBin: cfg.bankBin,
             accountNo: cfg.accountNo,
             accountName: cfg.accountName,
@@ -98,6 +131,7 @@ export class VietQrService {
             addInfo,
           };
         }
+        this.logger.warn('VietQR api trả về payload không mong đợi — dùng ảnh tĩnh dự phòng');
       }
     } catch (e) {
       this.logger.warn(`VietQR api failed: ${(e as Error).message}`);

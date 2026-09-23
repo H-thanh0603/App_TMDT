@@ -219,6 +219,10 @@ function slugify(s: string): string {
 }
 
 async function main() {
+  // Q78: seed/crawl chỉ cho local/staging — prod phải qua pipeline duyệt, không chạy tay.
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DATA_SEED !== 'true') {
+    throw new Error('Seed sản phẩm bị cấm trên production (đặt ALLOW_DATA_SEED=true nếu đã duyệt).');
+  }
   console.log('🛒 Seeding sản phẩm thật (ảnh local)...');
   const cats = await prisma.category.findMany();
   const catBySlug = new Map(cats.map((c) => [c.slug, c.id]));

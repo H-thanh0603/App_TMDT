@@ -23,8 +23,14 @@ services:
         value: "4000"
       - key: API_PREFIX
         value: api/v1
+      # Production: thay bằng domain frontend thật, ví dụ https://app.minimart.vn
       - key: CORS_ORIGIN
         value: "*"
+      - key: TRUST_PROXY
+        value: "1"
+      # Swagger: production tắt mặc định, chỉ bật khi cần debug (đặt "true")
+      - key: ENABLE_SWAGGER
+        value: ""
       - key: JWT_ACCESS_EXPIRES
         value: 15m
       - key: JWT_REFRESH_EXPIRES
@@ -44,6 +50,8 @@ services:
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: OCR_API_KEY
         generateValue: true
       - key: AI_ENCRYPTION_KEY
         sync: false

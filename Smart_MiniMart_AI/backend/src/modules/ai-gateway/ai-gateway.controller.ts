@@ -19,6 +19,7 @@ class AIChatDto {
   @MinLength(1)
   message: string;
 
+  // Q169: history tối đa 10 item, mỗi item ≤2000 ký tự — chống nhồi prompt.
   @IsOptional()
   @IsArray()
   history?: any[];
@@ -38,7 +39,7 @@ export class AIGatewayController {
   @Post('search')
   @ApiOperation({ summary: 'AI Search bằng mô tả tự nhiên (yêu cầu đăng nhập, giới hạn tần suất)' })
   search(@Body() dto: AISearchDto, @CurrentUser('sub') userId: string) {
-    return this.aiSearch.search(dto.query, userId);
+    return this.aiSearch.search(dto.query.slice(0, 4000), userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -47,6 +48,8 @@ export class AIGatewayController {
   @Post('chat')
   @ApiOperation({ summary: 'AI Shopping Assistant — chat tư vấn' })
   chat(@Body() dto: AIChatDto, @CurrentUser('sub') userId: string) {
-    return this.aiAssistant.chat(dto.message, userId, dto.history ?? []);
+    // Q169: cắt history ở controller — defense-in-depth cùng gateway sanitize.
+    const history = Array.isArray(dto.history) ? dto.history.slice(-10) : [];
+    return this.aiAssistant.chat(dto.message.slice(0, 4000), userId, history);
   }
 }

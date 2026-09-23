@@ -10,8 +10,12 @@ export function formatDate(iso: string): string {
   });
 }
 
+// Q107: mọi hiển thị giờ cho user VN dùng Asia/Ho_Chi_Minh (server lưu UTC).
+export const VN_TIME_ZONE = 'Asia/Ho_Chi_Minh';
+
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('vi-VN', {
+    timeZone: VN_TIME_ZONE,
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });

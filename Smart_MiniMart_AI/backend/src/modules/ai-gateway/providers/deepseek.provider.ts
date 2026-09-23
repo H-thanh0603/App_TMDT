@@ -21,7 +21,15 @@ export class DeepSeekProvider implements IAIProvider {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
+      // Q88: timeout AI 60s + retry 1 lần có jitter — chống request treo khi LLM chậm.
       timeout: 60_000,
+    });
+    this.client.interceptors.response.use(undefined, async (err) => {
+      const cfgReq: any = err.config;
+      if (!cfgReq || cfgReq.__retried || err.response?.status === 401) throw err;
+      cfgReq.__retried = true;
+      await new Promise((r) => setTimeout(r, 500 + Math.random() * 500));
+      return this.client.request(cfgReq);
     });
   }
 

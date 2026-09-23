@@ -14,7 +14,7 @@ services:
     rootDir: Smart_MiniMart_AI/backend
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    healthCheckPath: /api/v1/health
+    healthCheckPath: /api/v1/health/ready
     autoDeploy: true
     envVars:
       - key: NODE_ENV
@@ -23,8 +23,17 @@ services:
         value: "4000"
       - key: API_PREFIX
         value: api/v1
+      # Production: whitelist domain frontend thật (không để "*").
+      # Điền domain prod khi deploy, ví dụ https://app.minimart.vn
       - key: CORS_ORIGIN
-        value: "*"
+        value: "" # <-- ĐIỀN DOMAIN PROD (vd https://app.minimart.vn); để trống = chặn CORS strict
+      - key: ALLOWED_HOSTS
+        value: "" # <-- ĐIỀN host API prod (vd smart-minimart-api.onrender.com)
+      - key: TRUST_PROXY
+        value: "1"
+      # Swagger: production tắt mặc định, chỉ bật khi cần debug (đặt "true")
+      - key: ENABLE_SWAGGER
+        value: ""
       - key: JWT_ACCESS_EXPIRES
         value: 15m
       - key: JWT_REFRESH_EXPIRES
@@ -45,9 +54,14 @@ services:
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
+      - key: OCR_API_KEY
+        generateValue: true
       - key: AI_ENCRYPTION_KEY
         sync: false
       - key: DEEPSEEK_API_KEY
         sync: false
       - key: DEEPSEEK_BASE_URL
         value: https://api.deepseek.com
+      # Q139: Sentry DSN (để trống = tắt). Điền DSN khi vận hành.
+      - key: SENTRY_DSN
+        sync: false
