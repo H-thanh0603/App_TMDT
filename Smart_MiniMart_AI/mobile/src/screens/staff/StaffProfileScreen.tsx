@@ -6,6 +6,7 @@ import { useExpiringProducts, useSlowMoving } from '@/services/queries';
 import { Button } from '@/components/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 import { radius, spacing, typography } from '@/theme/typography';
 
 export function StaffProfileScreen() {
@@ -58,7 +59,7 @@ export function StaffProfileScreen() {
 
         <View style={styles.menu}>
           <TouchableOpacity style={styles.menuItem} onPress={() => nav.navigate('OCRScan')}>
-            <Text style={styles.menuIcon}>📷</Text>
+            <AppIcon name="camera" size={22} color={colors.roleStaff} />
             <Text style={styles.menuText}>Quét phiếu nhập hàng</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>

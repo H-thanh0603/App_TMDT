@@ -42,7 +42,7 @@ export function ImportReceiptsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Nhập hàng</Text>
         <Pressable style={styles.scanBtn} onPress={() => nav.navigate('OCRScan')}>
-          <Text style={styles.scanBtnText}>📷 Quét phiếu</Text>
+          <Text style={styles.scanBtnText}>Quét phiếu</Text>
         </Pressable>
       </View>
 

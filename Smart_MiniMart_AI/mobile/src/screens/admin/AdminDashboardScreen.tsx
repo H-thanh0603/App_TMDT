@@ -103,7 +103,7 @@ export function AdminDashboardScreen() {
           style={[styles.pendingCard, { marginHorizontal: 16, marginBottom: 8 }]}
           onPress={() => nav.navigate('Reports')}
         >
-          <Text style={styles.pendingTitle}>📈 Báo cáo doanh thu</Text>
+          <Text style={styles.pendingTitle}>Báo cáo doanh thu</Text>
           <Text style={styles.pendingSub}>Xem doanh thu theo ngày, top sản phẩm, xuất CSV →</Text>
         </Pressable>
 
@@ -158,7 +158,7 @@ export function AdminDashboardScreen() {
             <Card variant="elevated" padding={14}>
               <View style={styles.alertRow}>
                 <View style={[styles.alertIcon, { backgroundColor: colors.goldSoft }]}>
-                  <Text style={styles.alertEmoji}>🐢</Text>
+                  <AppIcon name="chart" size={22} color={colors.gold} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

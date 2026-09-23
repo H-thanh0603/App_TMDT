@@ -134,7 +134,7 @@ export function AdminCategoriesScreen() {
                 renderItem={({ item }) => (
                   <View style={styles.card}>
                     <View style={styles.icon}>
-                      <Text style={{ fontSize: 22 }}>📁</Text>
+                      <AppIcon name="grid" size={22} color={colors.roleAdmin} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.catName}>{item.name}</Text>

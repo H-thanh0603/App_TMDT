@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useScanReceipt } from '@/services/queries';
 import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 
 // Q110: mẫu OCR chỉ dùng ảnh mẫu bundle local (ocr-service/samples) — không gọi placehold.co.
 // Staff chọn ảnh từ thư viện/camera; danh sách mẫu do backend cung cấp khi cần.
@@ -124,17 +125,17 @@ export function OCRScanScreen() {
           <Image source={{ uri: imageUri }} style={styles.preview} />
         ) : (
           <View style={styles.placeholder}>
-            <Text style={{ fontSize: 56 }}>📄</Text>
+            <AppIcon name="camera" size={56} color={colors.textMuted} />
             <Text style={styles.placeholderText}>Chưa có ảnh</Text>
           </View>
         )}
 
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
           <Pressable style={[styles.outlineBtn, { flex: 1 }]} onPress={takePhoto}>
-            <Text style={styles.outlineBtnText}>📷 Chụp ảnh</Text>
+            <Text style={styles.outlineBtnText}>Chụp ảnh</Text>
           </Pressable>
           <Pressable style={[styles.outlineBtn, { flex: 1 }]} onPress={pickFromGallery}>
-            <Text style={styles.outlineBtnText}>📁 Tải lên</Text>
+            <Text style={styles.outlineBtnText}>Tải lên</Text>
           </Pressable>
         </View>
 

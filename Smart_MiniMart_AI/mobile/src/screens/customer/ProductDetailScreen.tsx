@@ -59,7 +59,7 @@ export function ProductDetailScreen() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView>
         <Image
-          source={resolveImage(product.imageUrl) ? { uri: resolveImage(product.imageUrl)! } : require('../../assets/icon.png')}
+          source={resolveImage(product.imageUrl) ? { uri: resolveImage(product.imageUrl)! } : require('../../../assets/icon.png')}
           style={styles.image}
           resizeMode="cover"
         />
