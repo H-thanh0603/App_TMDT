@@ -6,7 +6,9 @@ import { useNavigation } from '@react-navigation/native';
 import { useAISearch } from '@/services/queries';
 import { ProductCard } from '@/components/ProductCard';
 import { Button } from '@/components/Button';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { radius, spacing, typography } from '@/theme/typography';
+import { AppIcon } from '@/components/AppIcon';
 
 const SUGGESTIONS = [
   'Đồ ăn sáng dưới 30k',
@@ -17,6 +19,8 @@ const SUGGESTIONS = [
 ];
 
 export function AISearchScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const nav = useNavigation<any>();
   const [query, setQuery] = useState('');
   const search = useAISearch();
@@ -29,8 +33,11 @@ export function AISearchScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>AI Search 🤖</Text>
+      <View style={[styles.header, { backgroundColor: colors.aiDark }]}>
+        <View style={styles.titleRow}>
+          <AppIcon name="search" size={24} color="#fff" />
+          <Text style={styles.title}>AI Search</Text>
+        </View>
         <Text style={styles.subtitle}>Tả nhu cầu bằng ngôn ngữ tự nhiên</Text>
       </View>
 
@@ -55,7 +62,7 @@ export function AISearchScreen() {
             {SUGGESTIONS.map((s) => (
               <TouchableOpacity key={s} style={styles.suggestion}
                 onPress={() => { setQuery(s); search.mutate(s); }}>
-                <Text style={styles.suggestionText}>💡 {s}</Text>
+                <Text style={styles.suggestionText}>{s}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -72,7 +79,7 @@ export function AISearchScreen() {
           <View style={{ paddingHorizontal: spacing.lg }}>
             {result.explanation && (
               <View style={styles.aiBubble}>
-                <Text style={styles.aiBubbleLabel}>{result.usedAI ? '🤖 AI hiểu yêu cầu' : '🔍 Tìm thông minh'}</Text>
+                <Text style={styles.aiBubbleLabel}>{result.usedAI ? 'AI hiểu yêu cầu' : 'Tìm thông minh'}</Text>
                 <Text style={styles.aiBubbleText}>{result.explanation}</Text>
               </View>
             )}
@@ -90,7 +97,7 @@ export function AISearchScreen() {
 
             {result.products.length === 0 && (
               <View style={styles.empty}>
-                <Text style={{ fontSize: 56 }}>🤔</Text>
+                <AppIcon name="search" size={56} color={colors.textMuted} />
                 <Text style={styles.emptyText}>Không tìm thấy sản phẩm phù hợp.{"\n"}Thử mô tả khác nhé.</Text>
               </View>
             )}
@@ -101,11 +108,12 @@ export function AISearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
-  header: { padding: spacing.lg, paddingBottom: spacing.sm },
-  title: { fontSize: typography.size['2xl'], fontWeight: typography.weight.bold, color: colors.text },
-  subtitle: { fontSize: typography.size.sm, color: colors.textSecondary, marginTop: 2 },
+  header: { padding: spacing.lg, paddingBottom: spacing.sm, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  title: { fontSize: typography.size['2xl'], fontWeight: typography.weight.bold, color: '#fff' },
+  subtitle: { fontSize: typography.size.sm, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
   searchBox: { flexDirection: 'row', gap: 8, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   input: {
     flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.base,
@@ -121,10 +129,10 @@ const styles = StyleSheet.create({
   loading: { alignItems: 'center', paddingTop: spacing['2xl'] },
   loadingText: { color: colors.textSecondary, marginTop: spacing.md },
   aiBubble: {
-    backgroundColor: colors.primaryLight, padding: spacing.base,
+    backgroundColor: colors.aiSoft, padding: spacing.base,
     borderRadius: radius.base, marginTop: spacing.base,
   },
-  aiBubbleLabel: { fontSize: typography.size.xs, fontWeight: typography.weight.bold, color: colors.primaryDark, marginBottom: 4 },
+  aiBubbleLabel: { fontSize: typography.size.xs, fontWeight: typography.weight.bold, color: colors.aiDark, marginBottom: 4 },
   aiBubbleText: { fontSize: typography.size.sm, color: colors.text, lineHeight: 20 },
   resultCount: { color: colors.textSecondary, marginVertical: spacing.md, fontSize: typography.size.sm },
   gridWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },

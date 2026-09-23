@@ -8,7 +8,15 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+function guardProd(script: string) {
+  // Q78: script HỦY dữ liệu — cấm tuyệt đối trên production.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(`${script} bị cấm trên production (xóa dữ liệu thật).`);
+  }
+}
+
 async function main() {
+  guardProd('purge-inactive-products');
   console.log('🧹 Purge inactive crawled products...');
 
   const inactive = await prisma.product.findMany({

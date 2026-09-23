@@ -9,20 +9,23 @@ import {
   useCart, useUpdateCartItem, useRemoveCartItem, useCreateOrder, useAddresses,
   useCreateVnpay, useCreateVietQr, useStoreConfig,
 } from '@/services/queries';
-import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 import { formatAddress, formatVnd } from '@/utils/format';
 import { resolveImage } from '@/services/api';
 import type { Address, PaymentMethod } from '@/types';
 
 type PayOption = Extract<PaymentMethod, 'COD' | 'VNPAY_SANDBOX' | 'VIETQR'>;
 
-const PLACEHOLDER = 'https://placehold.co/120x120/png?text=SP';
+// Q110: placeholder offline (không phụ thuộc placehold.co trên prod).
+const PLACEHOLDER: string | null = null;
 
 export function CartScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const nav = useNavigation<any>();
   const { data: cart, isLoading, isError, error, refetch, isFetching } = useCart();
   const { data: addresses = [] } = useAddresses();
@@ -175,7 +178,7 @@ export function CartScreen() {
       return (
         <SafeAreaView style={[styles.container, styles.center]}>
           <EmptyState
-            icon="🛒"
+            icon={<AppIcon name="cart" size={40} color={colors.primary} />}
             title="Giỏ hàng trống"
             description="Thêm sản phẩm để bắt đầu mua sắm"
             actionLabel="Khám phá sản phẩm"
@@ -201,7 +204,7 @@ export function CartScreen() {
         ListHeaderComponent={
           defaultAddress ? (
             <Pressable style={styles.addressCard} onPress={() => nav.navigate('Addresses')}>
-              <Text style={styles.addressIcon}>📍</Text>
+              <AppIcon name="pin" size={22} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.addressName}>{defaultAddress.recipient}</Text>
                 <Text style={styles.addressPhone}>{defaultAddress.phone}</Text>
@@ -211,17 +214,23 @@ export function CartScreen() {
             </Pressable>
           ) : (
             <Pressable style={styles.noAddressCard} onPress={() => nav.navigate('Addresses')}>
-              <Text style={styles.addressIcon}>⚠️</Text>
+              <AppIcon name="alert" size={22} color={colors.warning} />
               <Text style={styles.noAddressText}>Thêm địa chỉ giao hàng</Text>
             </Pressable>
           )
         }
         renderItem={({ item }) => {
           const price = Number(item.product?.salePrice ?? item.product?.price ?? (item as any).unitPrice ?? 0);
-          const img = resolveImage(item.product?.imageUrl) || PLACEHOLDER;
+          const img = resolveImage(item.product?.imageUrl) ?? PLACEHOLDER;
           return (
             <View style={styles.itemCard}>
-              <Image source={{ uri: img }} style={styles.itemImage} />
+              {img ? (
+                <Image source={{ uri: img }} style={styles.itemImage} />
+              ) : (
+                <View style={[styles.itemImage, { alignItems: 'center', justifyContent: 'center' }]}>
+                  <AppIcon name="cart" size={24} color={colors.textMuted} />
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemName} numberOfLines={2}>{item.product?.name ?? 'Sản phẩm'}</Text>
                 <Text style={styles.itemPrice}>{formatVnd(price)}</Text>
@@ -232,21 +241,23 @@ export function CartScreen() {
                       if (item.quantity <= 1) removeItem.mutate(item.product.id);
                       else updateItem.mutate({ productId: item.product.id, quantity: item.quantity - 1 });
                     }}
+                    accessibilityLabel="Giảm số lượng"
                   >
-                    <Text style={styles.qtyBtnText}>−</Text>
+                    <AppIcon name="minus" size={16} color={colors.primary} />
                   </Pressable>
                   <Text style={styles.qtyValue}>{item.quantity}</Text>
                   <Pressable
                     style={styles.qtyBtn}
                     onPress={() => updateItem.mutate({ productId: item.product.id, quantity: item.quantity + 1 })}
+                    accessibilityLabel="Tăng số lượng"
                   >
-                    <Text style={styles.qtyBtnText}>+</Text>
+                    <AppIcon name="plus" size={16} color={colors.primary} />
                   </Pressable>
                 </View>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Pressable onPress={() => removeItem.mutate(item.product.id)}>
-                  <Text style={styles.removeBtn}>×</Text>
+                <Pressable onPress={() => removeItem.mutate(item.product.id)} accessibilityLabel="Xóa khỏi giỏ">
+                  <AppIcon name="close" size={20} color={colors.danger} />
                 </Pressable>
                 <Text style={styles.itemSubtotal}>{formatVnd(price * item.quantity)}</Text>
               </View>
@@ -262,21 +273,21 @@ export function CartScreen() {
             style={[styles.payOption, paymentMethod === 'COD' && styles.payOptionActive]}
             onPress={() => setPaymentMethod('COD')}
           >
-            <Text style={styles.payEmoji}>💵</Text>
+            <AppIcon name="wallet" size={18} color={paymentMethod === 'COD' ? '#fff' : colors.text} />
             <Text style={[styles.payText, paymentMethod === 'COD' && { color: 'white' }]}>COD</Text>
           </Pressable>}
           {storeConfig?.payment?.vnpay?.enabled !== false && <Pressable
             style={[styles.payOption, paymentMethod === 'VNPAY_SANDBOX' && styles.payOptionActive]}
             onPress={() => setPaymentMethod('VNPAY_SANDBOX')}
           >
-            <Text style={styles.payEmoji}>🏦</Text>
+            <AppIcon name="truck" size={18} color={paymentMethod === 'VNPAY_SANDBOX' ? '#fff' : colors.text} />
             <Text style={[styles.payText, paymentMethod === 'VNPAY_SANDBOX' && { color: 'white' }]}>VNPay</Text>
           </Pressable>}
           {storeConfig?.payment?.bank?.enabled !== false && <Pressable
             style={[styles.payOption, paymentMethod === 'VIETQR' && styles.payOptionActive]}
             onPress={() => setPaymentMethod('VIETQR')}
           >
-            <Text style={styles.payEmoji}>📱</Text>
+            <AppIcon name="qr" size={18} color={paymentMethod === 'VIETQR' ? '#fff' : colors.text} />
             <Text style={[styles.payText, paymentMethod === 'VIETQR' && { color: 'white' }]}>VietQR</Text>
           </Pressable>}
         </View>
@@ -312,7 +323,7 @@ export function CartScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   center: { alignItems: 'center', justifyContent: 'center', padding: 24 },
   header: {
@@ -331,22 +342,21 @@ const styles = StyleSheet.create({
   exploreBtnText: { color: 'white', fontWeight: '700' },
   addressCard: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: 'white', padding: 14, borderRadius: 12, marginBottom: 12,
+    backgroundColor: colors.surface, padding: 14, borderRadius: 12, marginBottom: 12,
     borderLeftWidth: 4, borderLeftColor: colors.primary,
   },
-  addressIcon: { fontSize: 22 },
   addressName: { fontSize: 14, fontWeight: '700', color: colors.text },
   addressPhone: { fontSize: 12, color: colors.textMuted },
   addressText: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
   addressArrow: { fontSize: 22, color: colors.textTertiary },
   noAddressCard: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#FEF3C7', padding: 14, borderRadius: 12, marginBottom: 12,
+    backgroundColor: colors.goldSoft, padding: 14, borderRadius: 12, marginBottom: 12,
     borderLeftWidth: 4, borderLeftColor: colors.warning,
   },
-  noAddressText: { fontSize: 14, fontWeight: '700', color: '#92400E' },
+  noAddressText: { fontSize: 14, fontWeight: '700', color: colors.gold },
   itemCard: {
-    flexDirection: 'row', backgroundColor: 'white', padding: 12,
+    flexDirection: 'row', backgroundColor: colors.surface, padding: 12,
     borderRadius: 12, marginBottom: 8, gap: 12,
   },
   itemImage: { width: 70, height: 70, borderRadius: 10, backgroundColor: colors.bgAlt },
@@ -355,15 +365,14 @@ const styles = StyleSheet.create({
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
   qtyBtn: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: colors.bgAlt, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.primary,
   },
-  qtyBtnText: { fontSize: 16, fontWeight: '700', color: colors.text },
   qtyValue: { fontSize: 14, fontWeight: '700', minWidth: 20, textAlign: 'center' },
-  removeBtn: { fontSize: 22, color: colors.danger, fontWeight: '700', padding: 4 },
   itemSubtotal: { fontSize: 13, fontWeight: '800', color: colors.text, marginTop: 16 },
   bottomSheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: 'white', padding: 16, paddingBottom: 28,
+    backgroundColor: colors.surface, padding: 16, paddingBottom: 28,
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
     borderTopWidth: 1, borderTopColor: colors.border,
   },
@@ -374,7 +383,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10, alignItems: 'center', backgroundColor: colors.bgAlt,
   },
   payOptionActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  payEmoji: { fontSize: 16 },
   payText: { fontSize: 12, fontWeight: '700', color: colors.text, marginTop: 2 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   summaryLabel: { fontSize: 13, color: colors.textSecondary },

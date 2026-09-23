@@ -1,13 +1,33 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AIMode, AITaskType, AIProviderType } from '@prisma/client';
-import { ServiceUnavailableException } from '@nestjs/common';
 
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { DeepSeekProvider } from './providers/deepseek.provider';
 import { OpenAICompatibleProvider } from './providers/openai-compatible.provider';
 import { MockProvider } from './providers/mock.provider';
 import { AIRequest, AIResponse, ChatRequest, IAIProvider } from './interfaces/ai.interface';
+
+/**
+ * SEC-030 — vượt hạn mức AI. Khác với lỗi provider (được phép fallback sang mock),
+ * lỗi hạn mức phải trả về 429 cho client: fallback âm thầm sẽ che mất việc đốt tiền.
+ *
+ * (NestJS v10 chưa có TooManyRequestsException → dùng HttpException 429 trực tiếp.)
+ */
+export class AIQuotaExceededException extends HttpException {
+  constructor(scope: string) {
+    super(
+      `Đã đạt hạn mức sử dụng AI (${scope}). Vui lòng thử lại sau.`,
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
+  }
+}
 
 @Injectable()
 export class AIGatewayService {
@@ -40,10 +60,13 @@ export class AIGatewayService {
     }
 
     // ONLINE / HYBRID -> thử primary provider
-    const providerId = req.providerId ?? taskConfig?.primaryProviderId;
+    const providerId = req.providerId ?? taskConfig?.primaryProviderId ?? null;
+    // Q169: chặn prompt-injection thô — giới hạn độ dài input/history trước khi gửi LLM.
+    req = this.sanitizeAIInput(req);
     const primaryType = await this.resolveProviderType(providerId);
     try {
-      if (providerId) await this.assertUsageAllowed(providerId);
+      // Kiểm tra hạn mức theo cả 3 phạm vi: global / provider / user (SEC-030).
+      await this.assertUsageAllowed(providerId, req.userId);
       const provider = this.getProvider(primaryType);
       const chatReq: ChatRequest = {
         messages: this.buildMessages(req, taskConfig?.systemPrompt),
@@ -58,6 +81,8 @@ export class AIGatewayService {
       await this.logAI(req, response, providerId);
       return response;
     } catch (err: any) {
+      // Hạn mức bị vượt KHÔNG được fallback âm thầm — trả thẳng 429 cho client.
+      if (err instanceof AIQuotaExceededException) throw err;
       this.logger.warn(`Primary provider failed, fallback to mock: ${err.message}`);
       const fallback = await this.executeMock(req, start, AIMode.MOCK, err.message);
       await this.logAI(req, fallback, providerId);
@@ -229,8 +254,9 @@ export class AIGatewayService {
           model: res.model,
           mode: res.mode,
           status: res.error ? 'fallback' : 'success',
-          inputSummary: req.userPrompt.slice(0, 500),
-          outputSummary: res.text?.slice(0, 500),
+          // Q64/Q172: log AI chỉ giữ 200 ký tự đầu — đủ debug, không giữ prompt/PII thô.
+          inputSummary: req.userPrompt.slice(0, 200),
+          outputSummary: res.text?.slice(0, 200),
           errorMessage: res.error,
           latencyMs: res.latencyMs,
           promptTokens: res.tokensUsed?.prompt,
@@ -243,9 +269,11 @@ export class AIGatewayService {
           refId: req.refId,
         },
       });
-      if (providerId) {
+      if (providerId || req.userId) {
+        // Tăng bộ đếm cho MỌI phạm vi liên quan (global / provider / user) để trần
+        // chi phí hoạt động đúng (trước đây chỉ tăng cho provider).
         await this.prisma.aIUsageLimit.updateMany({
-          where: { scope: `provider:${providerId}` },
+          where: { scope: { in: this.usageScopes(providerId ?? null, req.userId) } },
           data: {
             currentMonthCount: { increment: 1 },
             currentMonthCost: { increment: res.costUsd ?? 0 },
@@ -257,18 +285,82 @@ export class AIGatewayService {
     }
   }
 
-  private async assertUsageAllowed(providerId: string): Promise<void> {
-    const limit = await this.prisma.aIUsageLimit.findUnique({ where: { scope: `provider:${providerId}` } });
-    if (!limit?.isEnforced) return;
+  /** Các phạm vi hạn mức áp dụng cho một lượt gọi AI. */
+  private usageScopes(providerId: string | null, userId?: string | null): string[] {
+    const scopes = ['global'];
+    if (providerId) scopes.push(`provider:${providerId}`);
+    if (userId) scopes.push(`user:${userId}`);
+    return scopes;
+  }
+
+  /**
+   * SEC-030: thực thi hạn mức theo global + provider + user (trước đây chỉ có provider,
+   * nên một tài khoản khách có thể đốt hết credit của shop mà không bị chặn).
+   */
+  private async assertUsageAllowed(providerId: string | null, userId?: string): Promise<void> {
+    const scopes = this.usageScopes(providerId, userId);
+    const limits = await this.prisma.aIUsageLimit.findMany({
+      where: { scope: { in: scopes }, isEnforced: true },
+    });
+    for (const limit of limits) {
+      await this.enforceLimit(limit);
+    }
+  }
+
+  // Q169: giới hạn input/history — LLM chỉ nhận tối đa N ký tự, cắt bớt thay vì từ chối
+  // để UX không gãy; system prompt của server luôn thắng, user không ghi đè được.
+  private sanitizeAIInput(req: AIRequest): AIRequest {
+    const MAX_PROMPT = 4000;
+    const MAX_HISTORY = 10;
+    const clean = (s: string) =>
+      s
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+        .slice(0, MAX_PROMPT);
+    const out: AIRequest = {
+      ...req,
+      userPrompt: clean(String(req.userPrompt ?? '')),
+      systemPrompt: req.systemPrompt ? clean(req.systemPrompt) : req.systemPrompt,
+    };
+    // history không thuộc AIRequest — cắt tại controller; đây chỉ phòng thủ nếu ai đó gắn thêm.
+    const h = (req as unknown as Record<string, unknown>).history;
+    if (Array.isArray(h)) (out as unknown as Record<string, unknown>).history = h.slice(-MAX_HISTORY);
+    return out;
+  }
+
+  /** Áp dụng 1 bản ghi hạn mức: reset theo tháng nếu cần, sau đó chặn nếu vượt trần. */
+  private async enforceLimit(limit: {
+    id: string;
+    scope: string;
+    monthlyRequestLimit: number | null;
+    monthlyCostLimitUsd: unknown;
+    currentMonthCount: number;
+    currentMonthCost: unknown;
+    resetMonthAt: Date | null;
+  }): Promise<void> {
     const now = new Date();
     const reset = limit.resetMonthAt;
-    if (!reset || reset.getUTCFullYear() !== now.getUTCFullYear() || reset.getUTCMonth() !== now.getUTCMonth()) {
-      await this.prisma.aIUsageLimit.update({ where: { id: limit.id }, data: { currentMonthCount: 0, currentMonthCost: 0, resetMonthAt: now } });
+    if (
+      !reset ||
+      reset.getUTCFullYear() !== now.getUTCFullYear() ||
+      reset.getUTCMonth() !== now.getUTCMonth()
+    ) {
+      await this.prisma.aIUsageLimit.update({
+        where: { id: limit.id },
+        data: { currentMonthCount: 0, currentMonthCost: 0, resetMonthAt: now },
+      });
       return;
     }
-    if ((limit.monthlyRequestLimit != null && limit.monthlyRequestLimit > 0 && limit.currentMonthCount >= limit.monthlyRequestLimit)
-      || (Number(limit.monthlyCostLimitUsd ?? 0) > 0 && Number(limit.currentMonthCost) >= Number(limit.monthlyCostLimitUsd))) {
-      throw new ServiceUnavailableException('Provider đã đạt hạn mức tháng');
+
+    const overCount =
+      limit.monthlyRequestLimit != null &&
+      limit.monthlyRequestLimit > 0 &&
+      limit.currentMonthCount >= limit.monthlyRequestLimit;
+    const overCost =
+      Number(limit.monthlyCostLimitUsd ?? 0) > 0 &&
+      Number(limit.currentMonthCost) >= Number(limit.monthlyCostLimitUsd);
+
+    if (overCount || overCost) {
+      throw new AIQuotaExceededException(limit.scope);
     }
   }
 }

@@ -8,10 +8,13 @@ import { AIGatewayService } from './ai-gateway.service';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { assertSafeHttpUrl } from '@/common/utils/url-safety';
 
+const OCR_REQUEST_TIMEOUT_MS = 70_000;
+
 @Injectable()
 export class OCRClientService {
   private readonly logger = new Logger(OCRClientService.name);
   private client: AxiosInstance;
+  private readonly apiKey?: string;
 
   constructor(
     private cfg: ConfigService,
@@ -19,7 +22,21 @@ export class OCRClientService {
     private prisma: PrismaService,
   ) {
     const baseURL = this.cfg.get<string>('OCR_SERVICE_URL', 'http://localhost:5001');
-    this.client = axios.create({ baseURL, timeout: 60_000 });
+    // SEC-OCR-1 (phía backend): gửi khóa chia sẻ để OCR service xác thực (nếu đã đặt).
+    this.apiKey = this.cfg.get<string>('OCR_API_KEY') || undefined;
+    this.client = axios.create({
+      baseURL,
+      timeout: OCR_REQUEST_TIMEOUT_MS,
+      // Q88: timeout kết nối + retry 1 lần có backoff — chống request treo khi OCR chậm.
+      headers: this.apiKey ? { 'X-OCR-Key': this.apiKey } : {},
+    });
+    this.client.interceptors.response.use(undefined, async (err) => {
+      const cfgReq: any = err.config;
+      if (!cfgReq || cfgReq.__retried || err.response?.status === 401) throw err;
+      cfgReq.__retried = true;
+      await new Promise((r) => setTimeout(r, 500 + Math.random() * 500));
+      return this.client.request(cfgReq);
+    });
   }
 
   async parseReceipt(imageUrl: string, engine: OCREngine): Promise<OCRParseResult> {

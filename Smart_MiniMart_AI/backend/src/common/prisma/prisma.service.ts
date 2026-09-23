@@ -15,8 +15,16 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit() {
-    await this.$connect();
-    this.logger.log('Prisma connected to database');
+    // Q144: readiness tách khỏi boot — /health/ready trả 503 khi DB chết,
+    // app vẫn boot để orchestrator + health check hoạt động (không crash boot vì DB sleep).
+    try {
+      await this.$connect();
+      this.logger.log('Prisma connected to database');
+    } catch (err) {
+      this.logger.error(
+        `Prisma connect lúc boot thất bại — /health/ready sẽ 503 tới khi DB sống: ${(err as Error).message}`,
+      );
+    }
   }
 
   async onModuleDestroy() {

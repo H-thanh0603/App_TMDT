@@ -11,7 +11,8 @@ import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 import { formatVnd } from '@/utils/format';
 import { resolveImage } from '@/services/api';
 
@@ -59,6 +60,8 @@ function slugify(input: string): string {
 }
 
 export function AdminProductsScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const [search, setSearch] = useState('');
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all');
@@ -204,7 +207,7 @@ export function AdminProductsScreen() {
       </View>
 
       <View style={styles.searchWrap}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <AppIcon name="search" size={16} color={colors.textMuted} />
         <TextInput
           value={search}
           onChangeText={setSearch}
@@ -229,7 +232,7 @@ export function AdminProductsScreen() {
           onPress={() => setCategoryId(undefined)}
         >
           <Text style={[styles.catChipText, !categoryId && styles.catChipTextActive]}>
-            📋 Tất cả danh mục
+            Tất cả danh mục
           </Text>
         </Pressable>
         {categories.map((c: any) => (
@@ -272,7 +275,7 @@ export function AdminProductsScreen() {
                         {imageUrl ? (
                           <Image source={{ uri: imageUrl }} style={styles.img} />
                         ) : (
-                          <Text style={styles.imgPlaceholder}>📦</Text>
+                          <AppIcon name="box" size={28} color={colors.textMuted} />
                         )}
                         {item.isFeatured && (
                           <View style={styles.featuredBadge}>
@@ -309,7 +312,7 @@ export function AdminProductsScreen() {
                 }}
                 ListEmptyComponent={
                   <EmptyState
-                    icon="📦"
+                    icon={<AppIcon name="box" size={40} color={colors.roleAdmin} />}
                     title="Không có sản phẩm"
                     description="Thêm sản phẩm mới để bắt đầu bán."
                     actionLabel="Thêm sản phẩm"
@@ -377,6 +380,8 @@ function Field({
 }: {
   label: string; value: string; onChange: (v: string) => void; keyboardType?: any;
 }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={{ marginBottom: 10 }}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -392,9 +397,11 @@ function Field({
 }
 
 function FilterChip({ label, count, active, variant, onPress }: any) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const bg =
     variant === 'warning' ? colors.goldSoft :
-    variant === 'danger' ? '#FEE2E2' :
+    variant === 'danger' ? colors.dangerSoft :
     colors.bgAlt;
   const activeBg =
     variant === 'warning' ? colors.gold :
@@ -411,12 +418,12 @@ function FilterChip({ label, count, active, variant, onPress }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row', padding: 16, paddingBottom: 8,
-    backgroundColor: 'white', alignItems: 'center',
+    backgroundColor: colors.surface, alignItems: 'center',
   },
   title: { fontSize: 22, fontWeight: '800', color: colors.text },
   subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
@@ -438,7 +445,7 @@ const styles = StyleSheet.create({
   filterChipText: { fontSize: 12, fontWeight: '700', color: colors.text },
   filterChipCount: { fontSize: 11, fontWeight: '600', color: colors.textMuted, marginTop: 2 },
   catScroll: {
-    backgroundColor: 'white', maxHeight: 50, marginTop: 10,
+    backgroundColor: colors.surface, maxHeight: 50, marginTop: 10,
     paddingVertical: 8, paddingHorizontal: 12,
   },
   catChip: {
@@ -449,7 +456,7 @@ const styles = StyleSheet.create({
   catChipText: { fontSize: 12, color: colors.text, fontWeight: '600' },
   catChipTextActive: { color: 'white' },
   productCard: {
-    flexDirection: 'row', backgroundColor: 'white', borderRadius: 12,
+    flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 12,
     padding: 12, marginBottom: 8, gap: 12,
     shadowColor: colors.shadow, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
   },
@@ -487,7 +494,7 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end',
   },
   modalCard: {
-    backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
     padding: 20, maxHeight: '92%',
   },
   modalTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 12 },

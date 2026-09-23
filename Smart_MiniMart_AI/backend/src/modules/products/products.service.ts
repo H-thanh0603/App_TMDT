@@ -11,13 +11,16 @@ export class ProductsService {
 
   constructor(@Inject(PRODUCT_REPOSITORY) private readonly products: IProductRepository) {}
 
-  async list(query: ProductQueryDto) {
+  async list(query: ProductQueryDto, opts: { allowInactive?: boolean } = {}) {
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 20, 100);
     const skip = (page - 1) * limit;
 
-    const where: Prisma.ProductWhereInput =
-      query.includeInactive === 'true' ? {} : { isActive: true };
+    // SEC-022: `includeInactive` chỉ có hiệu lực với STORE_ADMIN/STAFF.
+    // Trước đây endpoint public nhận cờ này từ bất kỳ ai → lộ sản phẩm đã ngừng bán.
+    const includeInactive = query.includeInactive === 'true' && opts.allowInactive === true;
+
+    const where: Prisma.ProductWhereInput = includeInactive ? {} : { isActive: true };
 
     if (query.search) {
       where.OR = [
@@ -59,9 +62,13 @@ export class ProductsService {
     };
   }
 
-  async findOne(idOrSlug: string) {
+  async findOne(idOrSlug: string, opts: { allowInactive?: boolean } = {}) {
     const product = await this.products.findFirst({
-      where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+      where: {
+        OR: [{ id: idOrSlug }, { slug: idOrSlug }],
+        // SEC-022: khách ẩn danh không được xem sản phẩm đã ngừng bán
+        ...(opts.allowInactive ? {} : { isActive: true }),
+      },
       include: {
         category: true,
         images: { orderBy: { sortOrder: 'asc' } },
@@ -82,9 +89,11 @@ export class ProductsService {
   }
 
   async findFeatured(limit = 10) {
+    // Q84/Q115: clamp NaN/âm/vô hạn về mặc định an toàn.
+    const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.min(limit, 100) : 10;
     return this.products.findMany({
       where: { isActive: true, isFeatured: true, stock: { gt: 0 } },
-      take: limit,
+      take: safeLimit,
       orderBy: { soldCount: 'desc' },
       include: { category: { select: { name: true, slug: true } } },
     });

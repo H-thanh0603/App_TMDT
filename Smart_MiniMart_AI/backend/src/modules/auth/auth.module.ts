@@ -18,7 +18,9 @@ import { RolesGuard } from '@/common/guards/roles.guard';
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => ({
         secret: cfg.get<string>('JWT_ACCESS_SECRET'),
-        signOptions: { expiresIn: cfg.get<string>('JWT_ACCESS_EXPIRES', '15m') },
+        signOptions: {
+          expiresIn: cfg.get<string>('JWT_ACCESS_EXPIRES', '15m') as `${number}${'s' | 'm' | 'h' | 'd'}`,
+        },
       }),
     }),
   ],

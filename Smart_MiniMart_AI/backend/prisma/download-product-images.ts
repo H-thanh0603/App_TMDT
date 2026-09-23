@@ -134,6 +134,9 @@ async function placeholder(sku: string, dest: string): Promise<void> {
 }
 
 async function main() {
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DATA_SEED !== 'true') {
+    throw new Error('Download ảnh seed bị cấm trên production (đặt ALLOW_DATA_SEED=true nếu đã duyệt).');
+  }
   console.log('📥 Downloading product images →', imgDir);
   fs.mkdirSync(imgDir, { recursive: true });
 

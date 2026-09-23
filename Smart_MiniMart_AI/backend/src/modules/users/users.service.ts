@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -148,12 +148,35 @@ export class UsersService {
         createdAt: true,
       },
     });
+    // Khách hàng cần giỏ hàng ngay khi được tạo (trước đây chỉ có luồng register làm việc này).
+    if (user.role === 'CUSTOMER') {
+      await this.prisma.cart.create({ data: { userId: user.id } }).catch(() => undefined);
+    }
     return user;
   }
 
-  async updateStaff(id: string, dto: any) {
+  async updateStaff(id: string, dto: any, actorId?: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+
+    // SEC-024: không cho admin tự hạ quyền/tự khoá chính mình (chống tự bắn vào chân),
+    // và luôn phải giữ ít nhất 1 STORE_ADMIN hoạt động (chống "khoá cửa" hệ thống).
+    if (actorId && actorId === id) {
+      if (dto.role && dto.role !== user.role) {
+        throw new ForbiddenException('Không thể tự thay đổi vai trò của chính mình');
+      }
+      if (dto.status && dto.status !== 'ACTIVE') {
+        throw new ForbiddenException('Không thể tự vô hiệu hoá tài khoản của chính mình');
+      }
+    }
+
+    const losingAdmin =
+      user.role === 'STORE_ADMIN' &&
+      ((dto.role && dto.role !== 'STORE_ADMIN') || (dto.status && dto.status !== 'ACTIVE'));
+    if (losingAdmin) {
+      await this.assertNotLastAdmin(id);
+    }
+
     return this.prisma.user.update({
       where: { id },
       data: dto,
@@ -169,14 +192,66 @@ export class UsersService {
     });
   }
 
-  async deactivateUser(id: string) {
+  async deactivateUser(id: string, actorId?: string) {
+    if (actorId && actorId === id) {
+      throw new ForbiddenException('Không thể tự vô hiệu hoá tài khoản của chính mình');
+    }
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+    if (user.role === 'STORE_ADMIN') {
+      await this.assertNotLastAdmin(id);
+    }
     return this.prisma.user.update({
       where: { id },
       data: { status: 'SUSPENDED' },
       select: { id: true, email: true, status: true },
     });
+  }
+
+  // Q69: xuất dữ liệu user — hồ sơ + địa chỉ + đơn (không kèm passwordHash/token).
+  async exportUserData(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true, email: true, phone: true, fullName: true, avatarUrl: true,
+        role: true, status: true, loyaltyPoints: true, isVip: true,
+        createdAt: true, addresses: true,
+        orders: { select: { id: true, orderNumber: true, status: true, totalAmount: true, createdAt: true } },
+        reviews: { select: { id: true, productId: true, rating: true, comment: true, createdAt: true } },
+      },
+    });
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+    return { exportedAt: new Date().toISOString(), user };
+  }
+
+  // Q62: anonymize — ẩn danh PII, thu hồi phiên, giữ đơn hàng dạng không định danh.
+  async anonymizeUser(id: string, actorId?: string) {
+    if (actorId && actorId === id)
+      throw new ForbiddenException('Không thể anonymize chính tài khoản mình');
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+    if (user.role === 'STORE_ADMIN') await this.assertNotLastAdmin(id);
+    const anon = `deleted_${id.slice(0, 8)}`;
+    await this.prisma.refreshToken.updateMany({ where: { userId: id }, data: { revoked: true } });
+    await this.prisma.address.deleteMany({ where: { userId: id } });
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        email: `${anon}@deleted.local`, phone: null, fullName: 'Đã xóa',
+        avatarUrl: null, status: 'SUSPENDED', loyaltyPoints: 0, isVip: false,
+      },
+      select: { id: true, status: true },
+    });
+  }
+
+  /** Đảm bảo sau thao tác vẫn còn ít nhất 1 STORE_ADMIN ACTIVE khác. */
+  private async assertNotLastAdmin(excludeUserId: string): Promise<void> {
+    const remaining = await this.prisma.user.count({
+      where: { role: 'STORE_ADMIN', status: 'ACTIVE', id: { not: excludeUserId } },
+    });
+    if (remaining === 0) {
+      throw new ForbiddenException('Hệ thống phải còn ít nhất một STORE_ADMIN đang hoạt động');
+    }
   }
 
   async adjustLoyalty(id: string, delta: number, reason?: string) {

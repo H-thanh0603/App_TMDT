@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 import { api, unwrap } from '@/services/api';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -42,6 +43,8 @@ const useDeleteCategory = () => {
 };
 
 export function AdminCategoriesScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { data: cats = [], isLoading, isError, refetch, isFetching } = useAdminCategories();
   const create = useCreateCategory();
   const update = useUpdateCategory();
@@ -131,7 +134,7 @@ export function AdminCategoriesScreen() {
                 renderItem={({ item }) => (
                   <View style={styles.card}>
                     <View style={styles.icon}>
-                      <Text style={{ fontSize: 22 }}>📁</Text>
+                      <AppIcon name="grid" size={22} color={colors.roleAdmin} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.catName}>{item.name}</Text>
@@ -150,7 +153,7 @@ export function AdminCategoriesScreen() {
                 )}
                 ListEmptyComponent={
                   <EmptyState
-                    icon="🗂️"
+                    icon={<AppIcon name="grid" size={40} color={colors.roleAdmin} />}
                     title="Chưa có danh mục"
                     description="Thêm danh mục để tổ chức sản phẩm."
                     actionLabel="Thêm danh mục"
@@ -205,18 +208,18 @@ export function AdminCategoriesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 16, backgroundColor: 'white',
+    padding: 16, backgroundColor: colors.surface,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   title: { fontSize: 20, fontWeight: '800', color: colors.text },
   addBtn: { backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   addBtnText: { color: 'white', fontWeight: '700' },
   card: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: 'white',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
     padding: 12, marginBottom: 8, borderRadius: 12, gap: 10,
   },
   icon: {
@@ -235,12 +238,12 @@ const styles = StyleSheet.create({
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
   },
   modalTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
   label: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 6, marginTop: 8 },
   input: {
-    backgroundColor: 'white', borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: 10, padding: 12, fontSize: 15, color: colors.text,
   },
 });

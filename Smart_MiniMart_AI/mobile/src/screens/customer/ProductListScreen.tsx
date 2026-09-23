@@ -10,7 +10,8 @@ import { ProductCard } from '@/components/ProductCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ProductGridSkeleton } from '@/components/Skeleton';
-import { colors } from '@/theme';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 import type { Product } from '@/types';
 
 const SORT_OPTIONS = [
@@ -29,6 +30,8 @@ const PRICE_PRESETS = [
 ];
 
 export function ProductListScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const nav = useNavigation<any>();
   const route = useRoute<any>();
   const initialCategoryId = route.params?.categoryId;
@@ -86,7 +89,7 @@ export function ProductListScreen() {
       {/* Search + Filter row */}
       <View style={styles.topBar}>
         <View style={styles.searchWrap}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <AppIcon name="search" size={16} color={colors.textMuted} />
           <TextInput
             value={search}
             onChangeText={(v) => { setSearch(v); setPage(1); }}
@@ -99,7 +102,7 @@ export function ProductListScreen() {
           style={[styles.filterBtn, activeFilters > 0 && styles.filterBtnActive]}
           onPress={() => setFilterModalOpen(true)}
         >
-          <Text style={styles.filterIcon}>⚙</Text>
+          <AppIcon name="cog" size={20} color={activeFilters > 0 ? '#fff' : colors.text} />
           {activeFilters > 0 && (
             <View style={styles.filterDot}>
               <Text style={styles.filterDotText}>{activeFilters}</Text>
@@ -166,7 +169,7 @@ export function ProductListScreen() {
                 )}
                 ListEmptyComponent={
                   <EmptyState
-                    icon="📦"
+                    icon={<AppIcon name="box" size={40} color={colors.primary} />}
                     title="Không tìm thấy sản phẩm"
                     description={
                       activeFilters > 0 || search
@@ -228,6 +231,8 @@ function FilterModal({
   open, onClose, categories, categoryId, onCategoryChange,
   pricePreset, onPriceChange, inStockOnly, onInStockChange, onReset,
 }: any) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <Modal visible={open} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -291,7 +296,7 @@ function FilterModal({
             onPress={() => onInStockChange(!inStockOnly)}
           >
             <View style={[styles.checkbox, inStockOnly && styles.checkboxActive]}>
-              {inStockOnly && <Text style={styles.checkboxTick}>✓</Text>}
+              {inStockOnly && <AppIcon name="check" size={16} color="#fff" />}
             </View>
             <Text style={styles.checkLabel}>Chỉ hàng còn trong kho</Text>
           </Pressable>
@@ -307,18 +312,17 @@ function FilterModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   topBar: {
     flexDirection: 'row', gap: 8, padding: 12,
-    backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: colors.border,
+    backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   searchWrap: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.bgAlt, borderRadius: 10, paddingHorizontal: 12, gap: 6,
   },
-  searchIcon: { fontSize: 14 },
   searchInput: { flex: 1, paddingVertical: 10, fontSize: 14, color: colors.text },
   filterBtn: {
     width: 44, height: 44, borderRadius: 10,
@@ -327,7 +331,6 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   filterBtnActive: { backgroundColor: colors.primary },
-  filterIcon: { fontSize: 20 },
   filterDot: {
     position: 'absolute', top: 4, right: 4,
     width: 18, height: 18, borderRadius: 9,
@@ -335,7 +338,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   filterDotText: { color: 'white', fontSize: 10, fontWeight: '800' },
-  chipScroll: { backgroundColor: 'white', paddingVertical: 8, maxHeight: 48 },
+  chipScroll: { backgroundColor: colors.surface, paddingVertical: 8, maxHeight: 48 },
   chip: {
     paddingHorizontal: 14, paddingVertical: 7, marginHorizontal: 4,
     borderRadius: 16, backgroundColor: colors.bgAlt, height: 32,
@@ -365,7 +368,7 @@ const styles = StyleSheet.create({
   },
   pageBtn: {
     paddingHorizontal: 16, paddingVertical: 10,
-    backgroundColor: 'white', borderRadius: 10,
+    backgroundColor: colors.surface, borderRadius: 10,
     borderWidth: 1, borderColor: colors.border,
   },
   pageBtnDisabled: { opacity: 0.4 },
@@ -374,14 +377,14 @@ const styles = StyleSheet.create({
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
   },
   modalTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
   filterLabel: { fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 10 },
   filterGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   filterChip: {
     paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10,
-    backgroundColor: 'white', borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
   },
   filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   filterChipText: { color: colors.text, fontWeight: '600', fontSize: 13 },
@@ -396,11 +399,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   checkboxActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  checkboxTick: { color: 'white', fontWeight: '900' },
   checkLabel: { fontSize: 14, color: colors.text, fontWeight: '600' },
   modalFooter: {
     padding: 16, borderTopWidth: 1, borderTopColor: colors.border,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
   },
   applyBtn: {
     backgroundColor: colors.primary, padding: 14,

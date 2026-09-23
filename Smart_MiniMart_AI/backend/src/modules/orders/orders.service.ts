@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
-import { OrderStatus, PaymentMethod, Prisma, PromotionType, Role } from '@prisma/client';
+import { OrderStatus, PaymentMethod, PaymentStatus, Prisma, PromotionType, Role } from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
@@ -293,10 +293,27 @@ export class OrdersService {
     const data: Prisma.OrderUpdateInput = { status: dto.status };
     if (dto.status === OrderStatus.CONFIRMED) data.confirmedAt = new Date();
     if (dto.status === OrderStatus.DELIVERING) data.deliveredAt = new Date();
-    if (dto.status === OrderStatus.COMPLETED) data.completedAt = new Date();
+    if (dto.status === OrderStatus.COMPLETED) {
+      // SEC-025: đơn trả trước (VNPay/BANK) chưa thanh toán thì KHÔNG được hoàn tất —
+      // nếu không sẽ ghi nhận doanh thu + điểm thưởng cho đơn chưa có tiền.
+      if (
+        order.paymentMethod !== PaymentMethod.COD &&
+        (order.paymentStatus === PaymentStatus.UNPAID ||
+          order.paymentStatus === PaymentStatus.FAILED)
+      ) {
+        throw new BadRequestException(
+          'Đơn chưa thanh toán — cần xác nhận thanh toán trước khi hoàn tất đơn',
+        );
+      }
+      data.completedAt = new Date();
+    }
     if (dto.status === OrderStatus.CANCELED) {
       data.canceledAt = new Date();
       if (dto.reason) data.cancelReason = dto.reason;
+      // Đơn đã thu tiền mà bị huỷ → đánh dấu REFUNDED để kế toán xử lý hoàn tiền.
+      if (order.paymentStatus === PaymentStatus.PAID) {
+        data.paymentStatus = PaymentStatus.REFUNDED;
+      }
     }
 
     const updated = await this.repo.runInTransaction(async (tx) => {

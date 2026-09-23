@@ -8,18 +8,21 @@ import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { formatVnd } from '@/utils/format';
 
 type Tab = 'expiring' | 'slow' | 'restock';
 
-const TABS: Array<{ key: Tab; label: string; emoji: string }> = [
-  { key: 'expiring', label: 'Cận date', emoji: '⏰' },
-  { key: 'slow', label: 'Bán chậm', emoji: '📉' },
-  { key: 'restock', label: 'Cần nhập', emoji: '📥' },
+const TABS: Array<{ key: Tab; label: string; icon: AppIconName }> = [
+  { key: 'expiring', label: 'Cận date', icon: 'clock' },
+  { key: 'slow', label: 'Bán chậm', icon: 'chart' },
+  { key: 'restock', label: 'Cần nhập', icon: 'truck' },
 ];
 
 export function AdminInventoryScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const [tab, setTab] = useState<Tab>('expiring');
   const expiring = useExpiringProducts(30);
   const slow = useSlowMoving();
@@ -45,7 +48,7 @@ export function AdminInventoryScreen() {
         {TABS.map((t) => (
           <Pressable key={t.key} onPress={() => setTab(t.key)}
             style={[styles.tab, tab === t.key && styles.tabActive]}>
-            <Text style={styles.tabEmoji}>{t.emoji}</Text>
+            <AppIcon name={t.icon} size={14} color={colors.textSecondary} />
             <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
           </Pressable>
         ))}
@@ -83,7 +86,7 @@ export function AdminInventoryScreen() {
           )}
           ListEmptyComponent={
             <EmptyState
-              icon="✅"
+              icon={<AppIcon name="check" size={40} color={colors.success} />}
               title="Không có hàng cận date"
               description="Không có sản phẩm sắp hết hạn trong 30 ngày."
               actionLabel="Tải lại"
@@ -115,7 +118,7 @@ export function AdminInventoryScreen() {
           )}
           ListEmptyComponent={
             <EmptyState
-              icon="📈"
+              icon={<AppIcon name="chart" size={40} color={colors.roleAdmin} />}
               title="Không có hàng bán chậm"
               description="Tất cả sản phẩm đang xoay vòng ổn."
               actionLabel="Tải lại"
@@ -139,7 +142,7 @@ export function AdminInventoryScreen() {
                   Còn {item.currentStock}/{item.maxStock} • Bán/ngày: {item.dailyRate}
                 </Text>
                 <Text style={styles.suggestion}>
-                  💡 Đề xuất nhập: {item.suggestedRestock} đơn vị
+                  Đề xuất nhập: {item.suggestedRestock} đơn vị
                 </Text>
               </View>
               <Badge
@@ -151,7 +154,7 @@ export function AdminInventoryScreen() {
           )}
           ListEmptyComponent={
             <EmptyState
-              icon="📦"
+              icon={<AppIcon name="box" size={40} color={colors.roleAdmin} />}
               title="Tồn kho ổn"
               description="Chưa cần nhập thêm hàng."
               actionLabel="Tải lại"
@@ -165,7 +168,7 @@ export function AdminInventoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   header: { padding: 20, paddingBottom: 8 },
   title: { fontSize: 20, fontWeight: '800', color: colors.text },

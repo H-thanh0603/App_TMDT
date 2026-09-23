@@ -5,7 +5,8 @@ import { radius, spacing, typography } from '@/theme/typography';
 import { Button } from './Button';
 
 interface Props {
-  icon?: string;
+  icon?: string | React.ReactNode;
+  tone?: 'primary' | 'ai' | 'gold';
   title: string;
   description?: string;
   action?: React.ReactNode;
@@ -16,6 +17,7 @@ interface Props {
 
 export function EmptyState({
   icon = '📭',
+  tone = 'primary',
   title,
   description,
   action,
@@ -24,6 +26,7 @@ export function EmptyState({
   actionVariant = 'primary',
 }: Props) {
   const { colors } = useTheme();
+  const toneBg = tone === 'ai' ? colors.aiSoft : tone === 'gold' ? colors.goldSoft : colors.primarySoft;
   const cta =
     action ??
     (actionLabel && onAction ? (
@@ -32,8 +35,8 @@ export function EmptyState({
 
   return (
     <View style={styles.wrap}>
-      <View style={[styles.iconCircle, { backgroundColor: colors.primarySoft }]}>
-        <Text style={styles.icon}>{icon}</Text>
+      <View style={[styles.iconCircle, { backgroundColor: toneBg }]}>
+        {typeof icon === 'string' ? <Text style={styles.icon}>{icon}</Text> : icon}
       </View>
       <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       {description ? <Text style={[styles.desc, { color: colors.textMuted }]}>{description}</Text> : null}

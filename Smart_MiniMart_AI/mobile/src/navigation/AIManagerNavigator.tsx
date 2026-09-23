@@ -1,7 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { AppIcon, type AppIconName } from '@/components/AppIcon';
 
 import { AIControlCenterScreen } from '@/screens/ai-manager/AIControlCenterScreen';
 import { AIProvidersScreen } from '@/screens/ai-manager/AIProvidersScreen';
@@ -24,10 +24,10 @@ function AITabs() {
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         tabBarLabelStyle: { fontSize: 11 },
         tabBarIcon: ({ color, size }) => {
-          const icon: Record<string, string> = {
-            Center: '🎛️', Providers: '🔌', Logs: '📜', Profile: '👤',
+          const icon: Record<string, AppIconName> = {
+            Center: 'robot', Providers: 'cog', Logs: 'clock', Profile: 'user',
           };
-          return <Text style={{ fontSize: size, color }}>{icon[route.name] ?? '•'}</Text>;
+          return <AppIcon name={icon[route.name] ?? 'help'} size={size} color={color} />;
         },
       })}
     >

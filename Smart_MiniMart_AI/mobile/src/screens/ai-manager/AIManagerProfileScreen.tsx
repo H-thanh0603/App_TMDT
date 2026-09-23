@@ -3,10 +3,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/auth.store';
 import { Button } from '@/components/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { radius, spacing, typography } from '@/theme/typography';
 import { useNavigation } from '@react-navigation/native';
 
 export function AIManagerProfileScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { user, logout } = useAuthStore();
   const nav = useNavigation<any>();
 
@@ -74,7 +77,7 @@ export function AIManagerProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   header: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 12, backgroundColor: colors.surface },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.roleAiManager, alignItems: 'center', justifyContent: 'center' },

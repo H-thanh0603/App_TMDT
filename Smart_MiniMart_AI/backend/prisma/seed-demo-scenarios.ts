@@ -24,6 +24,10 @@ const ORDER_PREFIX = 'DEMO-SMM-';
 const RECEIPT_PREFIX = 'DEMO-IR-';
 
 async function main() {
+  // Q78: chặn cứng seed demo trên production — demo data chỉ cho local/staging.
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_SEED !== 'true') {
+    throw new Error('Seed demo bị cấm trên production (đặt ALLOW_DEMO_SEED=true nếu thật sự muốn).');
+  }
   console.log('🎬 Seed demo scenarios...');
 
   // Clean previous DEMO data (safe, only our prefixes)

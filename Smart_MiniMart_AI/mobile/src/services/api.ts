@@ -1,7 +1,15 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+// Q97: fail-closed — prod (không __DEV__) bắt buộc EXPO_PUBLIC_API_URL, không fallback localhost.
+function resolveApiUrl(): string {
+  const fromEnv = process.env.EXPO_PUBLIC_API_URL;
+  if (fromEnv) return fromEnv;
+  if (typeof __DEV__ !== 'undefined' && __DEV__) return 'http://localhost:4000/api/v1';
+  throw new Error('Thiếu EXPO_PUBLIC_API_URL cho production build.');
+}
+
+const API_URL = resolveApiUrl();
 
 export const api: AxiosInstance = axios.create({
   baseURL: API_URL,

@@ -274,6 +274,62 @@ describe('OrdersService', () => {
         service.updateStatus('order-1', { status: 'PENDING' } as any, 'staff-1'),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
+
+    it('refuses to COMPLETE an unpaid prepaid order (SEC-025)', async () => {
+      repo.findUnique.mockResolvedValue({
+        id: 'order-1',
+        status: 'DELIVERING',
+        userId: 'user-1',
+        totalAmount: 250000,
+        paymentMethod: PaymentMethod.VNPAY_SANDBOX,
+        paymentStatus: 'UNPAID',
+        items: [],
+      });
+
+      await expect(
+        service.updateStatus('order-1', { status: 'COMPLETED' } as any, 'staff-1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(repo.runInTransaction).not.toHaveBeenCalled();
+    });
+
+    it('allows completing an unpaid COD order', async () => {
+      repo.findUnique.mockResolvedValue({
+        id: 'order-1',
+        status: 'DELIVERING',
+        userId: 'user-1',
+        totalAmount: 250000,
+        paymentMethod: PaymentMethod.COD,
+        paymentStatus: 'UNPAID',
+        items: [],
+      });
+      repo.runInTransaction.mockImplementation(async (fn: any) => fn(makeTx()));
+
+      await expect(
+        service.updateStatus('order-1', { status: 'COMPLETED' } as any, 'staff-1'),
+      ).resolves.toBeDefined();
+    });
+
+    it('marks a paid order as REFUNDED when it is canceled', async () => {
+      repo.findUnique.mockResolvedValue({
+        id: 'order-1',
+        status: 'CONFIRMED',
+        userId: 'user-1',
+        orderNumber: 'SMM-2026-000001',
+        totalAmount: 250000,
+        paymentMethod: PaymentMethod.BANK,
+        paymentStatus: 'PAID',
+        items: [],
+      });
+      const tx = makeTx();
+      repo.runInTransaction.mockImplementation(async (fn: any) => fn(tx));
+
+      await service.updateStatus('order-1', { status: 'CANCELED', reason: 'khách đổi ý' } as any, 'staff-1');
+
+      expect(tx.order.update).toHaveBeenCalledWith({
+        where: { id: 'order-1' },
+        data: expect.objectContaining({ status: 'CANCELED', paymentStatus: 'REFUNDED' }),
+      });
+    });
   });
 
   describe('getReport + exportReportCsv (ADM-09)', () => {

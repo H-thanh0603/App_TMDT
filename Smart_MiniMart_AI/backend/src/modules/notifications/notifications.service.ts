@@ -10,10 +10,13 @@ export class NotificationsService {
     const where: any = { userId };
     if (query.isRead === 'true') where.isRead = true;
     if (query.isRead === 'false') where.isRead = false;
+    // Q84/Q115: clamp NaN/âm/vô hạn về mặc định an toàn.
+    const raw = query.limit;
+    const safeLimit = Number.isFinite(raw) && (raw as number) > 0 ? Math.min(raw as number, 200) : 50;
     const items = await this.prisma.notification.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      take: Math.min(query.limit ?? 50, 200),
+      take: safeLimit,
     });
     const unread = await this.prisma.notification.count({
       where: { userId, isRead: false },

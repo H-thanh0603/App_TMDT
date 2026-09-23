@@ -9,10 +9,13 @@ import { useAuthStore } from '@/store/auth.store';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { StatCard } from '@/components/StatCard';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 import { formatVnd } from '@/utils/format';
 
 export function AdminDashboardScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const nav = useNavigation<any>();
   const { user } = useAuthStore();
   const { data: summary } = useOrderSummary();
@@ -37,11 +40,11 @@ export function AdminDashboardScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.greeting}>Xin chào,</Text>
-            <Text style={styles.userName}>{user?.fullName?.split(' ').pop() ?? 'Quản lý'} 👋</Text>
+            <Text style={styles.userName}>{user?.fullName?.split(' ').pop() ?? 'Quản lý'}</Text>
             <Text style={styles.subtitle}>Tổng quan hôm nay</Text>
           </View>
           <Pressable style={styles.notifBtn} onPress={() => nav.navigate('Notifications')}>
-            <Text style={styles.notifIcon}>🔔</Text>
+            <AppIcon name="bell" size={22} color="#fff" />
             {totalAlerts > 0 && (
               <View style={styles.notifDot}>
                 <Text style={styles.notifDotText}>{totalAlerts}</Text>
@@ -63,7 +66,7 @@ export function AdminDashboardScreen() {
             <StatCard
               label="Đơn hôm nay"
               value={todaySummary?.periodOrders ?? 0}
-              icon="🛒"
+              icon={<AppIcon name="cart" size={40} color={colors.roleAdmin} />}
               variant="info"
               style={{ marginLeft: 6 }}
             />
@@ -72,14 +75,14 @@ export function AdminDashboardScreen() {
             <StatCard
               label="Tổng doanh thu"
               value={formatVnd(totalRevenue)}
-              icon="📈"
+              icon={<AppIcon name="chart" size={40} color={colors.roleAdmin} />}
               variant="ai"
               style={{ marginRight: 6 }}
             />
             <StatCard
               label="Tổng đơn"
               value={summary?.totalOrders ?? 0}
-              icon="📦"
+              icon={<AppIcon name="box" size={40} color={colors.roleAdmin} />}
               variant="gold"
               style={{ marginLeft: 6 }}
             />
@@ -89,10 +92,10 @@ export function AdminDashboardScreen() {
         {/* Quick actions */}
         <Text style={styles.sectionTitle}>Truy cập nhanh</Text>
         <View style={styles.quickGrid}>
-          <QuickAction icon="📁" label="Danh mục" color={colors.primary} onPress={() => nav.navigate('Categories')} />
-          <QuickAction icon="🎁" label="KM/Voucher" color={colors.ai} onPress={() => nav.navigate('Promotions')} />
-          <QuickAction icon="📋" label="Kho hàng" color={colors.warning} onPress={() => nav.navigate('Inventory')} />
-          <QuickAction icon="👥" label="Nhân viên" color={colors.info} onPress={() => nav.navigate('Users')} />
+          <QuickAction icon="grid" label="Danh mục" color={colors.primary} onPress={() => nav.navigate('Categories')} />
+          <QuickAction icon="gift" label="KM/Voucher" color={colors.ai} onPress={() => nav.navigate('Promotions')} />
+          <QuickAction icon="box" label="Kho hàng" color={colors.warning} onPress={() => nav.navigate('Inventory')} />
+          <QuickAction icon="users" label="Nhân viên" color={colors.info} onPress={() => nav.navigate('Users')} />
         </View>
 
         {/* Báo cáo */}
@@ -100,7 +103,7 @@ export function AdminDashboardScreen() {
           style={[styles.pendingCard, { marginHorizontal: 16, marginBottom: 8 }]}
           onPress={() => nav.navigate('Reports')}
         >
-          <Text style={styles.pendingTitle}>📈 Báo cáo doanh thu</Text>
+          <Text style={styles.pendingTitle}>Báo cáo doanh thu</Text>
           <Text style={styles.pendingSub}>Xem doanh thu theo ngày, top sản phẩm, xuất CSV →</Text>
         </Pressable>
 
@@ -115,7 +118,7 @@ export function AdminDashboardScreen() {
             <Card variant="elevated" padding={14}>
               <View style={styles.alertRow}>
                 <View style={[styles.alertIcon, { backgroundColor: '#FEE2E2' }]}>
-                  <Text style={styles.alertEmoji}>⏰</Text>
+                  <AppIcon name="clock" size={22} color={colors.warning} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -135,7 +138,7 @@ export function AdminDashboardScreen() {
             <Card variant="elevated" padding={14}>
               <View style={styles.alertRow}>
                 <View style={[styles.alertIcon, { backgroundColor: colors.aiSoft }]}>
-                  <Text style={styles.alertEmoji}>📥</Text>
+                  <AppIcon name="truck" size={22} color={colors.info} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -155,7 +158,7 @@ export function AdminDashboardScreen() {
             <Card variant="elevated" padding={14}>
               <View style={styles.alertRow}>
                 <View style={[styles.alertIcon, { backgroundColor: colors.goldSoft }]}>
-                  <Text style={styles.alertEmoji}>🐢</Text>
+                  <AppIcon name="chart" size={22} color={colors.gold} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -173,7 +176,7 @@ export function AdminDashboardScreen() {
 
           {totalAlerts === 0 && (
             <Card variant="outlined" padding={20}>
-              <Text style={styles.emptyAlertText}>✨ Mọi thứ đang ổn, không có cảnh báo!</Text>
+              <Text style={styles.emptyAlertText}>Mọi thứ đang ổn, không có cảnh báo!</Text>
             </Card>
           )}
         </View>
@@ -196,17 +199,19 @@ export function AdminDashboardScreen() {
 }
 
 function QuickAction({ icon, label, color, onPress }: any) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <Pressable style={styles.quickItem} onPress={onPress}>
       <View style={[styles.quickIconBg, { backgroundColor: color + '20' }]}>
-        <Text style={styles.quickEmoji}>{icon}</Text>
+        <AppIcon name={icon} size={26} color={color} />
       </View>
       <Text style={styles.quickLabel}>{label}</Text>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center',
@@ -242,7 +247,6 @@ const styles = StyleSheet.create({
     width: 56, height: 56, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center', marginBottom: 6,
   },
-  quickEmoji: { fontSize: 26 },
   quickLabel: { fontSize: 12, color: colors.text, fontWeight: '600' },
   alertHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 10,

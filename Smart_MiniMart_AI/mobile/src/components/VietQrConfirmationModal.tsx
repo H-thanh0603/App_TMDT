@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useConfirmVietQr } from '@/services/queries';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
 
 export function VietQrConfirmationModal({ order, onClose }: { order: any; onClose: () => void }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const confirm = useConfirmVietQr();
   const [reference, setReference] = useState('');
   const [note, setNote] = useState('');
@@ -34,8 +36,8 @@ export function VietQrConfirmationModal({ order, onClose }: { order: any; onClos
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,.45)' },
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
+  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay },
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, gap: 10 },
   title: { fontSize: 18, fontWeight: '800', color: colors.text }, subtitle: { color: colors.textSecondary, fontSize: 13 },
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, color: colors.text },

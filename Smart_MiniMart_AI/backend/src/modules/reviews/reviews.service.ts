@@ -20,9 +20,11 @@ export class ReviewsService {
   ) {}
 
   async listByProduct(productId: string, limit = 20) {
+    // Q84/Q115: clamp NaN/âm/vô hạn về mặc định an toàn.
+    const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.min(limit, 100) : 20;
     return this.prisma.review.findMany({
       where: { productId, isHidden: false },
-      take: Math.min(limit, 100),
+      take: safeLimit,
       orderBy: { createdAt: 'desc' },
       include: {
         user: { select: { id: true, fullName: true, avatarUrl: true } },

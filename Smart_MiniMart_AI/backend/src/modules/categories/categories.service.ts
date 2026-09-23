@@ -6,20 +6,23 @@ import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
 export class CategoriesService {
   constructor(private prisma: PrismaService) {}
 
-  list(includeInactive = false) {
+  /** SEC-022b: danh mục ẩn chỉ hiển thị khi `allowInactive = true` (STORE_ADMIN/STAFF). */
+  list(allowInactive = false) {
     return this.prisma.category.findMany({
-      where: includeInactive ? {} : { isActive: true },
+      where: allowInactive ? {} : { isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: { _count: { select: { products: true } } },
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, allowInactive = false) {
     const c = await this.prisma.category.findUnique({
       where: { id },
       include: { children: true, parent: true },
     });
-    if (!c) throw new NotFoundException('Danh mục không tồn tại');
+    if (!c || (!allowInactive && !c.isActive)) {
+      throw new NotFoundException('Danh mục không tồn tại');
+    }
     return c;
   }
 

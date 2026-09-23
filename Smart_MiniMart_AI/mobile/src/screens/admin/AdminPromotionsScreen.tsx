@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 import { api, unwrap } from '@/services/api';
 import { formatVnd } from '@/utils/format';
 import { EmptyState } from '@/components/EmptyState';
@@ -37,6 +38,8 @@ const useTogglePromo = () => {
 };
 
 export function AdminPromotionsScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { data: promos = [], isLoading, isError, refetch, isFetching } = useAdminPromos();
   const toggle = useTogglePromo();
   const [createOpen, setCreateOpen] = useState(false);
@@ -123,7 +126,7 @@ export function AdminPromotionsScreen() {
                 }}
                 ListEmptyComponent={
                   <EmptyState
-                    icon="🎁"
+                    icon={<AppIcon name="gift" size={40} color={colors.roleAdmin} />}
                     title="Chưa có khuyến mãi nào"
                     description="Tạo voucher để tăng chuyển đổi đơn hàng."
                     actionLabel="Tạo khuyến mãi"
@@ -139,6 +142,8 @@ export function AdminPromotionsScreen() {
 }
 
 function CreatePromoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const create = useCreatePromo();
   const [form, setForm] = useState<any>({
     code: '', name: '', description: '',
@@ -233,6 +238,8 @@ function CreatePromoModal({ open, onClose }: { open: boolean; onClose: () => voi
 }
 
 function Field({ label, value, onChange, keyboardType, placeholder, multiline }: any) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={{ marginBottom: 14 }}>
       <Text style={styles.label}>{label}</Text>
@@ -249,11 +256,11 @@ function Field({ label, value, onChange, keyboardType, placeholder, multiline }:
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 16, backgroundColor: 'white',
+    padding: 16, backgroundColor: colors.surface,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   title: { fontSize: 20, fontWeight: '800', color: colors.text },
@@ -263,7 +270,7 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 48, marginBottom: 12 },
   emptyText: { color: colors.textSecondary },
   card: {
-    backgroundColor: 'white', padding: 14, borderRadius: 12, marginBottom: 10,
+    backgroundColor: colors.surface, padding: 14, borderRadius: 12, marginBottom: 10,
     shadowColor: colors.shadow, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -290,12 +297,12 @@ const styles = StyleSheet.create({
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
   },
   modalTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
   label: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 6 },
   input: {
-    backgroundColor: 'white', borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: 10, padding: 12, fontSize: 15, color: colors.text,
   },
   toggleRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },

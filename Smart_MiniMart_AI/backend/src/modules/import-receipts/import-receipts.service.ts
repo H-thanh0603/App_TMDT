@@ -20,7 +20,8 @@ export class ImportReceiptsService {
     const settings = await this.prisma.oCRSettings.findFirst();
     const engine = dto.engine ?? settings?.defaultEngine ?? OCREngine.MOCK;
 
-    this.logger.log(`OCR scan với engine ${engine}: ${dto.imageUrl}`);
+    // Q64: không log URL/token — chỉ log engine + độ dài URL.
+    this.logger.log(`OCR scan engine=${engine} url_len=${dto.imageUrl?.length ?? 0} user=${userId}`);
 
     const ocrResult = await this.ocrClient.parseReceipt(dto.imageUrl, engine);
 

@@ -7,13 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useScanReceipt } from '@/services/queries';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 
-const SAMPLE_IMAGES = [
-  { label: 'Phiếu mẫu 1 (rõ nét)', url: 'https://placehold.co/600x800/png?text=Phieu+nhap+1' },
-  { label: 'Phiếu mẫu 2', url: 'https://placehold.co/600x800/png?text=Phieu+nhap+2' },
-  { label: 'Phiếu mẫu 3', url: 'https://placehold.co/600x800/png?text=Phieu+nhap+3' },
-];
+// Q110: mẫu OCR chỉ dùng ảnh mẫu bundle local (ocr-service/samples) — không gọi placehold.co.
+// Staff chọn ảnh từ thư viện/camera; danh sách mẫu do backend cung cấp khi cần.
+const SAMPLE_IMAGES: Array<{ label: string; url: string }> = [];
 
 /** Chỉ expose engines backend/OCR service thực sự hỗ trợ. EasyOCR chưa impl. */
 const ENGINES = [
@@ -26,6 +25,8 @@ function isLocalUri(uri: string): boolean {
 }
 
 export function OCRScanScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const nav = useNavigation<any>();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [engine, setEngine] = useState<string>('MOCK');
@@ -124,17 +125,17 @@ export function OCRScanScreen() {
           <Image source={{ uri: imageUri }} style={styles.preview} />
         ) : (
           <View style={styles.placeholder}>
-            <Text style={{ fontSize: 56 }}>📄</Text>
+            <AppIcon name="camera" size={56} color={colors.textMuted} />
             <Text style={styles.placeholderText}>Chưa có ảnh</Text>
           </View>
         )}
 
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
           <Pressable style={[styles.outlineBtn, { flex: 1 }]} onPress={takePhoto}>
-            <Text style={styles.outlineBtnText}>📷 Chụp ảnh</Text>
+            <Text style={styles.outlineBtnText}>Chụp ảnh</Text>
           </Pressable>
           <Pressable style={[styles.outlineBtn, { flex: 1 }]} onPress={pickFromGallery}>
-            <Text style={styles.outlineBtnText}>📁 Tải lên</Text>
+            <Text style={styles.outlineBtnText}>Tải lên</Text>
           </Pressable>
         </View>
 
@@ -145,24 +146,28 @@ export function OCRScanScreen() {
         >
           {scan.isPending
             ? <ActivityIndicator color="white" />
-            : <Text style={styles.scanBtnText}>🔍 Quét OCR</Text>}
+            : <Text style={styles.scanBtnText}>Quét OCR</Text>}
         </Pressable>
 
         <View style={styles.divider} />
 
-        <Text style={styles.label}>Hoặc dùng ảnh mẫu (demo)</Text>
-        {SAMPLE_IMAGES.map((s) => (
-          <Pressable key={s.url} style={styles.sampleItem} onPress={() => handleScan(s.url)}>
-            <Text style={styles.sampleLabel}>📋 {s.label}</Text>
-            <Text style={styles.sampleArrow}>→</Text>
-          </Pressable>
-        ))}
+        {SAMPLE_IMAGES.length > 0 && (
+          <>
+            <Text style={styles.label}>Hoặc dùng ảnh mẫu (demo)</Text>
+            {SAMPLE_IMAGES.map((s) => (
+              <Pressable key={s.url} style={styles.sampleItem} onPress={() => handleScan(s.url)}>
+                <Text style={styles.sampleLabel}>{s.label}</Text>
+                <Text style={styles.sampleArrow}>→</Text>
+              </Pressable>
+            ))}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   label: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 8, marginTop: 12 },
   hint: { fontSize: 11, color: '#92400E', backgroundColor: '#FEF3C7', padding: 10, borderRadius: 8, marginTop: 8, lineHeight: 16 },
@@ -191,7 +196,7 @@ const styles = StyleSheet.create({
   sampleArrow: { fontSize: 20, color: colors.primary, fontWeight: 'bold' },
   outlineBtn: {
     paddingVertical: 12, alignItems: 'center', borderRadius: 10,
-    backgroundColor: 'white', borderWidth: 1.5, borderColor: colors.primary,
+    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary,
   },
   outlineBtnText: { color: colors.primary, fontWeight: '700', fontSize: 14 },
   scanBtn: {

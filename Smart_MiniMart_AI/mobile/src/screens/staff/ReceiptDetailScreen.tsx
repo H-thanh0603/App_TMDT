@@ -6,10 +6,12 @@ import {
   useImportReceipt, useUpdateReceiptItems, useConfirmReceipt,
 } from '@/services/queries';
 import { Button } from '@/components/Button';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
 import { formatVnd } from '@/utils/format';
 
 export function ReceiptDetailScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const route = useRoute<any>();
   const nav = useNavigation<any>();
   const id = route.params?.id;
@@ -166,7 +168,7 @@ export function ReceiptDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   center: { alignItems: 'center', justifyContent: 'center' },
   headerCard: { backgroundColor: colors.surface, padding: 16, borderRadius: 12, marginBottom: 12 },

@@ -6,10 +6,12 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button } from '@/components/Button';
 import { useAuthStore } from '@/store/auth.store';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
 import type { AuthStackParamList } from '@/navigation/AuthNavigator';
 
 export function RegisterScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const nav = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const { register, loading } = useAuthStore();
   const [form, setForm] = useState({
@@ -17,8 +19,13 @@ export function RegisterScreen() {
   });
 
   const handleRegister = async () => {
-    if (form.password.length < 6) {
-      Alert.alert('Lỗi', 'Mật khẩu tối thiểu 6 ký tự');
+    // Khớp chuẩn mật khẩu server (SEC-026): ≥8 ký tự, có chữ và số
+    if (form.password.length < 8) {
+      Alert.alert('Lỗi', 'Mật khẩu tối thiểu 8 ký tự');
+      return;
+    }
+    if (!/[A-Za-z]/.test(form.password) || !/\d/.test(form.password)) {
+      Alert.alert('Lỗi', 'Mật khẩu phải có ít nhất 1 chữ cái và 1 chữ số');
       return;
     }
     try {
@@ -76,7 +83,7 @@ export function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: 20, paddingTop: 32 },
   title: { fontSize: 24, fontWeight: '800', color: colors.text },

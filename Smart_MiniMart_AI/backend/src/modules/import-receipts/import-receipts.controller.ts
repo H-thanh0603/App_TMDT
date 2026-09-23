@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ImportReceiptStatus, Role } from '@prisma/client';
 
 import { ImportReceiptsService } from './import-receipts.service';
@@ -18,6 +19,8 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 export class ImportReceiptsController {
   constructor(private receipts: ImportReceiptsService) {}
 
+  // SEC-027b: quét OCR tốn tiền LLM + CPU → giới hạn 30 lần/phút/user
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @Post('scan')
   @ApiOperation({ summary: 'Quét phiếu nhập bằng OCR' })
   scan(@Body() dto: OCRScanDto, @CurrentUser('sub') userId: string) {

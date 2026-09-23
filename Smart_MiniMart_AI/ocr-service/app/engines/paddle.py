@@ -5,6 +5,26 @@ from .base import BaseOCREngine, OCRResult
 logger = logging.getLogger(__name__)
 
 
+def _fetch_image_bytes(url: str) -> bytes:
+    """Tải ảnh có giới hạn (SEC-OCR-2): timeout + trần dung lượng, fail-closed."""
+    import httpx
+    from ..config import settings
+
+    with httpx.Client(timeout=settings.fetch_timeout_s, follow_redirects=False) as client:
+        with client.stream("GET", url) as r:
+            r.raise_for_status()
+            chunks: list[bytes] = []
+            total = 0
+            for chunk in r.iter_bytes(64 * 1024):
+                total += len(chunk)
+                if total > settings.max_image_bytes:
+                    raise ValueError(
+                        f"Ảnh vượt quá giới hạn {settings.max_image_bytes} byte"
+                    )
+                chunks.append(chunk)
+            return b"".join(chunks)
+
+
 class PaddleOCREngine(BaseOCREngine):
     name = "paddle_ocr"
     _instance = None
@@ -26,26 +46,37 @@ class PaddleOCREngine(BaseOCREngine):
         self.ocr = PaddleOCREngine._instance
 
     async def parse(self, image_url: str) -> OCRResult:
-        import httpx
         from PIL import Image
         from io import BytesIO
+        import anyio
 
-        async with httpx.AsyncClient() as client:
-            r = await client.get(image_url, timeout=30)
-            r.raise_for_status()
-            img = Image.open(BytesIO(r.content))
+        # SEC-OCR-2: không cho Pillow mở ảnh bom — đặt trần pixel trước khi decode.
+        try:
+            from ..config import settings
+            Image.MAX_IMAGE_PIXELS = settings.max_image_pixels
+        except Exception:
+            pass
 
-        result = self.ocr.ocr(img, cls=True)
-        lines = []
-        confs = []
-        for line in result[0] if result else []:
-            text = line[1][0]
-            conf = line[1][1]
-            lines.append(text)
-            confs.append(conf)
+        raw = _fetch_image_bytes(image_url)
 
-        return OCRResult(
-            raw_text="\n".join(lines),
-            confidence=sum(confs) / len(confs) if confs else 0.0,
-            engine=self.name,
-        )
+        def _decode() -> OCRResult:
+            img = Image.open(BytesIO(raw))
+            img.load()  # ép decode ngay trong guard pixel-limit
+
+            result = self.ocr.ocr(img, cls=True)
+            lines = []
+            confs = []
+            for line in result[0] if result else []:
+                text = line[1][0]
+                conf = line[1][1]
+                lines.append(text)
+                confs.append(conf)
+
+            return OCRResult(
+                raw_text="\n".join(lines),
+                confidence=sum(confs) / len(confs) if confs else 0.0,
+                engine=self.name,
+            )
+
+        # PaddleOCR chặn luồng → chạy trong thread, không treo event loop.
+        return await anyio.to_thread.run_sync(_decode)

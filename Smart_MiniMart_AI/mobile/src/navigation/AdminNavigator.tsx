@@ -1,7 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { AppIcon, type AppIconName } from '@/components/AppIcon';
 
 import { AdminDashboardScreen } from '@/screens/admin/AdminDashboardScreen';
 import { AdminReportsScreen } from '@/screens/admin/AdminReportsScreen';
@@ -31,10 +31,10 @@ function AdminTabs() {
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         tabBarLabelStyle: { fontSize: 11 },
         tabBarIcon: ({ color, size }) => {
-          const icon: Record<string, string> = {
-            Dashboard: '📊', Products: '📦', Orders: '🛍️', Users: '👥', Profile: '👤',
+          const icon: Record<string, AppIconName> = {
+            Dashboard: 'chart', Products: 'box', Orders: 'truck', Users: 'users', Profile: 'user',
           };
-          return <Text style={{ fontSize: size, color }}>{icon[route.name] ?? '•'}</Text>;
+          return <AppIcon name={icon[route.name] ?? 'help'} size={size} color={color} />;
         },
       })}
     >

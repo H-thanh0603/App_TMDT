@@ -4,7 +4,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 import { useOrder, useCreateVnpay } from '@/services/queries';
 import { formatVnd } from '@/utils/format';
 
@@ -26,6 +27,8 @@ const PAYMENT_LABELS: Record<string, string> = {
 };
 
 export function OrderDetailScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const route = useRoute<any>();
   const nav = useNavigation<any>();
   const orderId = route.params?.id;
@@ -75,7 +78,7 @@ export function OrderDetailScreen() {
         {/* Address */}
         {order.address && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📍 Địa chỉ giao hàng</Text>
+            <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
             <Text style={styles.addrName}>{order.address.recipient}</Text>
             <Text style={styles.addrPhone}>{order.address.phone}</Text>
             <Text style={styles.addrLine}>
@@ -87,11 +90,11 @@ export function OrderDetailScreen() {
 
         {/* Items */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🛒 Sản phẩm ({order.items?.length || 0})</Text>
+          <Text style={styles.sectionTitle}>Sản phẩm ({order.items?.length || 0})</Text>
           {order.items?.map((item: any) => (
             <View key={item.id} style={styles.itemRow}>
               <View style={styles.itemImg}>
-                <Text style={{ fontSize: 24 }}>📦</Text>
+                <AppIcon name="box" size={24} color={colors.textMuted} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemName} numberOfLines={2}>{item.productName}</Text>
@@ -104,7 +107,7 @@ export function OrderDetailScreen() {
 
         {/* Payment summary */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💰 Thanh toán</Text>
+          <Text style={styles.sectionTitle}>Thanh toán</Text>
           <Row label="Tạm tính" value={formatVnd(Number(order.subtotal || 0))} />
           {Number(order.discountAmount || 0) > 0 && (
             <Row label="Giảm giá" value={`- ${formatVnd(Number(order.discountAmount))}`} valueColor={colors.danger} />
@@ -115,7 +118,7 @@ export function OrderDetailScreen() {
           <Row label="Phương thức" value={PAYMENT_LABELS[order.paymentMethod] || order.paymentMethod} />
           <Row
             label="Trạng thái thanh toán"
-            value={order.paymentStatus === 'PAID' ? '✓ Đã thanh toán' : 'Chưa thanh toán'}
+            value={order.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}
             valueColor={order.paymentStatus === 'PAID' ? colors.success : colors.warning}
           />
           {Number(order.loyaltyEarned || 0) > 0 && (
@@ -126,7 +129,7 @@ export function OrderDetailScreen() {
         {/* Note */}
         {order.note && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📝 Ghi chú</Text>
+            <Text style={styles.sectionTitle}>Ghi chú</Text>
             <Text style={styles.noteText}>{order.note}</Text>
           </View>
         )}
@@ -134,7 +137,7 @@ export function OrderDetailScreen() {
         {/* Promotion */}
         {order.promotionCode && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🎁 Khuyến mãi</Text>
+            <Text style={styles.sectionTitle}>Khuyến mãi</Text>
             <View style={styles.promoBadge}>
               <Text style={styles.promoCode}>{order.promotionCode}</Text>
             </View>
@@ -153,6 +156,8 @@ export function OrderDetailScreen() {
 }
 
 function Row({ label, value, bold, valueColor }: any) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.row}>
       <Text style={[styles.rowLabel, bold && { fontWeight: '700', color: colors.text }]}>{label}</Text>
@@ -163,13 +168,13 @@ function Row({ label, value, bold, valueColor }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
   },
   back: { color: colors.primary, fontSize: 16, fontWeight: '600' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
@@ -180,7 +185,7 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 16, fontWeight: '800' },
   orderNumber: { fontSize: 13, fontWeight: '600' },
   section: {
-    backgroundColor: 'white', marginHorizontal: 16, marginBottom: 12,
+    backgroundColor: colors.surface, marginHorizontal: 16, marginBottom: 12,
     padding: 14, borderRadius: 12,
   },
   sectionTitle: { fontSize: 14, fontWeight: '800', color: colors.text, marginBottom: 10 },

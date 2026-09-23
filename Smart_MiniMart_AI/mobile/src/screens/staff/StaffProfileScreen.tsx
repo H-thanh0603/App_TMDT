@@ -5,9 +5,13 @@ import { useAuthStore } from '@/store/auth.store';
 import { useExpiringProducts, useSlowMoving } from '@/services/queries';
 import { Button } from '@/components/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
+import { radius, spacing, typography } from '@/theme/typography';
 
 export function StaffProfileScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { user, logout } = useAuthStore();
   const { data: expiring = [] } = useExpiringProducts(30);
   const { data: slow = [] } = useSlowMoving();
@@ -55,7 +59,7 @@ export function StaffProfileScreen() {
 
         <View style={styles.menu}>
           <TouchableOpacity style={styles.menuItem} onPress={() => nav.navigate('OCRScan')}>
-            <Text style={styles.menuIcon}>📷</Text>
+            <AppIcon name="camera" size={22} color={colors.roleStaff} />
             <Text style={styles.menuText}>Quét phiếu nhập hàng</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
@@ -73,7 +77,7 @@ export function StaffProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   header: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 12, backgroundColor: colors.surface },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.roleStaff, alignItems: 'center', justifyContent: 'center' },

@@ -7,10 +7,13 @@ import { useMyStats } from '@/services/queries';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { formatVnd } from '@/utils/format';
 
 export function ProfileScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const nav = useNavigation<any>();
   const { user, logout } = useAuthStore();
   const { data: stats } = useMyStats();
@@ -26,26 +29,26 @@ export function ProfileScreen() {
   const isVip = stats?.isVip ?? user?.isVip ?? false;
   const vipProgress = Math.min(100, (points / 1000) * 100);
 
-  const menuGroups = [
+  const menuGroups: Array<{ title: string; items: Array<{ icon: AppIconName; title: string; screen: string | null; subtitle?: string; filter?: string }> }> = [
     {
       title: 'Đơn hàng',
       items: [
-        { icon: '📦', title: 'Đơn hàng của tôi', screen: 'Orders', subtitle: `${stats?.orderCount ?? 0} đơn` },
-        { icon: '🚚', title: 'Đang giao', screen: 'Orders', filter: 'DELIVERING' },
+        { icon: 'box', title: 'Đơn hàng của tôi', screen: 'Orders', subtitle: `${stats?.orderCount ?? 0} đơn` },
+        { icon: 'truck', title: 'Đang giao', screen: 'Orders', filter: 'DELIVERING' },
       ],
     },
     {
       title: 'Tài khoản',
       items: [
-        { icon: '📍', title: 'Địa chỉ giao hàng', screen: 'Addresses' },
-        { icon: '🔔', title: 'Thông báo', screen: 'Notifications' },
+        { icon: 'pin', title: 'Địa chỉ giao hàng', screen: 'Addresses' },
+        { icon: 'bell', title: 'Thông báo', screen: 'Notifications' },
       ],
     },
     {
       title: 'Khác',
       items: [
-        { icon: 'ℹ️', title: 'Về Smart MiniMart AI', screen: null },
-        { icon: '⚙️', title: 'Cài đặt', screen: null },
+        { icon: 'help', title: 'Về Smart MiniMart AI', screen: null },
+        { icon: 'cog', title: 'Cài đặt', screen: null },
       ],
     },
   ];
@@ -57,13 +60,13 @@ export function ProfileScreen() {
         <View style={styles.header}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
-              {user?.fullName?.charAt(0).toUpperCase() ?? '👤'}
+              {user?.fullName?.charAt(0).toUpperCase() ?? 'S'}
             </Text>
           </View>
           <View style={{ flex: 1 }}>
             <View style={styles.nameRow}>
               <Text style={styles.name} numberOfLines={1}>{user?.fullName}</Text>
-              {isVip && <Badge label="✨ VIP" variant="gold" size="md" />}
+              {isVip && <Badge label="VIP" variant="gold" size="md" />}
             </View>
             <Text style={styles.email}>{user?.email}</Text>
             {user?.phone && <Text style={styles.email}>{user.phone}</Text>}
@@ -75,7 +78,7 @@ export function ProfileScreen() {
           <Card variant="elevated" padding={16}>
             <View style={styles.vipHeader}>
               <Text style={styles.vipLabel}>
-                {isVip ? '⭐ Thành viên VIP' : 'Tiến độ lên VIP'}
+                {isVip ? 'Thành viên VIP' : 'Tiến độ lên VIP'}
               </Text>
               <Text style={styles.vipPoints}>{points} / 1000 điểm</Text>
             </View>
@@ -121,12 +124,12 @@ export function ProfileScreen() {
                   else Alert.alert(m.title, 'Tính năng sắp ra mắt');
                 }}
               >
-                <Text style={styles.menuIcon}>{m.icon}</Text>
+                <AppIcon name={m.icon} size={22} color={colors.primary} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.menuText}>{m.title}</Text>
                   {m.subtitle && <Text style={styles.menuSubtitle}>{m.subtitle}</Text>}
                 </View>
-                <Text style={styles.menuArrow}>›</Text>
+                <AppIcon name="chevron-right" size={22} color={colors.textMuted} />
               </Pressable>
             ))}
           </View>
@@ -149,17 +152,17 @@ export function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryDark,
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40,
     borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
   },
   avatar: {
     width: 72, height: 72, borderRadius: 36,
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
   },
@@ -179,7 +182,7 @@ const styles = StyleSheet.create({
   progressFill: { height: 8, backgroundColor: colors.gold, borderRadius: 4 },
   vipHint: { fontSize: 11, color: colors.textMuted, marginTop: 6 },
   statsRow: {
-    flexDirection: 'row', backgroundColor: 'white',
+    flexDirection: 'row', backgroundColor: colors.surface,
     marginHorizontal: 16, marginTop: 12,
     borderRadius: 12, padding: 16,
   },
@@ -188,7 +191,7 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
   statDivider: { width: 1, backgroundColor: colors.border, marginVertical: 4 },
   menuGroup: {
-    backgroundColor: 'white', marginHorizontal: 16, marginTop: 12,
+    backgroundColor: colors.surface, marginHorizontal: 16, marginTop: 12,
     borderRadius: 12, overflow: 'hidden',
   },
   menuGroupTitle: {
@@ -201,13 +204,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14, paddingHorizontal: 16,
     borderTopWidth: 1, borderTopColor: colors.borderLight,
   },
-  menuIcon: { fontSize: 22 },
   menuText: { fontSize: 15, color: colors.text, fontWeight: '600' },
   menuSubtitle: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-  menuArrow: { fontSize: 22, color: colors.textMuted },
   logoutBtn: {
     marginHorizontal: 16, marginTop: 24, padding: 14,
-    backgroundColor: '#FEE2E2', borderRadius: 12, alignItems: 'center',
+    backgroundColor: colors.dangerSoft, borderRadius: 12, alignItems: 'center',
   },
   logoutText: { color: colors.danger, fontWeight: '700', fontSize: 15 },
   versionText: {

@@ -5,7 +5,7 @@ import { useTheme } from '../theme';
 interface StatCardProps {
   label: string;
   value: string | number;
-  icon?: string;
+  icon?: string | React.ReactNode;
   trend?: { value: string; positive?: boolean };
   variant?: 'primary' | 'ai' | 'gold' | 'info' | 'danger';
   style?: ViewStyle;
@@ -23,7 +23,11 @@ export const StatCard: React.FC<StatCardProps> = ({
   return (
     <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadow }, style]}>
       <View style={[styles.iconWrap, { backgroundColor: v.bg }]}>
-        <Text style={[styles.icon, { color: v.accent }]}>{icon ?? '◆'}</Text>
+        {typeof icon === 'string' || !icon ? (
+          <Text style={[styles.icon, { color: v.accent }]}>{icon ?? '◆'}</Text>
+        ) : (
+          icon
+        )}
       </View>
       <Text style={[styles.label, { color: colors.textMuted }]}>{label}</Text>
       <Text style={[styles.value, { color: colors.text }]}>{value}</Text>

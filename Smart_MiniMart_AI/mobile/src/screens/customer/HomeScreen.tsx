@@ -1,6 +1,7 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import {
-  FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
+  Dimensions, FlatList, Pressable, RefreshControl, ScrollView,
+  StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -8,34 +9,49 @@ import {
   useCategories, useProducts, useActivePromos, useNotifications,
 } from '@/services/queries';
 import { useAuthStore } from '@/store/auth.store';
+import { useTheme } from '@/theme';
 import { ProductCard } from '@/components/ProductCard';
+import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { CategoryRowSkeleton, ProductGridSkeleton } from '@/components/Skeleton';
-import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/typography';
 
-const CAT_EMOJI: Record<string, string> = {
-  'Đồ ăn nhanh': '🍜', 'Đồ uống': '🥤', 'Bánh kẹo': '🍪', 'Sữa': '🥛',
-  'Mỳ - Cháo': '🍝', 'Đồ dùng': '🧴', 'Vệ sinh': '🧻',
-  'Văn phòng phẩm': '✏️', 'Khác': '📦',
-};
+const BANNER_W = Dimensions.get('window').width - 32;
 
-const CAT_COLORS = [
-  '#FEF3C7', '#DBEAFE', '#FCE7F3', '#D1FAE5',
-  '#EDE9FE', '#FFE4E6', '#DCFCE7', '#FEF9C3', '#E0E7FF',
-];
+const CAT_ICONS: AppIconName[] = ['box', 'tag', 'gift', 'cart', 'flash', 'heart', 'grid', 'clock', 'wallet'];
+const CAT_TONES = ['primarySoft', 'aiSoft', 'goldSoft', 'dangerSoft'] as const;
+
+function useFlashCountdown() {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  // Hết sale lúc 23:59 Asia/Ho_Chi_Minh (UTC+7, không DST).
+  const vn = new Date(now + 7 * 3600_000);
+  const endOfDay = Date.UTC(vn.getUTCFullYear(), vn.getUTCMonth(), vn.getUTCDate(), 23, 59, 59) - 7 * 3600_000;
+  const diff = Math.max(0, endOfDay - now);
+  const h = Math.floor(diff / 3600_000);
+  const m = Math.floor((diff % 3600_000) / 60_000);
+  const s = Math.floor((diff % 60_000) / 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
 
 export function HomeScreen() {
   const nav = useNavigation<any>();
+  const { colors } = useTheme();
   const { user } = useAuthStore();
   const categoriesQ = useCategories();
-  const saleQ = useProducts({ onSale: 'true', limit: 4 });
+  const saleQ = useProducts({ onSale: 'true', limit: 8 });
   const bestSellingQ = useProducts({ sortBy: 'best_selling', limit: 6 });
   const newestQ = useProducts({ sortBy: 'newest', limit: 4 });
   const promosQ = useActivePromos();
   const notifQ = useNotifications();
+  const countdown = useFlashCountdown();
+  const [bannerIdx, setBannerIdx] = useState(0);
 
   const categories = categoriesQ.data ?? [];
   const sale = saleQ.data?.items ?? [];
@@ -46,14 +62,11 @@ export function HomeScreen() {
 
   const firstName = user?.fullName?.split(' ').pop() ?? '';
   const unread = notifData?.unread ?? 0;
-  const topPromo = promos[0];
 
-  const isBootLoading =
-    categoriesQ.isLoading && !categoriesQ.data;
+  const banners = promos.length > 0 ? promos : [null];
 
-  const isBootError =
-    !categoriesQ.data && categoriesQ.isError;
-
+  const isBootLoading = categoriesQ.isLoading && !categoriesQ.data;
+  const isBootError = !categoriesQ.data && categoriesQ.isError;
   const isRefreshing = [categoriesQ, saleQ, bestSellingQ, newestQ, promosQ, notifQ]
     .some((query) => query.isRefetching);
   const isDiscoveryLoading = saleQ.isLoading || bestSellingQ.isLoading || newestQ.isLoading;
@@ -67,6 +80,8 @@ export function HomeScreen() {
     notifQ.refetch();
   };
 
+  const styles = makeStyles(colors);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -76,21 +91,22 @@ export function HomeScreen() {
           <RefreshControl refreshing={isRefreshing} onRefresh={retryHome} colors={[colors.primary]} />
         )}
       >
-        {/* Header gradient */}
+        {/* Header cam */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.greeting}>Xin chào,</Text>
             <View style={styles.nameRow}>
-              <Text style={styles.userName}>{firstName} 👋</Text>
-              {user?.isVip && <Badge label="✨ VIP" variant="gold" size="sm" />}
+              <Text style={styles.userName}>{firstName}</Text>
+              {user?.isVip && <Badge label="VIP" variant="gold" size="sm" />}
             </View>
             <Text style={styles.subtitle}>{user?.loyaltyPoints ?? 0} điểm tích lũy</Text>
           </View>
           <Pressable
             style={styles.bellBtn}
             onPress={() => nav.navigate('Notifications')}
+            accessibilityLabel="Thông báo"
           >
-            <Text style={styles.bellIcon}>🔔</Text>
+            <AppIcon name="bell" size={24} color="#fff" />
             {unread > 0 && (
               <View style={styles.bellDot}>
                 <Text style={styles.bellDotText}>{unread > 9 ? '9+' : unread}</Text>
@@ -99,13 +115,13 @@ export function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* AI Search bar */}
+        {/* AI Search bar nổi */}
         <Pressable
           style={styles.searchBar}
           onPress={() => nav.navigate('Search')}
         >
           <View style={styles.aiIcon}>
-            <Text style={styles.aiIconText}>✨</Text>
+            <AppIcon name="robot" size={22} color={colors.aiDark} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.searchTitle}>AI Search</Text>
@@ -114,7 +130,7 @@ export function HomeScreen() {
             </Text>
           </View>
           <View style={styles.searchArrowBg}>
-            <Text style={styles.searchArrow}>→</Text>
+            <AppIcon name="chevron-right" size={20} color="#fff" />
           </View>
         </Pressable>
 
@@ -126,54 +142,94 @@ export function HomeScreen() {
           />
         ) : (
           <>
-            {/* Promo Banner */}
-            {topPromo ? (
-              <Pressable
-                style={styles.promoBanner}
-                onPress={() => nav.navigate('ProductList', { title: 'Khuyến mãi' })}
-              >
-                <View style={styles.promoLeft}>
-                  <View style={styles.promoBadge}>
-                    <Text style={styles.promoBadgeText}>HOT</Text>
+            {/* Promo carousel */}
+            <FlatList
+              data={banners}
+              keyExtractor={(_, i) => String(i)}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / (BANNER_W + 12));
+                setBannerIdx(idx);
+              }}
+              renderItem={({ item: promo }: any) => (
+                <Pressable
+                  style={styles.promoSlide}
+                  onPress={() => nav.navigate('ProductList', { title: 'Khuyến mãi' })}
+                >
+                  <View style={styles.promoShade} />
+                  <View style={styles.promoLeft}>
+                    <View style={styles.promoBadge}>
+                      <Text style={styles.promoBadgeText}>{promo ? 'HOT' : 'SALE'}</Text>
+                    </View>
+                    <Text style={styles.promoTitle} numberOfLines={1}>
+                      {promo?.name ?? 'Ưu đãi mỗi ngày'}
+                    </Text>
+                    <Text style={styles.promoCode}>
+                      {promo ? `Mã: ${promo.code}` : 'Khám phá giá tốt hôm nay'}
+                    </Text>
+                    <Text style={styles.promoDiscount}>
+                      {promo
+                        ? (promo.discountType === 'PERCENT'
+                          ? `Giảm ${promo.discountValue}%`
+                          : `Giảm ${Number(promo.discountValue).toLocaleString('vi-VN')}đ`)
+                        : 'Xem sản phẩm giảm giá'}
+                    </Text>
+                    <View style={styles.promoCta}>
+                      <Text style={styles.promoCtaText}>Lấy ngay</Text>
+                    </View>
                   </View>
-                  <Text style={styles.promoTitle} numberOfLines={1}>{topPromo.name}</Text>
-                  <Text style={styles.promoCode}>Mã: {topPromo.code}</Text>
-                  <Text style={styles.promoDiscount}>
-                    {topPromo.discountType === 'PERCENT'
-                      ? `Giảm ${topPromo.discountValue}%`
-                      : `Giảm ${Number(topPromo.discountValue).toLocaleString('vi-VN')}đ`}
-                  </Text>
-                </View>
-                <Text style={styles.promoEmoji}>🎁</Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                style={styles.promoBanner}
-                onPress={() => nav.navigate('ProductList', { title: 'Ưu đãi hôm nay', onSale: true })}
-              >
-                <View style={styles.promoLeft}>
-                  <View style={styles.promoBadge}><Text style={styles.promoBadgeText}>SALE</Text></View>
-                  <Text style={styles.promoTitle}>Ưu đãi mỗi ngày</Text>
-                  <Text style={styles.promoCode}>Khám phá giá tốt hôm nay</Text>
-                  <Text style={styles.promoDiscount}>Xem sản phẩm giảm giá</Text>
-                </View>
-                <Text style={styles.promoEmoji}>🛍️</Text>
-              </Pressable>
+                  <AppIcon name="gift" size={72} color="rgba(255,255,255,0.85)" />
+                </Pressable>
+              )}
+            />
+            {banners.length > 1 && (
+              <View style={styles.dots}>
+                {banners.map((_: any, i: number) => (
+                  <View
+                    key={i}
+                    style={[styles.dot, i === bannerIdx && styles.dotActive]}
+                  />
+                ))}
+              </View>
             )}
 
-            {/* Quick links */}
-            <View style={styles.quickRow}>
-              <QuickLink icon="🤖" label="AI Chat" color={colors.aiSoft}
-                textColor={colors.aiDark} onPress={() => nav.navigate('AI')} />
-              <QuickLink icon="🛒" label="Giỏ hàng" color={colors.primarySoft}
-                textColor={colors.primaryDark} onPress={() => nav.navigate('Cart')} />
-              <QuickLink icon="📦" label="Đơn hàng" color={colors.goldSoft}
-                textColor="#92400E" onPress={() => nav.navigate('Orders')} />
-              <QuickLink icon="📍" label="Địa chỉ" color="#FCE7F3"
-                textColor="#BE185D" onPress={() => nav.navigate('Addresses')} />
-            </View>
+            {/* Flash sale */}
+            {sale.length > 0 && (
+              <>
+                <View style={styles.flashHeader}>
+                  <AppIcon name="flash" size={20} color={colors.danger} />
+                  <Text style={styles.flashTitle}>Flash sale</Text>
+                  <View style={styles.countBox}>
+                    <AppIcon name="clock" size={14} color="#fff" />
+                    <Text style={styles.countText}>{countdown}</Text>
+                  </View>
+                  <View style={{ flex: 1 }} />
+                  <Pressable onPress={() => nav.navigate('ProductList', { title: 'Ưu đãi hôm nay', onSale: true })}>
+                    <Text style={styles.seeAll}>Xem tất cả ›</Text>
+                  </Pressable>
+                </View>
+                <FlatList
+                  data={sale}
+                  keyExtractor={(p: any) => p.id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 16, gap: spacing.md }}
+                  renderItem={({ item }) => (
+                    <View style={{ width: 140 }}>
+                      <ProductCard
+                        product={item}
+                        onPress={() => nav.navigate('ProductDetail', { idOrSlug: item.slug })}
+                      />
+                    </View>
+                  )}
+                />
+              </>
+            )}
 
-            {/* Categories */}
+            {/* Danh mục grid chợ */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Danh mục</Text>
               <Pressable onPress={() => nav.navigate('ProductList')}>
@@ -185,7 +241,6 @@ export function HomeScreen() {
               <CategoryRowSkeleton />
             ) : categories.length === 0 ? (
               <EmptyState
-                icon="🗂️"
                 title="Chưa có danh mục"
                 description="Cửa hàng đang cập nhật danh mục sản phẩm."
                 actionLabel="Tải lại"
@@ -193,50 +248,44 @@ export function HomeScreen() {
                 actionVariant="outline"
               />
             ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 8 }}
-              >
-                {categories.map((cat: any, idx: number) => (
-                  <Pressable
-                    key={cat.id}
-                    style={styles.catCard}
-                    onPress={() => nav.navigate('ProductList', { categoryId: cat.id, title: cat.name })}
-                  >
-                    <View
-                      style={[
-                        styles.catIconBg,
-                        { backgroundColor: CAT_COLORS[idx % CAT_COLORS.length] },
-                      ]}
+              <FlatList
+                data={categories}
+                keyExtractor={(cat: any) => cat.id}
+                numColumns={4}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingHorizontal: 12 }}
+                columnWrapperStyle={{ justifyContent: 'space-around' }}
+                renderItem={({ item: cat, index }: any) => {
+                  const tone = CAT_TONES[index % CAT_TONES.length] as keyof typeof colors;
+                  return (
+                    <Pressable
+                      style={styles.catCard}
+                      onPress={() => nav.navigate('ProductList', { categoryId: cat.id, title: cat.name })}
                     >
-                      <Text style={styles.catEmoji}>{CAT_EMOJI[cat.name] ?? '📦'}</Text>
-                    </View>
-                    <Text style={styles.catName} numberOfLines={2}>{cat.name}</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
+                      <View style={[styles.catIconBg, { backgroundColor: (colors as any)[tone] }]}>
+                        <AppIcon
+                          name={CAT_ICONS[index % CAT_ICONS.length]}
+                          size={26}
+                          color={colors.primary}
+                        />
+                      </View>
+                      <Text style={styles.catName} numberOfLines={2}>{cat.name}</Text>
+                    </Pressable>
+                  );
+                }}
+              />
             )}
 
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Mua theo mức giá</Text>
-            </View>
+            {/* Tiện ích */}
             <View style={styles.quickRow}>
-              <QuickLink icon="💸" label="Dưới 30k" color={colors.primarySoft} textColor={colors.primaryDark}
-                onPress={() => nav.navigate('ProductList', { title: 'Dưới 30k', maxPrice: 30000 })} />
-              <QuickLink icon="✨" label="30–50k" color={colors.goldSoft} textColor="#92400E"
-                onPress={() => nav.navigate('ProductList', { title: '30–50k', minPrice: 30000, maxPrice: 50000 })} />
-              <QuickLink icon="🎁" label="50–100k" color={colors.aiSoft} textColor={colors.aiDark}
-                onPress={() => nav.navigate('ProductList', { title: '50–100k', minPrice: 50000, maxPrice: 100000 })} />
-              <QuickLink icon="🌟" label="Trên 100k" color="#FCE7F3" textColor="#BE185D"
-                onPress={() => nav.navigate('ProductList', { title: 'Trên 100k', minPrice: 100000 })} />
+              <QuickLink icon="robot" label="AI Chat" tone="aiSoft" iconColor={colors.aiDark} onPress={() => nav.navigate('AI')} colors={colors} />
+              <QuickLink icon="cart" label="Giỏ hàng" tone="primarySoft" iconColor={colors.primaryDark} onPress={() => nav.navigate('Cart')} colors={colors} />
+              <QuickLink icon="truck" label="Đơn hàng" tone="goldSoft" iconColor={colors.gold} onPress={() => nav.navigate('Orders')} colors={colors} />
+              <QuickLink icon="pin" label="Địa chỉ" tone="dangerSoft" iconColor={colors.danger} onPress={() => nav.navigate('Addresses')} colors={colors} />
             </View>
 
             {isDiscoveryLoading ? <ProductGridSkeleton count={4} /> : (
               <>
-                <DiscoverySection title="Ưu đãi hôm nay" subtitle="Giá tốt đang chờ bạn" products={sale}
-                  onSeeAll={() => nav.navigate('ProductList', { title: 'Ưu đãi hôm nay', onSale: true })}
-                  onPressProduct={(item: any) => nav.navigate('ProductDetail', { idOrSlug: item.slug })} />
                 <DiscoverySection title="Được mua nhiều" subtitle="Sản phẩm bán chạy" products={bestSelling}
                   onSeeAll={() => nav.navigate('ProductList', { title: 'Được mua nhiều', sortBy: 'best_selling' })}
                   onPressProduct={(item: any) => nav.navigate('ProductDetail', { idOrSlug: item.slug })} />
@@ -252,27 +301,39 @@ export function HomeScreen() {
   );
 }
 
-function QuickLink({ icon, label, color, textColor, onPress }: any) {
+function QuickLink({ icon, label, tone, iconColor, onPress, colors }: any) {
   return (
-    <Pressable style={styles.quickItem} onPress={onPress}>
-      <View style={[styles.quickIcon, { backgroundColor: color }]}>
-        <Text style={styles.quickEmoji}>{icon}</Text>
+    <Pressable style={quickStyles.item} onPress={onPress}>
+      <View style={[quickStyles.icon, { backgroundColor: (colors as any)[tone] }]}>
+        <AppIcon name={icon as AppIconName} size={26} color={iconColor} />
       </View>
-      <Text style={[styles.quickLabel, { color: textColor }]}>{label}</Text>
+      <Text style={[quickStyles.label, { color: colors.textSecondary }]}>{label}</Text>
     </Pressable>
   );
 }
 
+const quickStyles = StyleSheet.create({
+  item: { alignItems: 'center', flex: 1 },
+  icon: {
+    width: 56, height: 56, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 6,
+  },
+  label: { fontSize: 11, fontWeight: '700' },
+});
+
 function DiscoverySection({ title, subtitle, products, onSeeAll, onPressProduct }: any) {
+  const { colors } = useTheme();
   if (!products.length) return null;
   return (
     <>
-      <View style={styles.sectionHeader}>
+      <View style={discStyles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.sectionTitle}>{title}</Text>
-          <Text style={styles.sectionSub}>{subtitle}</Text>
+          <Text style={[discStyles.title, { color: colors.text }]}>{title}</Text>
+          <Text style={[discStyles.sub, { color: colors.textMuted }]}>{subtitle}</Text>
         </View>
-        <Pressable onPress={onSeeAll}><Text style={styles.seeAll}>Xem tất cả ›</Text></Pressable>
+        <Pressable onPress={onSeeAll}>
+          <Text style={[discStyles.seeAll, { color: colors.primary }]}>Xem tất cả ›</Text>
+        </Pressable>
       </View>
       <FlatList
         data={products}
@@ -287,11 +348,21 @@ function DiscoverySection({ title, subtitle, products, onSeeAll, onPressProduct 
   );
 }
 
-const styles = StyleSheet.create({
+const discStyles = StyleSheet.create({
+  header: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, marginTop: 22, marginBottom: 12,
+  },
+  title: { fontSize: 17, fontWeight: '800', flex: 1 },
+  sub: { fontSize: 11, marginTop: 2 },
+  seeAll: { fontSize: 13, fontWeight: '700' },
+});
+
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryDark,
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28,
     borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
   },
@@ -304,7 +375,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center', justifyContent: 'center',
   },
-  bellIcon: { fontSize: 22 },
   bellDot: {
     position: 'absolute', top: 6, right: 6,
     minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9,
@@ -315,7 +385,7 @@ const styles = StyleSheet.create({
 
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: 'white', marginHorizontal: 16, marginTop: -16,
+    backgroundColor: colors.surface, marginHorizontal: 16, marginTop: -16,
     padding: 14, borderRadius: 16,
     shadowColor: colors.shadow, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3,
   },
@@ -324,7 +394,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.aiSoft,
     alignItems: 'center', justifyContent: 'center',
   },
-  aiIconText: { fontSize: 22 },
   searchTitle: { fontSize: 14, fontWeight: '800', color: colors.aiDark },
   searchPlaceholder: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   searchArrowBg: {
@@ -332,55 +401,68 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
   },
-  searchArrow: { color: 'white', fontWeight: '800', fontSize: 16 },
 
-  promoBanner: {
+  promoSlide: {
+    width: BANNER_W,
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.aiSoft, marginHorizontal: 16, marginTop: 12,
+    backgroundColor: colors.primary,
     padding: 16, borderRadius: 16, gap: 14,
-    borderLeftWidth: 4, borderLeftColor: colors.ai,
+    overflow: 'hidden',
+  },
+  promoShade: {
+    position: 'absolute', right: -40, top: -60,
+    width: 180, height: 220, borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   promoLeft: { flex: 1 },
   promoBadge: {
-    alignSelf: 'flex-start', backgroundColor: colors.danger,
+    alignSelf: 'flex-start', backgroundColor: '#fff',
     paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginBottom: 6,
   },
-  promoBadgeText: { color: 'white', fontSize: 10, fontWeight: '900' },
-  promoTitle: { fontSize: 14, fontWeight: '800', color: colors.text },
-  promoCode: { fontSize: 11, color: colors.aiDark, fontWeight: '700', marginTop: 2 },
-  promoDiscount: { fontSize: 13, color: colors.danger, fontWeight: '800', marginTop: 4 },
-  promoEmoji: { fontSize: 40 },
+  promoBadgeText: { color: colors.danger, fontSize: 10, fontWeight: '900' },
+  promoTitle: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  promoCode: { fontSize: 11, color: 'rgba(255,255,255,0.9)', fontWeight: '700', marginTop: 2 },
+  promoDiscount: { fontSize: 14, color: '#fff', fontWeight: '800', marginTop: 4 },
+  promoCta: {
+    alignSelf: 'flex-start', marginTop: 8,
+    backgroundColor: '#fff', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10,
+  },
+  promoCtaText: { color: colors.primaryDark, fontSize: 12, fontWeight: '800' },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 8 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
+  dotActive: { width: 20, backgroundColor: colors.primary },
 
-  quickRow: {
-    flexDirection: 'row', justifyContent: 'space-around',
-    paddingHorizontal: 12, marginTop: 18,
+  flashHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 16, marginTop: 20, marginBottom: 12,
   },
-  quickItem: { alignItems: 'center', flex: 1 },
-  quickIcon: {
-    width: 56, height: 56, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 6,
+  flashTitle: { fontSize: 17, fontWeight: '800', color: colors.danger },
+  countBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.danger, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
   },
-  quickEmoji: { fontSize: 26 },
-  quickLabel: { fontSize: 11, fontWeight: '700' },
+  countText: { color: '#fff', fontSize: 11, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  seeAll: { color: colors.primary, fontSize: 13, fontWeight: '700' },
 
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, marginTop: 22, marginBottom: 12,
   },
   sectionTitle: { fontSize: 17, fontWeight: '800', color: colors.text, flex: 1 },
-  sectionSub: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
-  seeAll: { color: colors.primary, fontSize: 13, fontWeight: '700' },
 
-  catCard: {
-    width: 76, alignItems: 'center', marginHorizontal: 6,
-  },
+  catCard: { width: 76, alignItems: 'center', marginVertical: 6 },
   catIconBg: {
     width: 60, height: 60, borderRadius: 18,
     alignItems: 'center', justifyContent: 'center', marginBottom: 6,
   },
-  catEmoji: { fontSize: 28 },
   catName: {
     fontSize: 11, color: colors.text, fontWeight: '600',
     textAlign: 'center', lineHeight: 14,
   },
+
+  quickRow: {
+    flexDirection: 'row', justifyContent: 'space-around',
+    paddingHorizontal: 12, marginTop: 18,
+  },
 });
+
