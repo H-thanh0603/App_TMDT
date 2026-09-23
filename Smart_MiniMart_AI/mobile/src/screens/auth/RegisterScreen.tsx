@@ -17,8 +17,13 @@ export function RegisterScreen() {
   });
 
   const handleRegister = async () => {
-    if (form.password.length < 6) {
-      Alert.alert('Lỗi', 'Mật khẩu tối thiểu 6 ký tự');
+    // Khớp chuẩn mật khẩu server (SEC-026): ≥8 ký tự, có chữ và số
+    if (form.password.length < 8) {
+      Alert.alert('Lỗi', 'Mật khẩu tối thiểu 8 ký tự');
+      return;
+    }
+    if (!/[A-Za-z]/.test(form.password) || !/\d/.test(form.password)) {
+      Alert.alert('Lỗi', 'Mật khẩu phải có ít nhất 1 chữ cái và 1 chữ số');
       return;
     }
     try {

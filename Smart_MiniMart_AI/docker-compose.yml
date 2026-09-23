@@ -6,15 +6,17 @@ services:
     container_name: minimart-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: minimart
-      POSTGRES_PASSWORD: minimart_dev_2026
-      POSTGRES_DB: smart_minimart
+      # Đặt qua file .env local (xem .env.example ở repo root của compose) — KHÔNG hard-code.
+      POSTGRES_USER: ${POSTGRES_USER:-minimart}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Thieu POSTGRES_PASSWORD trong .env}
+      POSTGRES_DB: ${POSTGRES_DB:-smart_minimart}
     ports:
-      - "5432:5432"
+      # Chỉ bind localhost: Postgres không cần phơi ra LAN/WAN ở môi trường dev.
+      - "127.0.0.1:5432:5432"
     volumes:
       - minimart_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U minimart -d smart_minimart"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-minimart} -d ${POSTGRES_DB:-smart_minimart}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -23,12 +25,13 @@ services:
     image: dpage/pgadmin4:latest
     container_name: minimart-pgadmin
     restart: unless-stopped
+    profiles: ["tools"] # mặc định không chạy: docker compose --profile tools up pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@minimart.vn
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@minimart.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?Thieu PGADMIN_PASSWORD trong .env}
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
-      - "5050:80"
+      - "127.0.0.1:5050:80"
     depends_on:
       - postgres
 
@@ -39,10 +42,12 @@ services:
     container_name: minimart-ocr
     restart: unless-stopped
     ports:
-      - "5001:5001"
+      # Chỉ bind localhost + yêu cầu OCR_API_KEY (xem ocr-service/.env.example).
+      - "127.0.0.1:5001:5001"
     environment:
       OCR_DEFAULT_ENGINE: mock
       LOG_LEVEL: INFO
+      OCR_API_KEY: ${OCR_API_KEY:-}
     volumes:
       - ./ocr-service/samples:/app/samples:ro
 

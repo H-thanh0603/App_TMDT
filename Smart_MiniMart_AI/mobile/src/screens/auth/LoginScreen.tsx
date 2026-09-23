@@ -18,17 +18,33 @@ const DEMO_ACCOUNTS = [
 
 export function LoginScreen() {
   const nav = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
-  const { login, loading } = useAuthStore();
+  const { login, loginMfa, loading } = useAuthStore();
   const [email, setEmail] = useState('customer@minimart.vn');
   const [password, setPassword] = useState('123456');
   const [activeRole, setActiveRole] = useState(0);
+  // Q29: bước 2 MFA — hiện khi server trả mfaRequired.
+  const [mfaUserId, setMfaUserId] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
 
   const handleLogin = async () => {
     try {
-      await login(email.trim(), password);
+      const r: any = await login(email.trim(), password);
+      if (r?.mfaRequired) setMfaUserId(r.userId);
     } catch (err: any) {
       Alert.alert('Đăng nhập thất bại',
         err.response?.data?.message ?? err.message ?? 'Vui lòng thử lại');
+    }
+  };
+
+  const handleMfa = async () => {
+    if (!mfaUserId) return;
+    try {
+      await loginMfa(mfaUserId, mfaCode.trim());
+      setMfaUserId(null);
+      setMfaCode('');
+    } catch (err: any) {
+      Alert.alert('Mã xác thực sai',
+        err.response?.data?.message ?? err.message ?? 'Thử lại');
     }
   };
 
@@ -74,8 +90,25 @@ export function LoginScreen() {
             <Button title="Đăng nhập" onPress={handleLogin} loading={loading} fullWidth
               style={{ marginTop: spacing.base }} />
 
+            {mfaUserId && (
+              <View style={{ marginTop: spacing.base }}>
+                <Text style={styles.label}>Mã MFA 6 số (Authenticator / recovery code)</Text>
+                <View style={styles.inputWrap}>
+                  <Text style={styles.inputIcon}>🔑</Text>
+                  <TextInput value={mfaCode} onChangeText={setMfaCode} style={styles.input}
+                    keyboardType="number-pad" maxLength={64}
+                    placeholder="123456" placeholderTextColor={colors.textMuted} />
+                </View>
+                <Button title="Xác nhận MFA" onPress={handleMfa} loading={loading} fullWidth
+                  style={{ marginTop: spacing.sm }} />
+              </View>
+            )}
+
             <TouchableOpacity onPress={() => nav.navigate('Register')} style={styles.linkBtn}>
               <Text style={styles.linkText}>Chưa có tài khoản? <Text style={styles.linkAccent}>Đăng ký</Text></Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => nav.navigate('Forgot')} style={[styles.linkBtn, { marginTop: spacing.sm }]}>
+              <Text style={styles.linkText}>Quên mật khẩu? <Text style={styles.linkAccent}>Đặt lại</Text></Text>
             </TouchableOpacity>
           </View>
 

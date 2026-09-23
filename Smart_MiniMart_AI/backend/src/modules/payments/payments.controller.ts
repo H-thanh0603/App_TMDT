@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Ip, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { Public } from '@/common/decorators/public.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
@@ -25,6 +26,7 @@ export class PaymentsController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Post('vnpay/create')
   @ApiOperation({ summary: 'Tạo URL thanh toán VNPay sandbox' })
   createVnpay(@CurrentUser('sub') userId: string, @Body() dto: CreateVnpayDto, @Ip() ip: string) {
@@ -50,15 +52,22 @@ export class PaymentsController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Post('vietqr/create')
   @ApiOperation({ summary: 'Tạo VietQR tĩnh cho đơn (thanh toán chuyển khoản)' })
-  createVietQr(@CurrentUser('sub') userId: string, @Body() dto: CreateVietQrDto) {
-    return this.vietqr.generate(userId, dto);
+  createVietQr(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: CreateVietQrDto,
+    @CurrentUser('role') role?: Role,
+  ) {
+    // SEC-023: chỉ STORE_ADMIN được ghi đè STK/ngân hàng; khách luôn dùng STK của shop.
+    return this.vietqr.generate(userId, dto, { allowOverrides: role === Role.STORE_ADMIN });
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @Roles(Role.STAFF, Role.STORE_ADMIN)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @Post('vietqr/:orderId/confirm')
   @ApiOperation({ summary: 'Xác nhận thủ công giao dịch VietQR' })
   confirmVietQr(

@@ -1,0 +1,9 @@
+# Không commit file môi trường thật (chứa khóa OCR chia sẻ).
+.env
+.env.local
+*.pem
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+uploads/

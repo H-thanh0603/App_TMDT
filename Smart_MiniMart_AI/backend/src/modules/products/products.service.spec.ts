@@ -84,5 +84,50 @@ describe('ProductsService', () => {
       const findManyArg = (repo.transactionList.mock.calls[0] as any)[0];
       expect(findManyArg.where).toEqual({ isActive: true, salePrice: { not: null } });
     });
+
+    it('ignores includeInactive for anonymous/customer requests (SEC-022)', async () => {
+      repo.transactionList.mockResolvedValue([[], 0]);
+
+      await service.list({ includeInactive: 'true' } as any); // không truyền allowInactive
+
+      const findManyArg = (repo.transactionList.mock.calls[0] as any)[0];
+      expect(findManyArg.where).toEqual({ isActive: true });
+    });
+
+    it('honours includeInactive only when allowInactive=true (admin/staff)', async () => {
+      repo.transactionList.mockResolvedValue([[], 0]);
+
+      await service.list({ includeInactive: 'true' } as any, { allowInactive: true });
+
+      const findManyArg = (repo.transactionList.mock.calls[0] as any)[0];
+      expect(findManyArg.where).toEqual({});
+    });
+  });
+
+  describe('findOne (SEC-022)', () => {
+    it('hides inactive products from anonymous lookups', async () => {
+      repo.findFirst.mockResolvedValue(null);
+
+      await expect(service.findOne('milk-220ml')).rejects.toThrow('Sản phẩm không tồn tại');
+      expect((repo.findFirst.mock.calls[0] as any)[0].where).toEqual({
+        OR: [{ id: 'milk-220ml' }, { slug: 'milk-220ml' }],
+        isActive: true,
+      });
+    });
+
+    it('lets admin/staff fetch an inactive product and bumps view count', async () => {
+      repo.findFirst.mockResolvedValue({ id: 'p1', name: 'SP ẩn' });
+      repo.update.mockResolvedValue({ id: 'p1' });
+
+      await service.findOne('p1', { allowInactive: true });
+
+      expect((repo.findFirst.mock.calls[0] as any)[0].where).toEqual({
+        OR: [{ id: 'p1' }, { slug: 'p1' }],
+      });
+      expect(repo.update).toHaveBeenCalledWith({
+        where: { id: 'p1' },
+        data: { viewCount: { increment: 1 } },
+      });
+    });
   });
 });

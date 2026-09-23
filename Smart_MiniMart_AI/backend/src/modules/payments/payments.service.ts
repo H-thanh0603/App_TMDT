@@ -71,7 +71,9 @@ export class PaymentsService {
   }
 
   /**
-   * Tạo URL thanh toán VNPay sandbox cho order.
+   * Tạo URL thanh toán VNPay cho order (sandbox hay prod theo VNPAY_URL cấu hình).
+   * Q155: prod dùng https://www.vnpayment.vn/paymentv2/vpcpay.html — người vận hành
+   * điền VNPAY_URL + VNPAY_TMN_CODE + VNPAY_HASH_SECRET, code không hard-code môi trường.
    * App mở URL này trên WebView/browser để khách thanh toán.
    */
   async createVnpayUrl(

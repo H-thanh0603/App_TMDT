@@ -15,7 +15,7 @@ export function AIChatScreen() {
     {
       id: '0',
       role: 'ai',
-      text: 'Xin chào! Tôi là trợ lý mua sắm AI. Bạn cần tư vấn gì hôm nay?',
+      text: 'Xin chào! Tôi là trợ lý mua sắm AI 🤖 (câu trả lời do AI tạo, giá cả chỉ tham khảo — kiểm tra giá hiển thị trên sản phẩm). Bạn cần tư vấn gì hôm nay?',
     },
   ]);
   const [keyboardHeight, setKeyboardHeight] = useState(0);

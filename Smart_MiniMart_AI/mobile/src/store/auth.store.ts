@@ -8,7 +8,8 @@ interface AuthState {
   loading: boolean;
   initialized: boolean;
   initialize: () => Promise<void>;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password: string) => Promise<User | { mfaRequired: true; userId: string }>;
+  loginMfa: (userId: string, code: string) => Promise<User>;
   register: (email: string, password: string, fullName: string, phone?: string) => Promise<User>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
@@ -36,10 +37,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  // Q29: login có thể trả mfaRequired (bước 1) thay vì token — caller hiện ô nhập MFA.
   login: async (email, password) => {
     set({ loading: true });
     try {
       const res = await api.post('/auth/login', { email, password });
+      const data = unwrap<any>(res);
+      if (data?.mfaRequired) return { mfaRequired: true as const, userId: data.userId };
+      await SecureStore.setItemAsync('access_token', data.accessToken);
+      await SecureStore.setItemAsync('refresh_token', data.refreshToken);
+      set({ user: data.user });
+      return data.user;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  loginMfa: async (userId, code) => {
+    set({ loading: true });
+    try {
+      const res = await api.post('/auth/mfa/login', { userId, code });
       const data = unwrap<{ user: User; accessToken: string; refreshToken: string }>(res);
       await SecureStore.setItemAsync('access_token', data.accessToken);
       await SecureStore.setItemAsync('refresh_token', data.refreshToken);
@@ -64,6 +81,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  // Q26: đổi mật khẩu/khóa tài khoản phía server đã thu hồi refresh token;
+  // client logout luôn xóa cả 2 token khỏi SecureStore (không để token mồ côi).
   logout: async () => {
     const refreshToken = await SecureStore.getItemAsync('refresh_token');
     try {

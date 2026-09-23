@@ -10,6 +10,8 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Q77: pool cho Render free + Neon sleep — ghi chú để vận hành thêm
+  // ?connection_limit=5&pool_timeout=10 vào DATABASE_URL prod khi scale.
 }
 
 // ============================================================================
@@ -139,6 +141,16 @@ model User {
   loyaltyPoints  Int        @default(0)
   isVip          Boolean    @default(false)
   lastLoginAt    DateTime?
+  // Q24: lockout chống credential stuffing — đếm sai liên tiếp, khóa tạm thời.
+  failedLoginAttempts Int      @default(0)
+  lockedUntil    DateTime?
+  // Q29: MFA TOTP cho admin/privileged — secret + cờ bật (recovery code = mã dự phòng hash).
+  mfaSecret      String?
+  mfaEnabled     Boolean    @default(false)
+  mfaRecoveryHash String?
+  // Q23: reset password — token hash 1 lần, hết hạn ngắn (đòi hỏi mail/SMTP của shop).
+  resetTokenHash String?    @unique
+  resetExpiresAt DateTime?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 

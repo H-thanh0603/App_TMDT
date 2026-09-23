@@ -9,11 +9,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { useScanReceipt } from '@/services/queries';
 import { colors } from '@/theme/colors';
 
-const SAMPLE_IMAGES = [
-  { label: 'Phiếu mẫu 1 (rõ nét)', url: 'https://placehold.co/600x800/png?text=Phieu+nhap+1' },
-  { label: 'Phiếu mẫu 2', url: 'https://placehold.co/600x800/png?text=Phieu+nhap+2' },
-  { label: 'Phiếu mẫu 3', url: 'https://placehold.co/600x800/png?text=Phieu+nhap+3' },
-];
+// Q110: mẫu OCR chỉ dùng ảnh mẫu bundle local (ocr-service/samples) — không gọi placehold.co.
+// Staff chọn ảnh từ thư viện/camera; danh sách mẫu do backend cung cấp khi cần.
+const SAMPLE_IMAGES: Array<{ label: string; url: string }> = [];
 
 /** Chỉ expose engines backend/OCR service thực sự hỗ trợ. EasyOCR chưa impl. */
 const ENGINES = [
@@ -150,13 +148,17 @@ export function OCRScanScreen() {
 
         <View style={styles.divider} />
 
-        <Text style={styles.label}>Hoặc dùng ảnh mẫu (demo)</Text>
-        {SAMPLE_IMAGES.map((s) => (
-          <Pressable key={s.url} style={styles.sampleItem} onPress={() => handleScan(s.url)}>
-            <Text style={styles.sampleLabel}>📋 {s.label}</Text>
-            <Text style={styles.sampleArrow}>→</Text>
-          </Pressable>
-        ))}
+        {SAMPLE_IMAGES.length > 0 && (
+          <>
+            <Text style={styles.label}>Hoặc dùng ảnh mẫu (demo)</Text>
+            {SAMPLE_IMAGES.map((s) => (
+              <Pressable key={s.url} style={styles.sampleItem} onPress={() => handleScan(s.url)}>
+                <Text style={styles.sampleLabel}>📋 {s.label}</Text>
+                <Text style={styles.sampleArrow}>→</Text>
+              </Pressable>
+            ))}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

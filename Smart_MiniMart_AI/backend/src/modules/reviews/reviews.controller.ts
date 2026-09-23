@@ -18,6 +18,7 @@ export class ReviewsController {
   @Public()
   @Get('product/:productId')
   list(@Param('productId') productId: string, @Query('limit') limit?: string) {
+    // parseInt('abc') = NaN → service clamp về 20 (Q84).
     return this.reviews.listByProduct(productId, limit ? parseInt(limit, 10) : 20);
   }
 

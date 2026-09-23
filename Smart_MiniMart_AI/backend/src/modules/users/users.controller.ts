@@ -101,16 +101,38 @@ export class UsersController {
   @UseGuards(RolesGuard)
   @Roles(Role.STORE_ADMIN)
   @ApiOperation({ summary: '[Admin] Cập nhật user (đổi role/status/info)' })
-  update(@Param('id') id: string, @Body() dto: UpdateStaffDto) {
-    return this.users.updateStaff(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateStaffDto,
+    @CurrentUser('sub') actorId: string,
+  ) {
+    return this.users.updateStaff(id, dto, actorId);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles(Role.STORE_ADMIN)
   @ApiOperation({ summary: '[Admin] Vô hiệu hóa tài khoản (soft delete)' })
-  deactivate(@Param('id') id: string) {
-    return this.users.deactivateUser(id);
+  deactivate(@Param('id') id: string, @CurrentUser('sub') actorId: string) {
+    return this.users.deactivateUser(id, actorId);
+  }
+
+  // Q62/Q69: xuất dữ liệu của user (data portability) — admin trả hồ sơ + đơn + địa chỉ.
+  @Get(':id/export')
+  @UseGuards(RolesGuard)
+  @Roles(Role.STORE_ADMIN)
+  @ApiOperation({ summary: '[Admin] Xuất dữ liệu user (JSON)' })
+  exportUser(@Param('id') id: string) {
+    return this.users.exportUserData(id);
+  }
+
+  // Q62: xóa/anonymize tài khoản (NĐ13/GDPR) — ẩn danh PII, giữ đơn dạng thống kê.
+  @Delete(':id/anonymize')
+  @UseGuards(RolesGuard)
+  @Roles(Role.STORE_ADMIN)
+  @ApiOperation({ summary: '[Admin] Anonymize tài khoản (xóa PII)' })
+  anonymize(@Param('id') id: string, @CurrentUser('sub') actorId: string) {
+    return this.users.anonymizeUser(id, actorId);
   }
 
   @Post(':id/loyalty')
