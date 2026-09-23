@@ -8,9 +8,27 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: t
+          POSTGRES_PASSWORD: t
+          POSTGRES_DB: e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: Smart_MiniMart_AI/backend
+    env:
+      DATABASE_URL: postgresql://t:t@localhost:5432/e2e
+      JWT_ACCESS_SECRET: ci-access-secret-32chars-minimum
+      JWT_REFRESH_SECRET: ci-refresh-secret-32chars-minimum
+      NODE_ENV: test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,6 +40,8 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm audit --omit=dev --audit-level=high
       - run: npm test
+      - run: npx prisma migrate deploy
+      - run: npm run test:e2e
 
   ocr:
     runs-on: ubuntu-latest
