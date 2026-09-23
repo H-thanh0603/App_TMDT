@@ -54,7 +54,7 @@ export function Button({
       onPressOut={() => { scale.value = withSpring(1, { damping: 12, stiffness: 300 }); }}
       style={[
         {
-          borderRadius: radius.base,
+          borderRadius: variant === 'primary' || variant === 'danger' ? radius.lg : radius.base,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: bg,

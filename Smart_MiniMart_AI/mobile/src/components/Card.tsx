@@ -16,7 +16,11 @@ export const Card: React.FC<CardProps> = ({
       style={[
         styles.base,
         { backgroundColor: colors.card },
-        variant === 'elevated' && { shadowColor: colors.shadow },
+        variant === 'elevated' && {
+          shadowColor: colors.shadow,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+        },
         variant === 'outlined' && { borderWidth: 1, borderColor: colors.border },
         { padding },
         style,

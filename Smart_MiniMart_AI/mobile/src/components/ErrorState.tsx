@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { AppIcon } from './AppIcon';
 import { useTheme } from '@/theme';
 import { radius, spacing, typography } from '@/theme/typography';
 import { Button } from './Button';
@@ -17,13 +18,17 @@ export function ErrorState({
   description = 'Không tải được dữ liệu. Kiểm tra mạng và thử lại.',
   onRetry,
   retryLabel = 'Thử lại',
-  icon = '⚠️',
+  icon,
 }: Props) {
   const { colors } = useTheme();
   return (
     <View style={styles.wrap} accessibilityRole="alert">
       <View style={[styles.iconCircle, { backgroundColor: colors.dangerSoft }]}>
-        <Text style={styles.icon}>{icon}</Text>
+        {typeof icon === 'string' ? (
+          <Text style={styles.icon}>{icon}</Text>
+        ) : (
+          icon ?? <AppIcon name="alert" size={36} color={colors.danger} />
+        )}
       </View>
       <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       {!!description && <Text style={[styles.desc, { color: colors.textMuted }]}>{description}</Text>}

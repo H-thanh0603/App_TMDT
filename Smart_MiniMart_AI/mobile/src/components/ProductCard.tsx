@@ -51,6 +51,9 @@ export function ProductCard({ product, onPress, variant = 'grid', index = 0 }: P
   const { colors } = useTheme();
   const finalPrice = Number(product.salePrice ?? product.price);
   const hasSale = product.salePrice && Number(product.salePrice) < Number(product.price);
+  const salePct = hasSale
+    ? Math.round((1 - Number(product.salePrice) / Number(product.price)) * 100)
+    : 0;
   const [failed, setFailed] = useState(false);
   const realUrl = resolveImage(product.imageUrl);
   const showReal = !failed && !!realUrl;
@@ -110,7 +113,7 @@ export function ProductCard({ product, onPress, variant = 'grid', index = 0 }: P
       )}
       {hasSale && (
         <View style={[styles.saleBadge, { backgroundColor: colors.danger }]}>
-          <Text style={styles.saleBadgeText}>SALE</Text>
+          <Text style={styles.saleBadgeText}>-{salePct}%</Text>
         </View>
       )}
       <View style={styles.gridBody}>
@@ -155,7 +158,7 @@ const styles = StyleSheet.create({
   name: { fontSize: typography.size.sm, fontWeight: typography.weight.semibold, lineHeight: 18 },
   brand: { fontSize: typography.size.xs, marginTop: 2 },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: spacing.xs },
-  price: { fontSize: typography.size.base, fontWeight: typography.weight.bold },
+  price: { fontSize: typography.size.base, fontWeight: '800' as const },
   priceStrike: {
     fontSize: typography.size.xs,
     textDecorationLine: 'line-through', marginLeft: spacing.xs,

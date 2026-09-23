@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useTheme } from '@/theme';
+import { AppIcon } from './AppIcon';
 
 type Props = {
   /** compact = switch only row used in profile menus */
@@ -14,7 +15,7 @@ export function ThemeToggle({ compact = false }: Props) {
   if (compact) {
     return (
       <View style={[styles.row, { borderTopColor: colors.borderLight }]}>
-        <Text style={styles.icon}>{isDark ? '🌙' : '☀️'}</Text>
+        <AppIcon name={isDark ? 'moon' : 'sun'} size={22} color={colors.text} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.title, { color: colors.text }]}>Giao diện tối</Text>
           <Text style={[styles.sub, { color: colors.textMuted }]}>
@@ -31,10 +32,10 @@ export function ThemeToggle({ compact = false }: Props) {
     );
   }
 
-  const options: Array<{ key: 'light' | 'dark' | 'system'; label: string; icon: string }> = [
-    { key: 'light', label: 'Sáng', icon: '☀️' },
-    { key: 'dark', label: 'Tối', icon: '🌙' },
-    { key: 'system', label: 'Hệ thống', icon: '⚙️' },
+  const options: Array<{ key: 'light' | 'dark' | 'system'; label: string; icon: 'sun' | 'moon' | 'cog' }> = [
+    { key: 'light', label: 'Sáng', icon: 'sun' },
+    { key: 'dark', label: 'Tối', icon: 'moon' },
+    { key: 'system', label: 'Hệ thống', icon: 'cog' },
   ];
 
   return (
@@ -55,7 +56,7 @@ export function ThemeToggle({ compact = false }: Props) {
                 },
               ]}
             >
-              <Text style={styles.segIcon}>{o.icon}</Text>
+              <AppIcon name={o.icon} size={16} color={active ? '#fff' : colors.text} />
               <Text style={[styles.segLabel, { color: active ? '#fff' : colors.text }]}>
                 {o.label}
               </Text>
@@ -76,7 +77,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderTopWidth: 1,
   },
-  icon: { fontSize: 22 },
+
   title: { fontSize: 15, fontWeight: '600' },
   sub: { fontSize: 12, marginTop: 2 },
   card: {
@@ -96,6 +97,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 4,
   },
-  segIcon: { fontSize: 16 },
   segLabel: { fontSize: 12, fontWeight: '700' },
 });
