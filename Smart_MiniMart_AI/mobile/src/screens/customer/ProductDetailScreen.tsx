@@ -4,11 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useProduct, useAddToCart, useCreateReview, useProductReviews, useReviewStats } from '@/services/queries';
 import { Button } from '@/components/Button';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { radius, spacing, typography } from '@/theme/typography';
 import { formatVnd } from '@/utils/format';
 import { resolveImage } from '@/services/api';
 
 export function ProductDetailScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const route = useRoute<any>();
   const nav = useNavigation<any>();
   const idOrSlug = route.params?.idOrSlug;
@@ -23,19 +26,30 @@ export function ProductDetailScreen() {
   const [comment, setComment] = useState('');
 
   if (isLoading || !product) {
-    return <SafeAreaView style={[styles.container, styles.center]}><Text>Đang tải...</Text></SafeAreaView>;
+    return <SafeAreaView style={[styles.container, styles.center]}><Text style={{ color: colors.textSecondary }}>Đang tải...</Text></SafeAreaView>;
   }
 
   const finalPrice = Number(product.salePrice ?? product.price);
   const hasSale = product.salePrice && Number(product.salePrice) < Number(product.price);
 
+  const doAdd = async () => {
+    await addToCart.mutateAsync({ productId: product.id, quantity: qty });
+  };
   const handleAdd = async () => {
     try {
-      await addToCart.mutateAsync({ productId: product.id, quantity: qty });
+      await doAdd();
       Alert.alert('Đã thêm vào giỏ', `${qty} ${product.name}`, [
         { text: 'Tiếp tục mua', style: 'cancel' },
         { text: 'Xem giỏ', onPress: () => nav.navigate('Tabs', { screen: 'Cart' }) },
       ]);
+    } catch (err: any) {
+      Alert.alert('Lỗi', err.response?.data?.message ?? 'Thêm vào giỏ thất bại');
+    }
+  };
+  const handleBuyNow = async () => {
+    try {
+      await doAdd();
+      nav.navigate('Tabs', { screen: 'Cart' });
     } catch (err: any) {
       Alert.alert('Lỗi', err.response?.data?.message ?? 'Thêm vào giỏ thất bại');
     }
@@ -56,7 +70,14 @@ export function ProductDetailScreen() {
           <View style={styles.priceRow}>
             <Text style={styles.price}>{formatVnd(finalPrice)}</Text>
             {hasSale && (
-              <Text style={styles.priceStrike}>{formatVnd(Number(product.price))}</Text>
+              <>
+                <Text style={styles.priceStrike}>{formatVnd(Number(product.price))}</Text>
+                <View style={styles.saleBadge}>
+                  <Text style={styles.saleBadgeText}>
+                    -{Math.round((1 - Number(product.salePrice) / Number(product.price)) * 100)}%
+                  </Text>
+                </View>
+              </>
             )}
             <Text style={styles.unit}>/{product.unit}</Text>
           </View>
@@ -66,7 +87,7 @@ export function ProductDetailScreen() {
               {product.stock > 0 ? `Còn ${product.stock}` : 'Hết hàng'}
             </Text>
             {product.tags?.includes('cận date') && (
-              <Text style={[styles.stockBadge, { backgroundColor: colors.expWarning, color: '#fff' }]}>
+              <Text style={[styles.stockBadge, { backgroundColor: colors.gold, color: '#fff' }]}>
                 Cận date — giảm sâu
               </Text>
             )}
@@ -110,15 +131,22 @@ export function ProductDetailScreen() {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <Button title={`Thêm vào giỏ • ${formatVnd(finalPrice * qty)}`}
-          onPress={handleAdd} loading={addToCart.isPending}
-          disabled={product.stock < 1} fullWidth />
+        <View style={{ flex: 1 }}>
+          <Button title="Thêm giỏ" variant="outline"
+            onPress={handleAdd} loading={addToCart.isPending}
+            disabled={product.stock < 1} fullWidth />
+        </View>
+        <View style={{ flex: 2 }}>
+          <Button title={`Mua ngay • ${formatVnd(finalPrice * qty)}`}
+            onPress={handleBuyNow} loading={addToCart.isPending}
+            disabled={product.stock < 1} fullWidth size="lg" />
+        </View>
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { alignItems: 'center', justifyContent: 'center' },
   image: { width: '100%', aspectRatio: 1, backgroundColor: colors.bgSecondary },
@@ -131,8 +159,10 @@ const styles = StyleSheet.create({
   unit: { fontSize: typography.size.sm, color: colors.textSecondary, marginLeft: spacing.xs },
   stockRow: { flexDirection: 'row', gap: 8, marginTop: spacing.md },
   stockBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.sm, fontSize: typography.size.xs, fontWeight: '600' },
-  inStock: { backgroundColor: colors.primaryLight, color: colors.primaryDark },
-  outStock: { backgroundColor: '#FEE2E2', color: colors.danger },
+  saleBadge: { backgroundColor: colors.danger, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.sm, marginLeft: spacing.sm },
+  saleBadgeText: { color: '#fff', fontSize: typography.size.xs, fontWeight: '800' },
+  inStock: { backgroundColor: colors.primarySoft, color: colors.success },
+  outStock: { backgroundColor: colors.dangerSoft, color: colors.danger },
   sectionTitle: { fontSize: typography.size.base, fontWeight: typography.weight.semibold, color: colors.text, marginBottom: spacing.sm },
   description: { fontSize: typography.size.sm, color: colors.textSecondary, lineHeight: 22 },
   rating: { color: colors.warning, fontWeight: '700' },
@@ -144,6 +174,7 @@ const styles = StyleSheet.create({
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   qtyText: { fontSize: typography.size.lg, fontWeight: typography.weight.semibold, color: colors.text, minWidth: 30, textAlign: 'center' },
   bottomBar: {
+    flexDirection: 'row', gap: spacing.sm,
     padding: spacing.base, borderTopWidth: 1, borderTopColor: colors.border,
     backgroundColor: colors.surface,
   },

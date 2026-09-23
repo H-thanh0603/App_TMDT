@@ -5,17 +5,21 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAIChat } from '@/services/queries';
-import { colors, radius, spacing, typography } from '@/theme';
+import { useTheme } from '@/theme';
+import { radius, spacing, typography } from '@/theme/typography';
+import { AppIcon } from '@/components/AppIcon';
 
 interface Msg { id: string; role: 'user' | 'ai'; text: string }
 
 export function AIChatScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Msg[]>([
     {
       id: '0',
       role: 'ai',
-      text: 'Xin chào! Tôi là trợ lý mua sắm AI 🤖 (câu trả lời do AI tạo, giá cả chỉ tham khảo — kiểm tra giá hiển thị trên sản phẩm). Bạn cần tư vấn gì hôm nay?',
+      text: 'Xin chào! Tôi là trợ lý mua sắm AI (câu trả lời do AI tạo, giá cả chỉ tham khảo — kiểm tra giá hiển thị trên sản phẩm). Bạn cần tư vấn gì hôm nay?',
     },
   ]);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -70,8 +74,11 @@ export function AIChatScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Trợ lý mua sắm 🤖</Text>
+      <View style={[styles.header, { backgroundColor: colors.aiDark }]}>
+        <View style={styles.titleRow}>
+          <AppIcon name="robot" size={24} color="#fff" />
+          <Text style={styles.title}>Trợ lý mua sắm</Text>
+        </View>
         <Text style={styles.subtitle}>Gợi ý sản phẩm, combo, khuyến mãi</Text>
       </View>
 
@@ -128,8 +135,9 @@ export function AIChatScreen() {
             onPress={send}
             style={[styles.sendBtn, (chat.isPending || !input.trim()) && { opacity: 0.5 }]}
             disabled={chat.isPending || !input.trim()}
+            accessibilityLabel="Gửi tin nhắn"
           >
-            <Text style={styles.sendIcon}>➤</Text>
+            <AppIcon name="chevron-right" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -137,14 +145,15 @@ export function AIChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
-  header: { padding: spacing.lg, paddingBottom: spacing.sm },
-  title: { fontSize: typography.size['2xl'], fontWeight: typography.weight.bold, color: colors.text },
-  subtitle: { fontSize: typography.size.sm, color: colors.textSecondary, marginTop: 2 },
+  header: { padding: spacing.lg, paddingBottom: spacing.sm, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  title: { fontSize: typography.size['2xl'], fontWeight: typography.weight.bold, color: '#fff' },
+  subtitle: { fontSize: typography.size.sm, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
   bubbleWrap: { marginVertical: spacing.xs },
   bubble: { maxWidth: '80%', padding: spacing.md, borderRadius: radius.base },
-  bubbleUser: { backgroundColor: colors.primary, borderBottomRightRadius: 4 },
+  bubbleUser: { backgroundColor: colors.ai, borderBottomRightRadius: 4 },
   bubbleAI: {
     backgroundColor: colors.surface, borderBottomLeftRadius: 4,
     borderWidth: 1, borderColor: colors.border,
@@ -161,8 +170,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgSecondary,
   },
   sendBtn: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary,
+    width: 44, height: 44, borderRadius: 22, backgroundColor: colors.ai,
     alignItems: 'center', justifyContent: 'center',
   },
-  sendIcon: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
 });

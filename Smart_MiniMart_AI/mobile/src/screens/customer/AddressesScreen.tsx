@@ -4,7 +4,8 @@ import {
   Modal, TextInput, ScrollView, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon } from '@/components/AppIcon';
 import { useAddresses, useCreateAddress, useUpdateAddress, useDeleteAddress } from '@/services/queries';
 import type { Address } from '@/types';
 import { EmptyState } from '@/components/EmptyState';
@@ -17,6 +18,8 @@ const empty: any = {
 };
 
 export function AddressesScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { data: addresses = [], isLoading, isError, refetch, isFetching } = useAddresses();
   const create = useCreateAddress();
   const update = useUpdateAddress();
@@ -112,7 +115,7 @@ export function AddressesScreen() {
                 )}
                 ListEmptyComponent={
                   <EmptyState
-                    icon="📍"
+                    icon={<AppIcon name="pin" size={40} color={colors.primary} />}
                     title="Chưa có địa chỉ nào"
                     description="Thêm địa chỉ để checkout đơn hàng."
                     actionLabel="Thêm địa chỉ đầu tiên"
@@ -156,6 +159,8 @@ export function AddressesScreen() {
 }
 
 function Field({ label, value, onChange, keyboardType }: any) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={{ marginBottom: 14 }}>
       <Text style={styles.label}>{label}</Text>
@@ -170,7 +175,7 @@ function Field({ label, value, onChange, keyboardType }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -208,7 +213,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
   label: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 6 },
   input: {
-    backgroundColor: 'white', borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: 10, padding: 12, fontSize: 15, color: colors.text,
   },
   switchRow: {

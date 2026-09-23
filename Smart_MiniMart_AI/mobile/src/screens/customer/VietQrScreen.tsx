@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { colors } from '@/theme';
+import { useTheme } from '@/theme';
 
 interface RouteParams {
   qr: {
@@ -18,6 +18,8 @@ interface RouteParams {
 }
 
 export function VietQrScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const route = useRoute<any>();
   const nav = useNavigation<any>();
   const { qr, orderNumber } = route.params as RouteParams;
@@ -66,6 +68,8 @@ export function VietQrScreen() {
 }
 
 function Row({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -76,24 +80,24 @@ function Row({ label, value, highlight }: { label: string; value: string; highli
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgSecondary },
   header: { padding: 16, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
   headerSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   body: { padding: 16, gap: 14 },
   qrCard: {
-    backgroundColor: 'white', borderRadius: 16, padding: 20, alignItems: 'center',
+    backgroundColor: colors.surface, borderRadius: 16, padding: 20, alignItems: 'center',
     borderWidth: 1, borderColor: colors.border,
   },
   qr: { width: 240, height: 240 },
   qrFallback: { fontSize: 13, color: colors.danger, textAlign: 'center' },
   scanHint: { fontSize: 12, color: colors.textMuted, marginTop: 12, textAlign: 'center' },
-  infoCard: { backgroundColor: 'white', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border },
+  infoCard: { backgroundColor: colors.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.bgAlt },
   rowLabel: { fontSize: 13, color: colors.textSecondary },
   rowValue: { fontSize: 13, fontWeight: '700', color: colors.text, flexShrink: 1, textAlign: 'right', marginLeft: 12 },
   note: { fontSize: 12, color: colors.textMuted, lineHeight: 18 },
-  btn: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
+  btn: { backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
   btnText: { color: 'white', fontWeight: '700', fontSize: 15 },
 });

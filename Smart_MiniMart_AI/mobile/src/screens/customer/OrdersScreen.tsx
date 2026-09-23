@@ -10,24 +10,28 @@ import { Badge } from '@/components/Badge';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { formatDateTime, formatVnd, statusLabel } from '@/utils/format';
 import type { OrderStatus } from '@/types';
 
 const STATUS_VARIANT: Record<string, any> = {
   PENDING: 'warning', CONFIRMED: 'info', PREPARING: 'ai',
-  DELIVERING: 'gold', COMPLETED: 'success', CANCELED: 'danger',
+  DELIVERING: 'neutral', COMPLETED: 'success', CANCELED: 'danger',
+  SHIPPING: 'neutral',
 };
 
-const FILTERS: Array<{ label: string; value?: OrderStatus; emoji: string }> = [
-  { label: 'Tất cả', emoji: '📋' },
-  { label: 'Chờ', value: 'PENDING', emoji: '⏳' },
-  { label: 'Đang xử lý', value: 'PREPARING', emoji: '📦' },
-  { label: 'Đang giao', value: 'DELIVERING', emoji: '🚚' },
-  { label: 'Hoàn tất', value: 'COMPLETED', emoji: '✅' },
+const FILTERS: Array<{ label: string; value?: OrderStatus; icon: AppIconName }> = [
+  { label: 'Tất cả', icon: 'grid' },
+  { label: 'Chờ', value: 'PENDING', icon: 'clock' },
+  { label: 'Đang xử lý', value: 'PREPARING', icon: 'box' },
+  { label: 'Đang giao', value: 'DELIVERING', icon: 'truck' },
+  { label: 'Hoàn tất', value: 'COMPLETED', icon: 'check' },
 ];
 
 export function OrdersScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const nav = useNavigation<any>();
   const route = useRoute<any>();
   const initialFilter = route.params?.filter as OrderStatus | undefined;
@@ -84,7 +88,7 @@ export function OrdersScreen() {
               style={[styles.chip, active && styles.chipActive]}
               onPress={() => setFilter(f.value)}
             >
-              <Text style={styles.chipEmoji}>{f.emoji}</Text>
+              <AppIcon name={f.icon} size={14} color={active ? '#fff' : colors.textSecondary} />
               <Text style={[styles.chipText, active && { color: 'white' }]}>{f.label}</Text>
               {cnt > 0 && (
                 <View style={[styles.chipCount, active && { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
@@ -133,7 +137,7 @@ export function OrdersScreen() {
             <View style={styles.cardFooter}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.payment}>
-                  {item.paymentMethod === 'COD' ? '💵 Tiền mặt' : '🏦 ' + item.paymentMethod}
+                  {item.paymentMethod === 'COD' ? 'Tiền mặt' : item.paymentMethod}
                 </Text>
                 <Text style={styles.itemCount}>{item.items.length} sản phẩm</Text>
               </View>
@@ -143,7 +147,7 @@ export function OrdersScreen() {
         )}
         ListEmptyComponent={
           <EmptyState
-            icon="📦"
+            icon={<AppIcon name="box" size={40} color={colors.primary} />}
             title={filter ? `Không có đơn ${statusLabel(filter).toLowerCase()}` : 'Chưa có đơn hàng'}
             description={
               filter
@@ -162,17 +166,16 @@ export function OrdersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  filterScroll: { backgroundColor: 'white', maxHeight: 56 },
+  filterScroll: { backgroundColor: colors.surface, maxHeight: 56 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18,
     backgroundColor: colors.bgAlt, height: 36,
   },
   chipActive: { backgroundColor: colors.primary },
-  chipEmoji: { fontSize: 14 },
   chipText: { fontSize: 12, fontWeight: '700', color: colors.text },
   chipCount: {
     minWidth: 20, paddingHorizontal: 6, height: 18, borderRadius: 9,
@@ -181,7 +184,7 @@ const styles = StyleSheet.create({
   },
   chipCountText: { fontSize: 10, fontWeight: '800', color: colors.text },
   card: {
-    backgroundColor: 'white', borderRadius: 12, padding: 14, marginBottom: 10,
+    backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10,
     shadowColor: colors.shadow, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },

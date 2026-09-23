@@ -1,17 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '@/theme/colors';
+import { useTheme } from '@/theme';
+import { AppIcon, type AppIconName } from '@/components/AppIcon';
 import { useNotifications, useMarkRead, useMarkAllRead } from '@/services/queries';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ListRowSkeleton } from '@/components/Skeleton';
 
-const TYPE_ICONS: Record<string, string> = {
-  ORDER: '🛒', PROMOTION: '🎁', EXPIRY: '⏰', SYSTEM: '🔔',
+const TYPE_ICONS: Record<string, AppIconName> = {
+  ORDER: 'cart', PROMOTION: 'gift', EXPIRY: 'clock', SYSTEM: 'bell',
 };
 
 export function NotificationsScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { data, isLoading, isError, refetch, isFetching } = useNotifications();
   const markRead = useMarkRead();
   const markAll = useMarkAllRead();
@@ -47,7 +50,7 @@ export function NotificationsScreen() {
               onPress={() => !item.isRead && markRead.mutate(item.id)}
             >
               <View style={[styles.iconWrap, !item.isRead && styles.iconUnread]}>
-                <Text style={{ fontSize: 18 }}>{TYPE_ICONS[item.type] || '📩'}</Text>
+                <AppIcon name={TYPE_ICONS[item.type] ?? 'bell'} size={20} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.cardTitle, !item.isRead && { fontWeight: '800' }]}>{item.title}</Text>
@@ -59,7 +62,7 @@ export function NotificationsScreen() {
           )}
           ListEmptyComponent={
             <EmptyState
-              icon="🔔"
+              icon={<AppIcon name="bell" size={40} color={colors.primary} />}
               title="Chưa có thông báo nào"
               description="Đơn hàng, KM và cảnh báo kho sẽ hiện ở đây."
               actionLabel="Tải lại"
@@ -73,7 +76,7 @@ export function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -83,7 +86,7 @@ const styles = StyleSheet.create({
   markAllBtn: { paddingHorizontal: 10, paddingVertical: 6 },
   markAllText: { color: colors.primary, fontWeight: '700' },
   card: {
-    flexDirection: 'row', backgroundColor: 'white', padding: 12,
+    flexDirection: 'row', backgroundColor: colors.surface, padding: 12,
     marginBottom: 8, borderRadius: 12, gap: 10, alignItems: 'center',
   },
   unread: { backgroundColor: colors.primarySoft },
@@ -91,7 +94,7 @@ const styles = StyleSheet.create({
     width: 44, height: 44, borderRadius: 22, backgroundColor: colors.bgAlt,
     alignItems: 'center', justifyContent: 'center',
   },
-  iconUnread: { backgroundColor: 'white' },
+  iconUnread: { backgroundColor: colors.primarySoft },
   cardTitle: { fontSize: 14, color: colors.text, fontWeight: '600' },
   body: { fontSize: 13, color: colors.textSecondary, marginTop: 2, lineHeight: 18 },
   time: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
