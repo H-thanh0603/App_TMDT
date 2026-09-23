@@ -1,7 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { AppIcon, type AppIconName } from '@/components/AppIcon';
 
 import { StaffOrdersScreen } from '@/screens/staff/StaffOrdersScreen';
 import { ImportReceiptsScreen } from '@/screens/staff/ImportReceiptsScreen';
@@ -25,10 +25,10 @@ function StaffTabs() {
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         tabBarLabelStyle: { fontSize: 11 },
         tabBarIcon: ({ color, size }) => {
-          const icon: Record<string, string> = {
-            Orders: '📦', Imports: '📥', Notif: '🔔', Profile: '👤',
+          const icon: Record<string, AppIconName> = {
+            Orders: 'box', Imports: 'truck', Notif: 'bell', Profile: 'user',
           };
-          return <Text style={{ fontSize: size, color }}>{icon[route.name] ?? '•'}</Text>;
+          return <AppIcon name={icon[route.name] ?? 'help'} size={size} color={color} />;
         },
       })}
     >
