@@ -7,20 +7,21 @@ Sentry.init({
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 0,
   // Q64/Q139: scrub PII/token khỏi event trước khi gửi.
   beforeSend(event: Record<string, unknown>) {
+    type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
     try {
       const scrub = (s: string) =>
         s
           .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, '[email]')
           .replace(/Bearer\s+[A-Za-z0-9._~-]+/gi, 'Bearer [redacted]')
           .replace(/(sk-|xox|secret|password|token)[=:][^\s"']+/gi, '$1=[redacted]');
-      const walk = (v: unknown): unknown => {
+      const walk = (v: Json): Json => {
         if (typeof v === 'string') return scrub(v);
         if (Array.isArray(v)) return v.map(walk);
         if (v && typeof v === 'object')
           return Object.fromEntries(Object.entries(v).map(([k, val]) => [k, walk(val)]));
         return v;
       };
-      return walk(event) as typeof event;
+      return walk(event as Json) as typeof event;
     } catch {
       return event;
     }
@@ -37,6 +38,7 @@ import { randomUUID } from 'crypto';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { MetricsInterceptor } from './common/interceptors/metrics.interceptor';
 
 export function parseCorsOrigins(
   raw: string | undefined,
@@ -171,7 +173,8 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(new TransformInterceptor(app.get(Reflector)));
+  // Q141: metrics tối thiểu — 1 dòng structured log/request (đăng ký TRƯỚC transform để bọc ngoài).
+  app.useGlobalInterceptors(new MetricsInterceptor(), new TransformInterceptor(app.get(Reflector)));
 
   // Graceful shutdown: đóng kết nối (Prisma) khi nhận SIGTERM/SIGINT
   app.enableShutdownHooks();

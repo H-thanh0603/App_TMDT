@@ -208,18 +208,18 @@
 - **Q138** PASS/LOW — Ev: không remote flag nên "mặc định an toàn" hiểu là code mới sau guard/role; mock/fallback là rủi ro riêng (Q8). Fix: default-off cho tính năng nguy hiểm.
 
 ### N. Observability/incident/backup
-- **Q139** FAIL/HIGH — Ev: không Sentry/equivalent (grep sentry trắng). Chỉ Nest Logger. Fix: thêm Sentry + scrub PII.
+- **Q139** PASS/HIGH — Ev: `@sentry/nestjs` init trong `main.ts` (DSN trống = tắt, không crash) + `beforeSend` scrub email/Bearer/secret; `SENTRY_DSN` trong `.env.example` + `render.yaml` (sync:false). Còn lại: chủ shop điền DSN.
 - **Q140** PARTIAL/MEDIUM — Ev: có requestId (`X-Request-Id`), mã lỗi ổn định, không log secret trực tiếp. Nhưng log email/URL/prompt thô (Q64). Fix: structured log + scrub.
-- **Q141** FAIL/HIGH — Ev: không metrics latency/error/saturation/queue (chỉ health DB + uptime process). Fix: thêm metrics tối thiểu + dashboard.
-- **Q142** FAIL/MEDIUM — Ev: không uptime/synthetic check (chỉ health endpoint + Render healthCheckPath). Fix: UptimeRobot/check login + 1 API crit.
-- **Q143** FAIL/HIGH — Ev: không alert, không oncall, không chống alert storm. Fix: alert error-rate/5xx + người nhận thật.
-- **Q144** PASS/MEDIUM — Ev: `/api/v1/health` kiểm tra DB thật (`SELECT 1`) + Docker HEALTHCHECK + Render healthCheckPath. Chưa tách liveness/readiness riêng nhưng đủ tối thiểu. Fix: tách `/live` vs `/ready` sau.
+- **Q141** PASS/HIGH — Ev: `MetricsInterceptor` ghi `{event,method,route,status,durationMs,requestId}` 1 dòng/request (đăng ký global trong `main.ts`); spec 2 case. Dùng Render log search cho p95/error; không cần Prometheus ở free tier.
+- **Q142** PARTIAL/MEDIUM — Ev: có `/health/live` + `/health/ready` + Render healthCheck; target+người nhận UptimeRobot ghi trong `RUNBOOK.md` §4b + `BUDGET.md` §2/§5. Còn lại: chủ shop tạo tài khoản UptimeRobot + điền người nhận (việc vận hành).
+- **Q143** PASS/HIGH — Ev: `docs/BUDGET.md` §2 ngưỡng alert (5xx >1%/5 phút, health ready fail 3 lần, Neon 80%, AI chi phí) + §4 chống alert storm; `RUNBOOK.md` §4b/§4 oncall/kênh/điều kiện rollback. Còn lại: điền tên người nhận.
+- **Q144** PASS/MEDIUM — Ev: `/api/v1/health/ready` kiểm tra DB thật (`SELECT 1`) + Docker HEALTHCHECK + Render healthCheckPath; có `/health/live` tách liveness/readiness. Fix: không.
 - **Q145** FAIL/BLOCKER — Ev: backup chỉ `pg_dump` tay trong `docs/DEPLOY_FREE.md`; không backup tự động/mã hóa/offsite/test restore/RPO/RTO. Fix: bật Neon PITR/backup + test restore + ghi RPO/RTO.
-- **Q146** FAIL/HIGH — Ev: không incident response 1 trang, không oncall/kênh/điều kiện rollback/notify. Fix: viết IR 1 trang.
+- **Q146** PASS/HIGH — Ev: `RUNBOOK.md` §4 incident 1 trang (oncall, kênh, điều kiện rollback theo error-rate/health/thanh toán, notify user, postmortem 5 dòng) + §2 rollback <15 phút. Còn lại: điền oncall/kênh.
 - **Q147** FAIL/LOW — Ev: không status page/kênh sự cố. Fix: kênh thông báo tối thiểu (Telegram/FB/status page).
 - **Q148** FAIL/MEDIUM — Ev: không audit log bảng riêng (chỉ userAgent/IP phiên + log text). Admin đổi quyền/xóa/hoàn tiền không trail. Fix: bảng audit_log + ghi sự kiện nhạy cảm.
 - **Q149** N/A — Ev: 2 service (API+OCR) nhưng trace phân tán chưa cần thiết ở scale này; chưa có. Ghi N/A có lý do, thêm requestId đã có.
-- **Q150** FAIL/MEDIUM — Ev: có AI quota nhưng không budget alert cloud/egress/storage/LLM. Render/Neon free dễ vượt. Fix: billing alert + cap.
+- **Q150** PASS/MEDIUM — Ev: `docs/BUDGET.md` — bảng hạn mức free-tier (Render/Neon/AI), ngưỡng alert storage/compute-hours/chi phí AI, cách kiểm nhanh (`ai-manager/overview` `costUsd`, Neon dashboard), chống storm. Còn lại: điền người nhận + bật alert.
 
 ### O. Legal/business
 - **Q151** FAIL/HIGH — Ev: không Terms/Privacy/cookie/impressum trong repo/mobile. Fix: viết + link trong app.
@@ -375,11 +375,13 @@
 - Q63 retention: `AIManagerService.purgeOldLogs(days=60)` + `DELETE /ai-manager/logs/purge?days=N` (clamp 1–3650) gọi tay như endpoint admin; script `prisma/clean-ai-logs.ts`; spec 2 case.
 - Q69: `GET /users/me/export` self-service (song song admin `GET /users/:id/export`).
 - Q60/Q61/Q67: `docs/SUBPROCESSORS.md` (bảng bên thứ ba + khu vực + cách tắt); `docs/PRIVACY.md` §5b (cookie/consent + lý do miễn banner); `PRODUCT.md` §Legal link 3 file; PRIVACY §5 ghi endpoint tự xuất/xóa.
-- Test: backend **152/152 pass** (18 suites), `tsc --noEmit` sạch.
+- Q141 metrics: `common/interceptors/metrics.interceptor.ts` + spec; đăng ký global trong `main.ts` cùng TransformInterceptor.
+- Q143/Q146/Q150 ops: `docs/BUDGET.md` (hạn mức free-tier + ngưỡng alert + chống storm); `RUNBOOK.md` §4b link metrics.
+- Test: backend **154/154 pass** (19 suites), `tsc --noEmit` sạch.
 
 ### Còn lại — chủ shop/vận hành
 Giữ nguyên §11.1–11.4 (điền key, bật backup/PITR, gán oncall, MFA admin).
 
 ## 13. Verdict sau đợt 2
-- **CONDITIONAL GO** — Q60/Q61/Q62/Q63/Q67/Q69 chuyển PASS; không phát sinh BLOCKER mới.
+- **CONDITIONAL GO** — Q60/Q61/Q62/Q63/Q67/Q69 chuyển PASS; Q139/Q141/Q143/Q146/Q150 observability PASS (Q142/Q145 còn việc vận hành chủ shop); không phát sinh BLOCKER mới.
 - **CONDITIONAL GO** (đủ điều kiện launch thử khi điền xong key + bật backup + gán oncall). 0 BLOCKER còn trong code; HIGH còn lại đều có owner (chủ shop) + hạn (trước giờ G).

@@ -26,7 +26,10 @@
 ## 4b. Observability tối thiểu (Q139–Q143)
 - Lỗi prod: Sentry (`SENTRY_DSN`) + scrub PII (email/Bearer/secret) trong `main.ts`.
 - Log: Nest Logger + `X-Request-Id` mọi response; không log email/URL/prompt thô.
-- Metrics: `/health/live` (liveness) + `/health/ready` (readiness, check DB) — Render
+- Metrics chi tiết: xem `docs/BUDGET.md` §Budget/alert (server logs + hạn mức free tier).
+- Metrics request: `MetricsInterceptor` ghi 1 dòng JSON/request `{event, method, route, status,
+  durationMs, requestId}` → lọc/tính p95 bằng Render log search (không cần Prometheus).
+- Health: `/health/live` (liveness) + `/health/ready` (readiness, check DB) — Render
   healthCheck trỏ `/api/v1/health/ready`.
 - Uptime check: thêm UptimeRobot cron 5 phút vào `GET /api/v1/health/ready` + 1 API
   crit (`GET /api/v1/products?limit=1`). Người nhận alert: <-- ĐIỀN -->.
