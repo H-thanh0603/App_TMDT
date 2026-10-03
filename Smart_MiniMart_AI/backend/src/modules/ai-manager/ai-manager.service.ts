@@ -300,6 +300,17 @@ export class AIManagerService {
     return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
+  // Q63: retention — xóa AI log cũ hơn N ngày (mặc định 60). Gọi qua endpoint admin.
+  // ponytail: xóa 1 lần theo cutoff, đủ cho volume hiện tại; batch nếu log > 1M dòng.
+  async purgeOldLogs(days = 60) {
+    const safeDays = Math.max(1, Math.min(days, 3650));
+    const cutoff = new Date(Date.now() - safeDays * 86_400_000);
+    const { count } = await this.prisma.aILog.deleteMany({
+      where: { createdAt: { lt: cutoff } },
+    });
+    return { deleted: count, olderThanDays: safeDays, cutoff: cutoff.toISOString() };
+  }
+
   async getOverview() {
     const [providers, taskConfigs, totalLogs, last24h, errors24h] = await Promise.all([
       this.prisma.aIProvider.count(),

@@ -65,3 +65,30 @@ describe('AIManagerService encryption key (SEC-006 fail-closed)', () => {
     expect(createArg.apiKeyEncrypted).not.toContain('sk-secret'); // đã mã hóa
   });
 });
+
+describe('AIManagerService log retention (Q63)', () => {
+  it('deletes logs older than the given days and clamps input', async () => {
+    const prisma: any = {
+      aILog: { deleteMany: jest.fn().mockResolvedValue({ count: 7 }) },
+    };
+    const service = new AIManagerService(prisma, makeCfg(VALID_KEY));
+
+    const res = await service.purgeOldLogs(30);
+
+    expect(res.deleted).toBe(7);
+    expect(res.olderThanDays).toBe(30);
+    const where = prisma.aILog.deleteMany.mock.calls[0][0].where;
+    expect(where.createdAt.lt).toBeInstanceOf(Date);
+  });
+
+  it('clamps out-of-range days to a safe minimum of 1', async () => {
+    const prisma: any = {
+      aILog: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    };
+    const service = new AIManagerService(prisma, makeCfg(VALID_KEY));
+
+    const res = await service.purgeOldLogs(0);
+
+    expect(res.olderThanDays).toBe(1);
+  });
+});

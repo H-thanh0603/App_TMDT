@@ -115,6 +115,13 @@ export class AIManagerController {
   }
 
   // -------- Logs --------
+  // Q63: retention — xóa AI log cũ hơn ?days (mặc định 60).
+  @Delete('logs/purge')
+  @ApiOperation({ summary: 'Xóa AI log cũ hơn N ngày (retention)' })
+  purgeLogs(@Query('days') days?: string) {
+    return this.aiManager.purgeOldLogs(days ? parseInt(days, 10) : 60);
+  }
+
   @Get('logs')
   listLogs(
     @Query('taskType') taskType?: AITaskType,

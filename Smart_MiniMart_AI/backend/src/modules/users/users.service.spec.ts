@@ -12,6 +12,8 @@ describe('UsersService admin safety (SEC-024)', () => {
         update: jest.fn().mockResolvedValue({ id: 'admin-1' }),
         count: jest.fn(),
       },
+      refreshToken: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      address: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
     };
     service = new UsersService(prisma);
   });
@@ -75,5 +77,51 @@ describe('UsersService admin safety (SEC-024)', () => {
     await expect(service.deactivateUser('ghost', 'admin-1')).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+});
+
+describe('UsersService self-service anonymize/export (Q62/Q69)', () => {
+  let service: UsersService;
+  let prisma: any;
+
+  beforeEach(() => {
+    prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'u1', role: 'CUSTOMER' }),
+        update: jest.fn().mockResolvedValue({ id: 'u1', status: 'SUSPENDED' }),
+        count: jest.fn(),
+      },
+      refreshToken: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
+      address: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    };
+    service = new UsersService(prisma);
+  });
+
+  it('anonymizes PII, revokes sessions and deletes addresses on self-delete', async () => {
+    await service.deleteMyAccount('u1');
+
+    expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+      where: { userId: 'u1' },
+      data: { revoked: true },
+    });
+    expect(prisma.address.deleteMany).toHaveBeenCalledWith({ where: { userId: 'u1' } });
+    const data = prisma.user.update.mock.calls[0][0].data;
+    expect(data.email).toMatch(/@deleted\.local$/);
+    expect(data.phone).toBeNull();
+    expect(data.status).toBe('SUSPENDED');
+  });
+
+  it('refuses self-delete for the last active STORE_ADMIN', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'admin-1', role: 'STORE_ADMIN' });
+    prisma.user.count.mockResolvedValue(0);
+
+    await expect(service.deleteMyAccount('admin-1')).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFound when self-deleting a missing user', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(service.deleteMyAccount('ghost')).rejects.toBeInstanceOf(NotFoundException);
   });
 });

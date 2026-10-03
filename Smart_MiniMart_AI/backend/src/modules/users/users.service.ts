@@ -231,6 +231,20 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
     if (user.role === 'STORE_ADMIN') await this.assertNotLastAdmin(id);
+    return this.applyAnonymization(id);
+  }
+
+  // Q62: self-service — user tự xóa tài khoản (anonymize PII + thu hồi mọi phiên).
+  async deleteMyAccount(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+    if (user.role === 'STORE_ADMIN') await this.assertNotLastAdmin(userId);
+    await this.applyAnonymization(userId);
+    return { message: 'Tài khoản đã được ẩn danh và đăng xuất khỏi mọi thiết bị' };
+  }
+
+  /** Ẩn danh PII + thu hồi refresh token + xóa địa chỉ. Dùng chung cho admin & self-service. */
+  private async applyAnonymization(id: string) {
     const anon = `deleted_${id.slice(0, 8)}`;
     await this.prisma.refreshToken.updateMany({ where: { userId: id }, data: { revoked: true } });
     await this.prisma.address.deleteMany({ where: { userId: id } });

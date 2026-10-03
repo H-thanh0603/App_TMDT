@@ -41,6 +41,20 @@ export class UsersController {
     return this.users.getMyStats(userId);
   }
 
+  // Q69: self-service — user tự xuất dữ liệu của mình (data portability).
+  @Get('me/export')
+  @ApiOperation({ summary: 'Xuất dữ liệu cá nhân của tôi (JSON)' })
+  exportMe(@CurrentUser('sub') userId: string) {
+    return this.users.exportUserData(userId);
+  }
+
+  // Q62: self-service — user tự xóa tài khoản (ẩn danh PII).
+  @Delete('me')
+  @ApiOperation({ summary: 'Xóa tài khoản của tôi (ẩn danh PII, giữ đơn không định danh)' })
+  deleteMe(@CurrentUser('sub') userId: string) {
+    return this.users.deleteMyAccount(userId);
+  }
+
   @Get('me/addresses')
   listAddresses(@CurrentUser('sub') userId: string) {
     return this.users.listAddresses(userId);
