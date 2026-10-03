@@ -676,3 +676,21 @@ model SystemSetting {
 
   @@map("system_settings")
 }
+
+// Q148: audit trail cho thao tác nhạy cảm (đổi quyền/xóa/hoàn tiền/điều chỉnh kho/khuyến mãi).
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actorRole  String?
+  action     String // user.update | user.deactivate | user.anonymize | payment.confirm | promo.create ...
+  targetType String // User | Order | Promotion | Product
+  targetId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+  @@map("audit_logs")
+}

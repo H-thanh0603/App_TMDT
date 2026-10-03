@@ -12,6 +12,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
+import { AuditService } from '@/common/audit/audit.module';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { Role } from '@prisma/client';
@@ -25,7 +26,10 @@ import { CreateStaffDto, UpdateStaffDto, AdjustLoyaltyDto } from './dto/admin-us
 @UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UsersController {
-  constructor(private users: UsersService) {}
+  constructor(
+    private users: UsersService,
+    private audit: AuditService,
+  ) {}
 
   // ========== Self-service ==========
 
@@ -115,20 +119,44 @@ export class UsersController {
   @UseGuards(RolesGuard)
   @Roles(Role.STORE_ADMIN)
   @ApiOperation({ summary: '[Admin] Cập nhật user (đổi role/status/info)' })
-  update(
+  async update(
     @Param('id') id: string,
     @Body() dto: UpdateStaffDto,
     @CurrentUser('sub') actorId: string,
+    @CurrentUser('role') actorRole: string,
   ) {
-    return this.users.updateStaff(id, dto, actorId);
+    const after = await this.users.updateStaff(id, dto, actorId);
+    // Q148: role/status là thao tác nhạy cảm — ghi trail (fire-and-forget).
+    await this.audit.record({
+      actorId,
+      actorRole,
+      action: 'user.update',
+      targetType: 'User',
+      targetId: id,
+      after,
+    });
+    return after;
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles(Role.STORE_ADMIN)
   @ApiOperation({ summary: '[Admin] Vô hiệu hóa tài khoản (soft delete)' })
-  deactivate(@Param('id') id: string, @CurrentUser('sub') actorId: string) {
-    return this.users.deactivateUser(id, actorId);
+  async deactivate(
+    @Param('id') id: string,
+    @CurrentUser('sub') actorId: string,
+    @CurrentUser('role') actorRole: string,
+  ) {
+    const after = await this.users.deactivateUser(id, actorId);
+    await this.audit.record({
+      actorId,
+      actorRole,
+      action: 'user.deactivate',
+      targetType: 'User',
+      targetId: id,
+      after,
+    });
+    return after;
   }
 
   // Q62/Q69: xuất dữ liệu của user (data portability) — admin trả hồ sơ + đơn + địa chỉ.
@@ -145,15 +173,42 @@ export class UsersController {
   @UseGuards(RolesGuard)
   @Roles(Role.STORE_ADMIN)
   @ApiOperation({ summary: '[Admin] Anonymize tài khoản (xóa PII)' })
-  anonymize(@Param('id') id: string, @CurrentUser('sub') actorId: string) {
-    return this.users.anonymizeUser(id, actorId);
+  async anonymize(
+    @Param('id') id: string,
+    @CurrentUser('sub') actorId: string,
+    @CurrentUser('role') actorRole: string,
+  ) {
+    const after = await this.users.anonymizeUser(id, actorId);
+    await this.audit.record({
+      actorId,
+      actorRole,
+      action: 'user.anonymize',
+      targetType: 'User',
+      targetId: id,
+      after,
+    });
+    return after;
   }
 
   @Post(':id/loyalty')
   @UseGuards(RolesGuard)
   @Roles(Role.STORE_ADMIN, Role.STAFF)
   @ApiOperation({ summary: '[Admin/Staff] Điều chỉnh điểm tích lũy' })
-  adjustLoyalty(@Param('id') id: string, @Body() dto: AdjustLoyaltyDto) {
-    return this.users.adjustLoyalty(id, dto.delta, dto.reason);
+  async adjustLoyalty(
+    @Param('id') id: string,
+    @Body() dto: AdjustLoyaltyDto,
+    @CurrentUser('sub') actorId: string,
+    @CurrentUser('role') actorRole: string,
+  ) {
+    const after = await this.users.adjustLoyalty(id, dto.delta, dto.reason);
+    await this.audit.record({
+      actorId,
+      actorRole,
+      action: 'user.loyalty_adjust',
+      targetType: 'User',
+      targetId: id,
+      after: { delta: dto.delta, ...after },
+    });
+    return after;
   }
 }

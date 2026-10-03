@@ -6,6 +6,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import * as path from 'path';
 
 import { PrismaModule } from './common/prisma/prisma.module';
+import { AuditModule } from './common/audit/audit.module';
 import { validateEnv } from './config/env.validation';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
@@ -47,6 +48,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
       serveStaticOptions: { maxAge: '7d', immutable: true },
     }),
     PrismaModule,
+    AuditModule,
     AuthModule,
     UsersModule,
     CategoriesModule,
