@@ -6,6 +6,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import * as path from 'path';
 
 import { PrismaModule } from './common/prisma/prisma.module';
+import { validateEnv } from './config/env.validation';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
 import { AuthModule } from './modules/auth/auth.module';
@@ -28,7 +29,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, cache: true }),
+    ConfigModule.forRoot({ isGlobal: true, cache: true, validate: validateEnv }),
     // Rate limit: mặc định 100 req/phút, cấu hình qua THROTTLE_TTL (giây) / THROTTLE_LIMIT.
     ThrottlerModule.forRoot([
       {
