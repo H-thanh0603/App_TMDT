@@ -218,6 +218,7 @@
 - **Q146** PASS/HIGH — Ev: `RUNBOOK.md` §4 incident 1 trang (oncall, kênh, điều kiện rollback theo error-rate/health/thanh toán, notify user, postmortem 5 dòng) + §2 rollback <15 phút. Còn lại: điền oncall/kênh.
 - **Q147** FAIL/LOW — Ev: không status page/kênh sự cố. Fix: kênh thông báo tối thiểu (Telegram/FB/status page).
 - **Q148** PASS/MEDIUM — Ev: model `AuditLog` + migration `20261004060000_add_audit_logs` (CREATE TABLE `audit_logs`, không FK, câu rollback trong file); `AuditService.record` fire-and-forget (không throw, scrub secret trước khi lưu) + `GET /audit-logs` (STORE_ADMIN, paginate clamp); ghi ở `user.update/deactivate/anonymize/loyalty_adjust` trong `users.controller.ts`; spec 4 case (ghi thành công, scrub, lỗi không throw, clamp). Chưa phủ: payments confirm + promotions CRUD + inventory adjust (ghi giờ qua controller, tính sau).
+- **SEC-004 bổ sung (idempotency checkout)** — Ev: `orders.idempotencyKey @unique` + migration `20261004063000_add_order_idempotency_key`; `POST /orders` nhận header `Idempotency-Key` (≤64 ký tự); replay trong 24h trả đơn cũ, key quá hạn giải phóng trong cùng transaction, race P2002 trả đơn thắng; spec 4 case + `clampPagination` helper.
 - **Q149** N/A — Ev: 2 service (API+OCR) nhưng trace phân tán chưa cần thiết ở scale này; chưa có. Ghi N/A có lý do, thêm requestId đã có.
 - **Q150** PASS/MEDIUM — Ev: `docs/BUDGET.md` — bảng hạn mức free-tier (Render/Neon/AI), ngưỡng alert storage/compute-hours/chi phí AI, cách kiểm nhanh (`ai-manager/overview` `costUsd`, Neon dashboard), chống storm. Còn lại: điền người nhận + bật alert.
 
@@ -383,5 +384,5 @@
 Giữ nguyên §11.1–11.4 (điền key, bật backup/PITR, gán oncall, MFA admin).
 
 ## 13. Verdict sau đợt 2
-- **CONDITIONAL GO** — Q60/Q61/Q62/Q63/Q67/Q69 chuyển PASS; Q139/Q141/Q143/Q146/Q148/Q150 observability/privacy PASS (Q142/Q145 còn việc vận hành chủ shop); không phát sinh BLOCKER mới.
+- **CONDITIONAL GO** — Q60/Q61/Q62/Q63/Q67/Q69 chuyển PASS; Q139/Q141/Q143/Q146/Q148/Q150 observability/privacy PASS; SEC-004 idempotency checkout hoàn chỉnh (Q142/Q145 còn việc vận hành chủ shop); không phát sinh BLOCKER mới.
 - **CONDITIONAL GO** (đủ điều kiện launch thử khi điền xong key + bật backup + gán oncall). 0 BLOCKER còn trong code; HIGH còn lại đều có owner (chủ shop) + hạn (trước giờ G).

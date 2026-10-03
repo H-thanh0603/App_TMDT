@@ -160,6 +160,96 @@ describe('OrdersService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
+    it('returns the existing order when retrying with the same idempotency key', async () => {
+      const oldOrder = {
+        id: 'order-old',
+        userId: 'user-1',
+        orderNumber: 'SMM-2026-000001',
+        items: [],
+        createdAt: new Date(),
+      };
+      repo.findUnique.mockResolvedValue(oldOrder);
+
+      const result = await service.createOrder(
+        'user-1',
+        { paymentMethod: PaymentMethod.COD } as any,
+        'key-123',
+      );
+
+      expect(result).toBe(oldOrder);
+      expect(repo.runInTransaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects a key that belongs to another user', async () => {
+      repo.findUnique.mockResolvedValue({
+        id: 'order-other',
+        userId: 'user-2',
+        createdAt: new Date(),
+      });
+
+      await expect(
+        service.createOrder('user-1', { paymentMethod: PaymentMethod.COD } as any, 'key-123'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('creates a new order when the key is older than 24h', async () => {
+      repo.findUnique.mockResolvedValue({
+        id: 'order-stale',
+        userId: 'user-1',
+        createdAt: new Date(Date.now() - 25 * 3_600_000),
+      });
+      repo.findCartWithItems.mockResolvedValue({
+        id: 'cart-1',
+        items: [{ quantity: 2, product }],
+      });
+      const baseTx = makeTx();
+      const tx = {
+        ...baseTx,
+        order: {
+          ...baseTx.order,
+          deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+          create: jest.fn().mockResolvedValue({ id: 'order-new', items: [] }),
+        },
+      };
+      repo.runInTransaction.mockImplementation(async (fn: any) => fn(tx));
+
+      const result = await service.createOrder(
+        'user-1',
+        { paymentMethod: PaymentMethod.COD } as any,
+        'key-stale',
+      );
+
+      expect(result.id).toBe('order-new');
+      expect(tx.order.deleteMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ idempotencyKey: 'key-stale' }) }),
+      );
+    });
+
+    it('returns the winning order when two requests race on the same key (P2002)', async () => {
+      const winner = { id: 'order-winner', userId: 'user-1', items: [] };
+      // replay lookup: chưa có → vào transaction → race thua → lookup lại thấy đơn thắng
+      repo.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(winner);
+      repo.findCartWithItems.mockResolvedValue({
+        id: 'cart-1',
+        items: [{ quantity: 2, product }],
+      });
+      const p2002 = Object.assign(new Error('Unique constraint failed'), {
+        code: 'P2002',
+        meta: { target: ['idempotencyKey'] },
+      });
+      repo.runInTransaction.mockImplementationOnce(async () => {
+        throw p2002;
+      });
+
+      const result = await service.createOrder(
+        'user-1',
+        { paymentMethod: PaymentMethod.COD } as any,
+        'key-race',
+      );
+
+      expect(result).toBe(winner);
+    });
+
     it('rejects an order using an addressId that does not belong to the user (IDOR)', async () => {
       repo.findCartWithItems.mockResolvedValue({
         id: 'cart-1',

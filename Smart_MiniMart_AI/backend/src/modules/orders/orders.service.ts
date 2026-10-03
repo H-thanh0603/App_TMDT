@@ -1,5 +1,12 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
-import { OrderStatus, PaymentMethod, PaymentStatus, Prisma, PromotionType, Role } from '@prisma/client';
+import {
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  Prisma,
+  PromotionType,
+  Role,
+} from '@prisma/client';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
@@ -17,7 +24,27 @@ export class OrdersService {
     private readonly settings: SettingsService,
   ) {}
 
-  async createOrder(userId: string, dto: CreateOrderDto) {
+  /**
+   * Tạo đơn từ giỏ. `idempotencyKey` (header Idempotency-Key, optional): retry cùng key trong
+   * 24h trả lại đơn cũ (SEC-004 bổ sung — cart lock chống double-submit đồng thời, key chống
+   * retry sau timeout mà server đã tạo đơn). Trả cùng shape đơn bình thường.
+   */
+  async createOrder(userId: string, dto: CreateOrderDto, idempotencyKey?: string) {
+    // Replay: key của chính user, tạo trong 24h → trả đơn cũ, không tạo mới.
+    if (idempotencyKey) {
+      const existing = await this.repo.findUnique({
+        where: { idempotencyKey },
+        include: { items: true },
+      });
+      if (existing) {
+        if (existing.userId !== userId) {
+          throw new BadRequestException('Khóa idempotency đã dùng cho đơn khác');
+        }
+        const ageMs = Date.now() - new Date(existing.createdAt).getTime();
+        if (ageMs < 24 * 3_600_000) return existing;
+        // Key quá hạn → cho tạo đơn mới (tiếp tục flow bên dưới).
+      }
+    }
     const [policies, paymentMethods] = await Promise.all([
       this.settings.getStorePolicies(),
       this.settings.getPaymentMethods(),
@@ -92,7 +119,20 @@ export class OrdersService {
 
           const { itemsData, subtotal } = this.assembleItems(freshItems);
           if (subtotal < policies.minOrderValue) {
-            throw new BadRequestException(`Đơn tối thiểu ${policies.minOrderValue.toLocaleString('vi-VN')}đ`);
+            throw new BadRequestException(
+              `Đơn tối thiểu ${policies.minOrderValue.toLocaleString('vi-VN')}đ`,
+            );
+          }
+          // SEC-004: key cũ quá hạn (>24h) thì giải phóng để tái dùng — cùng transaction,
+          // dưới cart lock nên không race với checkout khác của chính user.
+          if (idempotencyKey) {
+            await tx.order.deleteMany({
+              where: {
+                idempotencyKey,
+                userId,
+                createdAt: { lt: new Date(Date.now() - 24 * 3_600_000) },
+              },
+            });
           }
           const shippingFee = subtotal >= policies.freeShipThreshold ? 0 : policies.shippingFee;
           const discount = Math.min(discountAmount, subtotal);
@@ -110,6 +150,8 @@ export class OrdersService {
               shippingFee,
               totalAmount,
               promotionCode: appliedPromoCode,
+              // SEC-004: bỏ qua nếu key quá hạn đã có chủ (unique) — replay lookup phía trên đã trả đơn cũ.
+              idempotencyKey: idempotencyKey ?? undefined,
               note: dto.note,
               items: { create: itemsData },
             },
@@ -172,6 +214,14 @@ export class OrdersService {
         if (this.isDuplicateOrderNumber(err) && attempt < MAX_ATTEMPTS) {
           this.logger.warn(`Trùng orderNumber, thử lại (lần ${attempt})`);
           continue;
+        }
+        // SEC-004: race 2 request cùng key — request thua thấy P2002 unique thì trả đơn đã thắng.
+        if (idempotencyKey && this.isDuplicateIdempotencyKey(err)) {
+          const raced = await this.repo.findUnique({
+            where: { idempotencyKey },
+            include: { items: true },
+          });
+          if (raced && raced.userId === userId) return raced;
         }
         throw err;
       }
@@ -476,11 +526,20 @@ export class OrdersService {
 
   /** Nhận diện lỗi vi phạm unique constraint orderNumber (Prisma P2002) để retry. */
   private isDuplicateOrderNumber(err: unknown): boolean {
+    return this.isUniqueViolationOn(err, 'ordernumber');
+  }
+
+  /** SEC-004: unique index nào của orders bị đụng — orderNumber (retry) hay idempotencyKey (race). */
+  private isDuplicateIdempotencyKey(err: unknown): boolean {
+    return this.isUniqueViolationOn(err, 'idempotencykey');
+  }
+
+  private isUniqueViolationOn(err: unknown, field: string): boolean {
     const e = err as { code?: string; meta?: { target?: unknown } };
     if (e?.code !== 'P2002') return false;
     const target = e.meta?.target;
     const asText = Array.isArray(target) ? target.join(',') : String(target ?? '');
-    return asText.toLowerCase().includes('ordernumber');
+    return asText.toLowerCase().includes(field);
   }
 
   private canTransition(from: OrderStatus, to: OrderStatus): boolean {

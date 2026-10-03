@@ -1,4 +1,16 @@
-import { Body, Controller, Get, Header, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  Headers,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { Role } from '@prisma/client';
@@ -22,8 +34,12 @@ export class OrdersController {
 
   @Post()
   @ApiOperation({ summary: 'Tạo đơn hàng từ giỏ hiện tại (Customer)' })
-  create(@CurrentUser('sub') userId: string, @Body() dto: CreateOrderDto) {
-    return this.orders.createOrder(userId, dto);
+  create(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: CreateOrderDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.orders.createOrder(userId, dto, idempotencyKey?.slice(0, 64));
   }
 
   @Get('mine')

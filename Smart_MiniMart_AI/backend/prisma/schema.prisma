@@ -319,36 +319,39 @@ model CartItem {
 }
 
 model Order {
-  id              String        @id @default(uuid())
-  orderNumber     String        @unique // SMM-2026-000001
-  userId          String
-  addressId       String?
-  status          OrderStatus   @default(PENDING)
-  paymentMethod   PaymentMethod @default(COD)
-  paymentStatus   PaymentStatus @default(UNPAID)
-  subtotal        Decimal       @db.Decimal(12, 2)
-  discountAmount  Decimal       @default(0) @db.Decimal(12, 2)
-  shippingFee     Decimal       @default(0) @db.Decimal(12, 2)
-  totalAmount     Decimal       @db.Decimal(12, 2)
-  promotionCode   String?
-  paymentRef      String?       // VNPay txnRef hoặc external payment reference
-  note            String?
-  loyaltyEarned   Int           @default(0)
-  cancelReason    String?
-  confirmedAt     DateTime?
-  deliveredAt     DateTime?
-  completedAt     DateTime?
-  canceledAt      DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id             String        @id @default(uuid())
+  orderNumber    String        @unique // SMM-2026-000001
+  userId         String
+  addressId      String?
+  status         OrderStatus   @default(PENDING)
+  paymentMethod  PaymentMethod @default(COD)
+  paymentStatus  PaymentStatus @default(UNPAID)
+  subtotal       Decimal       @db.Decimal(12, 2)
+  discountAmount Decimal       @default(0) @db.Decimal(12, 2)
+  shippingFee    Decimal       @default(0) @db.Decimal(12, 2)
+  totalAmount    Decimal       @db.Decimal(12, 2)
+  promotionCode  String?
+  paymentRef     String? // VNPay txnRef hoặc external payment reference
+  // SEC-004: header Idempotency-Key client gửi — retry cùng key trong 24h trả đơn cũ.
+  idempotencyKey String?   @unique
+  note           String?
+  loyaltyEarned  Int           @default(0)
+  cancelReason   String?
+  confirmedAt    DateTime?
+  deliveredAt    DateTime?
+  completedAt    DateTime?
+  canceledAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  user    User        @relation(fields: [userId], references: [id])
-  address Address?    @relation(fields: [addressId], references: [id])
-  items   OrderItem[]
+  user                User                 @relation(fields: [userId], references: [id])
+  address             Address?             @relation(fields: [addressId], references: [id])
+  items               OrderItem[]
   paymentConfirmation PaymentConfirmation?
 
   @@index([userId, status])
   @@index([status, createdAt])
+  @@index([paymentRef])
   @@map("orders")
 }
 
