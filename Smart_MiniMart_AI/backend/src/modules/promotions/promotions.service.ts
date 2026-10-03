@@ -82,8 +82,15 @@ export class PromotionsService {
   }
 
   async update(id: string, dto: UpdatePromotionDto) {
-    this.assertValidPromotion(dto);
-    await this.findOne(id);
+    const current = await this.findOne(id);
+    // DTO update là partial: thiếu type/date thì mượn giá trị hiện tại để validate
+    // (không thì discountValue >100 lọt qua khi client chỉ gửi discountValue).
+    this.assertValidPromotion({
+      type: dto.type ?? current.type,
+      discountValue: dto.discountValue ?? current.discountValue,
+      startDate: dto.startDate ?? current.startDate,
+      endDate: dto.endDate ?? current.endDate,
+    } as CreatePromotionDto);
     const { productIds, ...rest } = dto;
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.promotion.update({
