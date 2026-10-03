@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { BroadcastNotificationDto } from './dto/broadcast-notification.dto';
 
@@ -7,7 +8,7 @@ export class NotificationsService {
   constructor(private prisma: PrismaService) {}
 
   async listMine(userId: string, query: { isRead?: string; limit?: number }) {
-    const where: any = { userId };
+    const where: Prisma.NotificationWhereInput = { userId };
     if (query.isRead === 'true') where.isRead = true;
     if (query.isRead === 'false') where.isRead = false;
     // Q84/Q115: clamp NaN/âm/vô hạn về mặc định an toàn.
@@ -84,7 +85,13 @@ export class NotificationsService {
   }
 
   // Helper: gọi từ services khác (ví dụ orders, promotions) để push notif
-  async push(userId: string, title: string, body: string, type = 'SYSTEM', data?: any) {
+  async push(
+    userId: string,
+    title: string,
+    body: string,
+    type = 'SYSTEM',
+    data?: Prisma.InputJsonValue,
+  ) {
     return this.prisma.notification.create({
       data: { userId, title, body, type, data },
     });

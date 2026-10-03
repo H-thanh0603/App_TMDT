@@ -1,9 +1,8 @@
 import { ProductsService } from './products.service';
-import { IProductRepository } from './repositories/product.repository';
 
 describe('ProductsService', () => {
   let service: ProductsService;
-  let repo: jest.Mocked<IProductRepository>;
+  let repo: any; // mock lỏng — payload thật do Prisma định
 
   beforeEach(() => {
     repo = {

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, Logger, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
@@ -7,8 +7,6 @@ import { IProductRepository, PRODUCT_REPOSITORY } from './repositories/product.r
 
 @Injectable()
 export class ProductsService {
-  private readonly logger = new Logger(ProductsService.name);
-
   constructor(@Inject(PRODUCT_REPOSITORY) private readonly products: IProductRepository) {}
 
   async list(query: ProductQueryDto, opts: { allowInactive?: boolean } = {}) {

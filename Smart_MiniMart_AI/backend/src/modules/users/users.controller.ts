@@ -89,7 +89,7 @@ export class UsersController {
   @UseGuards(RolesGuard)
   @Roles(Role.STORE_ADMIN)
   @ApiOperation({ summary: '[Admin] Danh sách user, lọc theo role/status/search' })
-  list(@Query() query: any) {
+  list(@Query() query: Record<string, string>) {
     return this.users.listUsers({
       role: query.role,
       status: query.status,

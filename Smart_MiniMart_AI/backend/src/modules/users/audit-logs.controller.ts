@@ -20,7 +20,7 @@ export class AuditLogsController {
 
   @Get()
   @ApiOperation({ summary: '[Admin] Nhật ký thao tác nhạy cảm' })
-  list(@Query() query: any) {
+  list(@Query() query: Record<string, string>) {
     return this.audit.list({
       targetType: query.targetType,
       actorId: query.actorId,

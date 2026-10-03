@@ -10,8 +10,11 @@ import {
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
-import { ORDER_REPOSITORY, IOrderRepository } from './repositories/order.repository';
+import { ORDER_REPOSITORY, IOrderRepository, CartWithItems } from './repositories/order.repository';
 import { SettingsService } from '../settings/settings.service';
+
+type PromotionWithProducts = Prisma.PromotionGetPayload<{ include: { products: true } }>;
+type CartItemWithProduct = CartWithItems['items'][number];
 
 const VIP_THRESHOLD = 1_000;
 
@@ -430,12 +433,21 @@ export class OrdersService {
   // ========== Private helpers (use repo's prisma internally via runInTransaction) ==========
 
   private async resolvePromotion(code: string, subtotal: number, cartProductIds: Set<string>) {
-    let promo: any;
-    await this.repo.runInTransaction(async (tx) => {
-      promo = await tx.promotion.findFirst({
+    // tx trong runInTransaction là TransactionClient (model delegates không typed) →
+    // ép về payload chuẩn tại biên, logic bên dưới dùng type thật.
+    // Trả promo RA KHỎI transaction (thay vì gán biến ngoài) — TS narrow được, không thành never.
+    const promo: PromotionWithProducts | null = await this.repo.runInTransaction(async (tx) => {
+      // SAFETY: TransactionClient không expose typed model delegates — ép hẹp tại biên duy nhất
+      // này; shape trả về khớp PromotionWithProducts do query select/include tường minh ở dưới.
+      const found = await (
+        tx as unknown as {
+          promotion: { findFirst: (a: unknown) => Promise<PromotionWithProducts | null> };
+        }
+      ).promotion.findFirst({
         where: { code, isActive: true },
         include: { products: true },
       });
+      return found;
     });
     if (!promo) throw new BadRequestException('Mã khuyến mãi không tồn tại hoặc đã hết hạn');
 
@@ -454,7 +466,7 @@ export class OrdersService {
     }
 
     if (promo.products.length > 0) {
-      const allowed = new Set(promo.products.map((p: any) => p.productId));
+      const allowed = new Set(promo.products.map((p) => p.productId));
       const hit = [...cartProductIds].some((id) => allowed.has(id));
       if (!hit) {
         throw new BadRequestException('Mã khuyến mãi không áp dụng cho sản phẩm trong giỏ');
@@ -491,10 +503,10 @@ export class OrdersService {
   }
 
   /** Gom itemsData + subtotal + tập productId từ danh sách cart item. */
-  private assembleItems(cartItems: any[]) {
+  private assembleItems(cartItems: CartItemWithProduct[]) {
     let subtotal = 0;
     const cartProductIds = new Set<string>();
-    const itemsData = cartItems.map((it: any) => {
+    const itemsData = cartItems.map((it) => {
       const price = Number(it.product.salePrice ?? it.product.price);
       const lineTotal = price * it.quantity;
       subtotal += lineTotal;

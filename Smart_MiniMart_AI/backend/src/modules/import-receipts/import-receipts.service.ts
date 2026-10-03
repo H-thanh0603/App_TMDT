@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { ImportReceiptStatus, OCREngine } from '@prisma/client';
 
 import { PrismaService } from '@/common/prisma/prisma.service';
@@ -21,7 +21,9 @@ export class ImportReceiptsService {
     const engine = dto.engine ?? settings?.defaultEngine ?? OCREngine.MOCK;
 
     // Q64: không log URL/token — chỉ log engine + độ dài URL.
-    this.logger.log(`OCR scan engine=${engine} url_len=${dto.imageUrl?.length ?? 0} user=${userId}`);
+    this.logger.log(
+      `OCR scan engine=${engine} url_len=${dto.imageUrl?.length ?? 0} user=${userId}`,
+    );
 
     const ocrResult = await this.ocrClient.parseReceipt(dto.imageUrl, engine);
 

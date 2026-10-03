@@ -1,14 +1,16 @@
 import { BadRequestException } from '@nestjs/common';
 import { PaymentMethod } from '@prisma/client';
 import { OrdersService } from './orders.service';
-import { IOrderRepository } from './repositories/order.repository';
+
 import { SettingsService } from '../settings/settings.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
-  let repo: jest.Mocked<IOrderRepository>;
+  // Repo mock không cần type chặt — payload thật do Prisma định, test chỉ kiểm logic.
+  let repo: any;
   let settings: jest.Mocked<Pick<SettingsService, 'getStorePolicies' | 'getPaymentMethods'>>;
 
+  // Mock row không cần đủ field DB — service chỉ đọc vài field, cast any cho gọn.
   const product = {
     id: 'prod-1',
     name: 'Mì Hảo Hảo',
@@ -16,7 +18,7 @@ describe('OrdersService', () => {
     stock: 10,
     price: 5000,
     salePrice: null,
-  };
+  } as any;
 
   /** Tạo tx mock giả lập Prisma.TransactionClient dùng trong runInTransaction. */
   function makeTx(overrides: any = {}) {
@@ -64,7 +66,15 @@ describe('OrdersService', () => {
       runInTransaction: jest.fn(),
     };
     settings = {
-      getStorePolicies: jest.fn().mockResolvedValue({ minOrderValue: 0, shippingFee: 15000, freeShipThreshold: 200000, loyaltyPerVnd: 10000, vipThreshold: 1000 }),
+      getStorePolicies: jest
+        .fn()
+        .mockResolvedValue({
+          minOrderValue: 0,
+          shippingFee: 15000,
+          freeShipThreshold: 200000,
+          loyaltyPerVnd: 10000,
+          vipThreshold: 1000,
+        }),
       getPaymentMethods: jest.fn().mockResolvedValue({
         cod: { enabled: true, label: 'COD' },
         vnpay: { enabled: true, label: 'VNPay' },
@@ -76,7 +86,7 @@ describe('OrdersService', () => {
 
   describe('createOrder', () => {
     it('throws when cart is empty', async () => {
-      repo.findCartWithItems.mockResolvedValue({ id: 'cart-1', items: [] });
+      repo.findCartWithItems.mockResolvedValue({ id: 'cart-1', items: [] } as any);
 
       await expect(
         service.createOrder('user-1', { paymentMethod: PaymentMethod.COD } as any),
@@ -221,7 +231,9 @@ describe('OrdersService', () => {
 
       expect(result.id).toBe('order-new');
       expect(tx.order.deleteMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ idempotencyKey: 'key-stale' }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({ idempotencyKey: 'key-stale' }),
+        }),
       );
     });
 
@@ -413,7 +425,11 @@ describe('OrdersService', () => {
       const tx = makeTx();
       repo.runInTransaction.mockImplementation(async (fn: any) => fn(tx));
 
-      await service.updateStatus('order-1', { status: 'CANCELED', reason: 'khách đổi ý' } as any, 'staff-1');
+      await service.updateStatus(
+        'order-1',
+        { status: 'CANCELED', reason: 'khách đổi ý' } as any,
+        'staff-1',
+      );
 
       expect(tx.order.update).toHaveBeenCalledWith({
         where: { id: 'order-1' },
@@ -436,10 +452,7 @@ describe('OrdersService', () => {
       });
       const r = await service.getReport('2026-01-01', '2026-01-31');
       expect(r.totalRevenue).toBe(100000);
-      expect(repo.getReport).toHaveBeenCalledWith(
-        new Date('2026-01-01'),
-        new Date('2026-01-31'),
-      );
+      expect(repo.getReport).toHaveBeenCalledWith(new Date('2026-01-01'), new Date('2026-01-31'));
       await expect(service.getReport('not-a-date')).rejects.toBeInstanceOf(BadRequestException);
     });
 

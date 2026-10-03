@@ -1,20 +1,29 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, Cart, CartItem, Product } from '@prisma/client';
 import { PrismaService } from '@/common/prisma/prisma.service';
 
 export const ORDER_REPOSITORY = Symbol('ORDER_REPOSITORY');
 
+export type CartWithItems = Cart & { items: Array<CartItem & { product: Product }> };
+
 /** Port — Clean Architecture boundary cho Order aggregate */
 export interface IOrderRepository {
-  findCartWithItems(userId: string): Promise<any | null>;
+  findCartWithItems(userId: string): Promise<CartWithItems | null>;
   countOrders(args?: Prisma.OrderCountArgs): Promise<number>;
-  findUnique(args: Prisma.OrderFindUniqueArgs): Promise<any | null>;
-  findMany(args: Prisma.OrderFindManyArgs): Promise<any[]>;
-  transactionList(
-    findManyArgs: Prisma.OrderFindManyArgs,
+  findUnique<T extends Prisma.OrderFindUniqueArgs>(
+    args: Prisma.SelectSubset<T, Prisma.OrderFindUniqueArgs>,
+  ): Promise<Prisma.OrderGetPayload<T> | null>;
+  findMany<T extends Prisma.OrderFindManyArgs>(
+    args: Prisma.SelectSubset<T, Prisma.OrderFindManyArgs>,
+  ): Promise<Array<Prisma.OrderGetPayload<T>>>;
+  transactionList<T extends Prisma.OrderFindManyArgs>(
+    findManyArgs: Prisma.SelectSubset<T, Prisma.OrderFindManyArgs>,
     countArgs: Prisma.OrderCountArgs,
-  ): Promise<[any[], number]>;
-  getSummary(from?: Date, to?: Date): Promise<{
+  ): Promise<[Array<Prisma.OrderGetPayload<T>>, number]>;
+  getSummary(
+    from?: Date,
+    to?: Date,
+  ): Promise<{
     totalOrders: number;
     pendingOrders: number;
     completedOrders: number;
@@ -22,7 +31,10 @@ export interface IOrderRepository {
     periodOrders: number;
     periodRevenue: number;
   }>;
-  getReport(from: Date | undefined, to: Date | undefined): Promise<{
+  getReport(
+    from: Date | undefined,
+    to: Date | undefined,
+  ): Promise<{
     from: Date | undefined;
     to: Date | undefined;
     totalRevenue: number;
@@ -53,26 +65,34 @@ export class PrismaOrderRepository implements IOrderRepository {
     return this.prisma.order.count(args);
   }
 
-  findUnique(args: Prisma.OrderFindUniqueArgs) {
+  findUnique<T extends Prisma.OrderFindUniqueArgs>(
+    args: Prisma.SelectSubset<T, Prisma.OrderFindUniqueArgs>,
+  ) {
     return this.prisma.order.findUnique(args);
   }
 
-  findMany(args: Prisma.OrderFindManyArgs) {
+  findMany<T extends Prisma.OrderFindManyArgs>(
+    args: Prisma.SelectSubset<T, Prisma.OrderFindManyArgs>,
+  ) {
     return this.prisma.order.findMany(args);
   }
 
-  transactionList(findManyArgs: Prisma.OrderFindManyArgs, countArgs: Prisma.OrderCountArgs) {
+  transactionList<T extends Prisma.OrderFindManyArgs>(
+    findManyArgs: Prisma.SelectSubset<T, Prisma.OrderFindManyArgs>,
+    countArgs: Prisma.OrderCountArgs,
+  ) {
     return this.prisma.$transaction([
       this.prisma.order.findMany(findManyArgs),
       this.prisma.order.count(countArgs),
-    ]) as Promise<[any[], number]>;
+    ]) as Promise<[Array<Prisma.OrderGetPayload<T>>, number]>;
   }
 
   async getSummary(from?: Date, to?: Date) {
     const completed = { status: 'COMPLETED' as const };
-    const period = from || to
-      ? { ...completed, createdAt: { ...(from && { gte: from }), ...(to && { lte: to }) } }
-      : completed;
+    const period =
+      from || to
+        ? { ...completed, createdAt: { ...(from && { gte: from }), ...(to && { lte: to }) } }
+        : completed;
     const [totalOrders, pendingOrders, allCompleted, periodCompleted] = await Promise.all([
       this.prisma.order.count(),
       this.prisma.order.count({ where: { status: 'PENDING' } }),
@@ -91,9 +111,10 @@ export class PrismaOrderRepository implements IOrderRepository {
 
   async getReport(from: Date | undefined, to: Date | undefined) {
     const completed = { status: 'COMPLETED' as const };
-    const periodWhere = from || to
-      ? { ...completed, completedAt: { ...(from && { gte: from }), ...(to && { lte: to }) } }
-      : completed;
+    const periodWhere =
+      from || to
+        ? { ...completed, completedAt: { ...(from && { gte: from }), ...(to && { lte: to }) } }
+        : completed;
 
     // Doanh thu/đơn COMPLETED trong kỳ
     const agg = await this.prisma.order.aggregate({
@@ -106,11 +127,16 @@ export class PrismaOrderRepository implements IOrderRepository {
     const statusGroups = await this.prisma.order.groupBy({
       by: ['status'],
       _count: true,
-      where: from || to ? { createdAt: { ...(from && { gte: from }), ...(to && { lte: to }) } } : undefined,
+      where:
+        from || to
+          ? { createdAt: { ...(from && { gte: from }), ...(to && { lte: to }) } }
+          : undefined,
     });
 
     // Trend theo ngày — dùng completedAt (ngày hoàn thành) để ra doanh thu thực
-    const dailyRaw = await this.prisma.$queryRaw<Array<{ date: string; revenue: number; orders: number }>>`
+    const dailyRaw = await this.prisma.$queryRaw<
+      Array<{ date: string; revenue: number; orders: number }>
+    >`
       SELECT to_char("completedAt", 'YYYY-MM-DD') AS date,
              COALESCE(SUM("totalAmount"), 0)::int AS revenue,
              COUNT(*)::int AS orders
@@ -156,7 +182,8 @@ export class PrismaOrderRepository implements IOrderRepository {
       to,
       totalRevenue: Number(agg._sum.totalAmount ?? 0),
       totalOrders: agg._count,
-      avgOrderValue: agg._count > 0 ? Math.round(Number(agg._sum.totalAmount ?? 0) / agg._count) : 0,
+      avgOrderValue:
+        agg._count > 0 ? Math.round(Number(agg._sum.totalAmount ?? 0) / agg._count) : 0,
       statusBreakdown: Object.fromEntries(statusGroups.map((s) => [s.status, s._count])),
       daily: dailyRaw.map((d) => ({
         date: d.date,

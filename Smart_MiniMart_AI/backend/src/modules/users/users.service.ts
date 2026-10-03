@@ -1,6 +1,13 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { Prisma, Role, UserStatus } from '@prisma/client';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { CreateStaffDto, UpdateStaffDto } from './dto/admin-users.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { AddressDto } from './dto/address.dto';
 
@@ -72,9 +79,14 @@ export class UsersService {
   }) {
     const page = query.page ?? 1;
     const limit = Math.min(query.limit ?? 20, 100);
-    const where: any = {};
-    if (query.role) where.role = query.role;
-    if (query.status) where.status = query.status;
+    const where: Prisma.UserWhereInput = {};
+    // Query string từ controller → chỉ nhận giá trị enum hợp lệ, còn lại bỏ qua.
+    if (query.role && Object.values(Role).includes(query.role as Role)) {
+      where.role = query.role as Role;
+    }
+    if (query.status && Object.values(UserStatus).includes(query.status as UserStatus)) {
+      where.status = query.status as UserStatus;
+    }
     if (query.search) {
       where.OR = [
         { email: { contains: query.search, mode: 'insensitive' } },
@@ -131,7 +143,7 @@ export class UsersService {
     return user;
   }
 
-  async createStaff(dto: any) {
+  async createStaff(dto: CreateStaffDto) {
     const exists = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (exists) throw new ConflictException('Email đã tồn tại');
     const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -155,7 +167,7 @@ export class UsersService {
     return user;
   }
 
-  async updateStaff(id: string, dto: any, actorId?: string) {
+  async updateStaff(id: string, dto: UpdateStaffDto, actorId?: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
 

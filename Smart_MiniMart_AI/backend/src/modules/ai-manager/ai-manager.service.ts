@@ -186,12 +186,14 @@ export class AIManagerService {
           sample,
         };
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
       result = {
         success: false,
         latencyMs: Date.now() - start,
         model,
-        message: err?.response?.data?.error?.message || err?.message || 'Test connection thất bại',
+        message:
+          e?.response?.data?.error?.message || e?.message || 'Test connection thất bại',
       };
     }
 

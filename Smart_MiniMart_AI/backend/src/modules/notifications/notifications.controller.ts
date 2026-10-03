@@ -17,7 +17,7 @@ export class NotificationsController {
 
   @Get('me')
   @ApiOperation({ summary: 'Danh sách thông báo của tôi' })
-  myList(@CurrentUser('sub') userId: string, @Query() query: any) {
+  myList(@CurrentUser('sub') userId: string, @Query() query: Record<string, string>) {
     return this.notif.listMine(userId, {
       isRead: query.isRead,
       limit: query.limit ? Number(query.limit) : 50,
