@@ -56,3 +56,9 @@ Minimart kết hợp AI concierge: AI search/chat hiểu nhu cầu ("đồ ăn s
 ## Accessibility & Inclusion
 
 Chưa có yêu cầu đặc biệt được xác nhận. Giữ ngưỡng: icon có label đọc được, tương phản chữ/giá đạt AA, tôn trọng reduce-motion của hệ điều hành.
+
+## Legal
+
+- `docs/PRIVACY.md` — chính sách bảo mật, khớp PII code thật thu thập.
+- `docs/TERMS.md` — điều khoản sử dụng tối thiểu.
+- `docs/SUBPROCESSORS.md` — bên thứ ba nhận dữ liệu + khu vực + cách tắt.

@@ -113,14 +113,14 @@
 
 ### F. Privacy
 - **Q59** PASS/INFO (ghi PARTIAL vì thiếu inventory văn bản) — Ev: PII có thật: email/phone/fullName/address (`schema.prisma` User/Address), IP/user-agent (`refresh_tokens`), chat/AI log. Không CCCD/health/biometric/payment PAN (chỉ VNPay ref + VietQR). Fix: viết inventory PII 1 trang.
-- **Q60** FAIL/HIGH — Ev: không Terms/Privacy/cookie policy trong repo/mobile. Risk: thu thập email/phone/address/log mà không công bố. Fix: viết policy khớp code trước launch.
-- **Q61** FAIL/MEDIUM — Ev: không consent banner, không tracker opt-in (grep consent/cookie trắng). Fix: nếu chỉ VN nội bộ thì ghi miễn trừ; nếu có EU thì phải có banner.
+- **Q60** PASS/HIGH — Ev: `docs/PRIVACY.md` (dữ liệu thu thập, mục đích, subprocessor, quyền, trẻ em) + `docs/TERMS.md` khớp code thật (schema/PII/thanh toán); link trong `PRODUCT.md` §Legal. Còn lại: shop điền thông tin liên hệ.
+- **Q61** PASS→ghi lý do/MEDIUM — Ev: `PRIVACY.md` §5b: không cookie/tracker bên thứ ba, token trong SecureStore, single-locale VN → miễn consent banner; ghi điều kiện phải thêm banner nếu có analytics/EU.
 - **Q62** PASS/HIGH — Ev: self-service `DELETE /users/me` + admin `DELETE /users/:id/anonymize`; `users.service.ts applyAnonymization` ẩn danh PII (email→`deleted_*@deleted.local`, phone/fullName/avatar null), revoke refresh token, xóa địa chỉ, giữ đơn không định danh. Chặn tự xóa/last-admin. Spec trong `users.service.spec.ts`. Còn lại: shop viết runbook NĐ13 (không phải code).
 - **Q63** PASS/MEDIUM — Ev: `AIManagerService.purgeOldLogs(days=60)` + `DELETE /ai-manager/logs/purge?days=N` (clamp 1–3650); script `prisma/clean-ai-logs.ts` (npm `db:clean-logs`) xóa AI log cũ + refresh token hết hạn. Spec trong `ai-manager.service.spec.ts`.
 - **Q64** PARTIAL/HIGH — Ev: 500 đã che message; requestId/userId log có chủ ý. Nhưng `logger.log(Registered user email)`, `logger.info(OCR image_url)`, AI log có thể giữ prompt thô. Risk: PII trong log. Fix: scrub email/URL/prompt, chỉ giữ hash.
 - **Q65** PARTIAL/MEDIUM — Ev: TLS do Render/Neon (`sslmode=require` trong DEPLOY_FREE); at-rest trông chờ Neon/disk; `AI_ENCRYPTION_KEY` tồn tại nhưng chưa thấy dùng field-level. Fix: bật Neon encryption/PITR + xác nhận AI key dùng ở đâu.
 - **Q66** FAIL/HIGH — Ev: backup chỉ là `pg_dump` tay trong docs, không mã hóa/kiểm soát truy cập được mô tả. Fix: backup mã hóa + bucket riêng + least-privilege.
-- **Q67** FAIL/MEDIUM — Ev: third-party có thật (DeepSeek/OpenAI/Anthropic/Gemini, VNPay, placehold.co) nhưng không DPA/subprocessor/data-residency. Fix: liệt kê subprocessor + data residency Singapore/VN.
+- **Q67** PASS/MEDIUM — Ev: `docs/SUBPROCESSORS.md` — bảng Neon/Render/DeepSeek-OpenAI-Anthropic-Gemini/VNPay/placehold.co: vai trò, dữ liệu đi qua, khu vực, cách tắt; ghi chú chưa ký DPA chính thức + cập nhật khi đổi provider.
 - **Q68** N/A — Ev: không thu thập trẻ em/dữ liệu đặc biệt có chủ ý (schema/màn hình không có). Fix: không.
 - **Q69** PASS/LOW — Ev: self-service `GET /users/me/export` + admin `GET /users/:id/export` trả JSON profile/địa chỉ/đơn/review (không kèm passwordHash/token); `users.service.ts exportUserData`.
 - **Q70** FAIL/HIGH — Ev: không SSO/least-privilege/audit cho truy cập prod DB; docs dùng connection string copy tay. Fix: Neon role ít quyền + audit + cấm share user.
@@ -374,11 +374,12 @@
 - Q62 self-service: `users.controller.ts` `DELETE /users/me` (user tự xóa) + `GET /users/me/export`; `users.service.ts deleteMyAccount/applyAnonymization` dùng chung với admin anonymize; spec 3 case (anonymize thành công, chặn last-admin, NotFound).
 - Q63 retention: `AIManagerService.purgeOldLogs(days=60)` + `DELETE /ai-manager/logs/purge?days=N` (clamp 1–3650) gọi tay như endpoint admin; script `prisma/clean-ai-logs.ts`; spec 2 case.
 - Q69: `GET /users/me/export` self-service (song song admin `GET /users/:id/export`).
+- Q60/Q61/Q67: `docs/SUBPROCESSORS.md` (bảng bên thứ ba + khu vực + cách tắt); `docs/PRIVACY.md` §5b (cookie/consent + lý do miễn banner); `PRODUCT.md` §Legal link 3 file; PRIVACY §5 ghi endpoint tự xuất/xóa.
 - Test: backend **152/152 pass** (18 suites), `tsc --noEmit` sạch.
 
 ### Còn lại — chủ shop/vận hành
 Giữ nguyên §11.1–11.4 (điền key, bật backup/PITR, gán oncall, MFA admin).
 
 ## 13. Verdict sau đợt 2
-- **CONDITIONAL GO** — Q62/Q63/Q69 chuyển PASS; không phát sinh BLOCKER mới.
+- **CONDITIONAL GO** — Q60/Q61/Q62/Q63/Q67/Q69 chuyển PASS; không phát sinh BLOCKER mới.
 - **CONDITIONAL GO** (đủ điều kiện launch thử khi điền xong key + bật backup + gán oncall). 0 BLOCKER còn trong code; HIGH còn lại đều có owner (chủ shop) + hạn (trước giờ G).

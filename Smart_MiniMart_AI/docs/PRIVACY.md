@@ -17,6 +17,7 @@ Xử lý đơn, giao hàng, chăm sóc khách, chống gian lận, cải thiện
 - VNPay — thông tin thanh toán khi bạn chọn VNPay.
 - Neon (Postgres, Singapore) + Render (hosting API, Singapore) — lưu trữ/vận hành.
 - Không bán dữ liệu.
+- Chi tiết đầy đủ (dữ liệu đi qua, khu vực, cách tắt): xem `docs/SUBPROCESSORS.md`.
 
 ## 4. Lưu trữ & xóa
 - Lưu khi tài khoản còn hoạt động. Vô hiệu hóa tài khoản: liên hệ shop để xóa/anonymize
@@ -24,7 +25,15 @@ Xử lý đơn, giao hàng, chăm sóc khách, chống gian lận, cải thiện
 - Sao lưu DB: Neon backup/PITR, truy cập giới hạn admin hạ tầng.
 
 ## 5. Quyền của bạn
-Xem/sửa hồ sơ trong app; yêu cầu xuất/xóa dữ liệu qua <-- ĐIỀN email/SĐT shop -->.
+Xem/sửa hồ sơ trong app; tự xuất dữ liệu (`GET /users/me/export`) và tự xóa tài khoản
+(`DELETE /users/me` — ẩn danh PII, thu hồi mọi phiên) ngay trong app. Yêu cầu khác qua
+<-- ĐIỀN email/SĐT shop -->.
+
+## 5b. Cookie / consent (Q61)
+Không dùng cookie quảng cáo hay tracker bên thứ ba; token phiên lưu trong SecureStore của
+thiết bị (không phải cookie trình duyệt). Ứng dụng **single-locale tiếng Việt, phục vụ VN** →
+chưa cần consent banner. Nếu sau này thêm analytics/quảng cáo hoặc người dùng EU, phải thêm
+banner opt-in trước khi bật.
 
 ## 6. Trẻ em
 Dịch vụ không dành cho trẻ dưới 16 tuổi; không cố ý thu thập dữ liệu trẻ em.
